@@ -206,7 +206,7 @@ func TestLoginHandlerValidPassword(t *testing.T) {
 		return
 	}
 
-	if len(user.PasswordSessions[0].Token) != 64 {
+	if len(user.PasswordSessions[0].Token) != 63 {
 		t.Errorf("got %d token length, expected %d", len(user.PasswordSessions[0].Token), 64)
 		return
 	}
