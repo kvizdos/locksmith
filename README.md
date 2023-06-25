@@ -69,6 +69,79 @@ func main() {
 }
 ```
 
+In this example, `db` can be the MongoDB structure this package provides (which gives the features necessary for this project to work and is slightly limited), or any Database structure that follows this interface:
+
+```
+type DatabaseUpdateActions string
+
+const (
+	SET  DatabaseUpdateActions = "set"
+	PUSH DatabaseUpdateActions = "push"
+)
+
+type DatabaseAccessor interface {
+	InsertOne(table string, body map[string]interface{}) (interface{}, error)
+	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
+	FindOne(table string, query map[string]interface{}) (interface{}, bool)
+	Find(table string, query map[string]interface{}) ([]interface{}, bool)
+}
+```
+
+### Customizing Users
+
+Sometimes, you may want to store custom data on users. This can be accomplished by:
+1. Create a User structure that defines any new method and *inherits the LocksmithUserInterface*
+2. Define your custom User structure
+3. Override the default `ReadFromMap()` function to read in any new data that would be stored on the user
+
+In code, this looks like:
+
+```
+type CustomUserInterface interface {
+	users.LocksmithUserInterface
+}
+
+type CustomUser struct {
+	users.LocksmithUser
+
+	customObject string
+}
+
+func (c CustomUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+	// Load initial locksmith data
+	var user users.LocksmithUserInterface
+	c.LocksmithUser.ReadFromMap(&user, u)
+	lsu := user.(users.LocksmithUser)
+
+	converted := customUser{
+		LocksmithUser: lsu,
+	}
+
+	converted.customObject = u["customObject"].(string)
+
+	*writeTo = converted
+}
+```
+
+Once you've read in your user from a MongoDB database, you can use it in the code by running:
+
+```
+// mongoUserData is as such:
+// var mongoUserData map[string]interface{}
+
+var user LocksmithUserInterface
+customUser{}.ReadFromMap(&user, mongoUserData)
+converted := user.(CustomUser)
+```
+
+Specific Locksmith features can also be used with custom interfaces, like `ListUsers()` by passing a base structure that inherits from `LocksmithUserInterface`:
+
+```
+usersArr, err := administration.ListUsers(testDb, CustomUser{})
+
+// This will return an array of CustomUsers instead of LocksmithUsers
+```
+
 ## Contribute
 
-This project has a list of todo's at [TODO.md](./TODO.md). Feel free to submit a PR!
+This project has a list of todo's at [TODO.md](./TODO.md). Feel free to submit a PR! Please reasonably test your code as you go along :)

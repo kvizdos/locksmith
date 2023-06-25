@@ -67,7 +67,7 @@ func main() {
 	registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{}, db)
 	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
 
-	serveAppPage := validation.ValidateUserToken(TestAppHandler{}, db)
+	serveAppPage := validation.ValidateUserTokenMiddleware(TestAppHandler{}, db)
 
 	http.Handle("/api/login", loginAPIHandler)
 	http.Handle("/api/register", registrationAPIHandler)

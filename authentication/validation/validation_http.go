@@ -9,7 +9,7 @@ import (
 	"kv.codes/locksmith/database"
 )
 
-func ValidateUserToken(next http.Handler, db database.DatabaseAccessor) http.Handler {
+func ValidateUserTokenMiddleware(next http.Handler, db database.DatabaseAccessor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Inject the database into the request
 		r = r.WithContext(context.WithValue(r.Context(), "database", db))

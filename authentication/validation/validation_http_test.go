@@ -50,7 +50,7 @@ func TestValidationMiddlewareNoCookiePresent(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -90,7 +90,7 @@ func TestValidationMiddlewareMalformedTokenNotBase64Encoded(t *testing.T) {
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -136,7 +136,7 @@ func TestValidationMiddlewareMalformedTokenBase64EncodedInvalidTokenLength(t *te
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -183,7 +183,7 @@ func TestValidationMiddlewareMalformedTokenBase64EncodedValidLength(t *testing.T
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -237,7 +237,7 @@ func TestValidationMiddlewareInvalidTokenBadUsername(t *testing.T) {
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -302,7 +302,7 @@ func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -365,7 +365,7 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -434,7 +434,7 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusSeeOther {
@@ -532,7 +532,7 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 	req.AddCookie(&token)
 
 	rr := httptest.NewRecorder()
-	middleware := ValidateUserToken(handler, testDb)
+	middleware := ValidateUserTokenMiddleware(handler, testDb)
 	middleware.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
