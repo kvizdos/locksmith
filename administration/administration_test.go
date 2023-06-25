@@ -94,7 +94,7 @@ func TestListUsersMultipleUsers(t *testing.T) {
 }
 
 type customUserInterface interface {
-	users.LocksmithUserStruct
+	users.LocksmithUserInterface
 }
 
 type customUser struct {
@@ -103,9 +103,9 @@ type customUser struct {
 	customObject string
 }
 
-func (c customUser) ReadFromMap(writeTo *users.LocksmithUserStruct, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
 	// Load initial locksmith data
-	var user users.LocksmithUserStruct
+	var user users.LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
 	lsu := user.(users.LocksmithUser)
 

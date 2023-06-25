@@ -7,7 +7,7 @@ import (
 	"kv.codes/locksmith/users"
 )
 
-func FinishRegistration(w http.ResponseWriter, r *http.Request, user users.LocksmithUserStruct) {
+func FinishRegistration(w http.ResponseWriter, r *http.Request, user users.LocksmithUserInterface) {
 	response, err := protocol.ParseCredentialCreationResponseBody(r.Body)
 	if err != nil {
 		// Handle Error and return.

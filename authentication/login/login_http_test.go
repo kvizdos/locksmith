@@ -199,7 +199,7 @@ func TestLoginHandlerValidPassword(t *testing.T) {
 		"username": "kenton",
 	})
 
-	var tmpUser users.LocksmithUserStruct
+	var tmpUser users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
 	user := tmpUser.(users.LocksmithUser)
 

@@ -48,7 +48,7 @@ func validateRequiredEnvironmentVariables() bool {
 	return true
 }
 
-func BeginRegisterWebAuthn(user users.LocksmithUserStruct, db database.DatabaseAccessor) (*protocol.CredentialCreation, error) {
+func BeginRegisterWebAuthn(user users.LocksmithUserInterface, db database.DatabaseAccessor) (*protocol.CredentialCreation, error) {
 	authSelect := protocol.AuthenticatorSelection{
 		AuthenticatorAttachment: protocol.AuthenticatorAttachment("platform"),
 		RequireResidentKey:      protocol.ResidentKeyRequired(),

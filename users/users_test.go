@@ -33,7 +33,7 @@ func TestLoadLocksmithUserFromMap(t *testing.T) {
 		"sessions": sessions,
 	}
 
-	var user LocksmithUserStruct
+	var user LocksmithUserInterface
 	LocksmithUser{}.ReadFromMap(&user, lsu)
 
 	converted := user.(LocksmithUser)
@@ -60,7 +60,7 @@ func TestLoadLocksmithUserFromMap(t *testing.T) {
 }
 
 type customUserInterface interface {
-	LocksmithUserStruct
+	LocksmithUserInterface
 }
 
 type customUser struct {
@@ -69,9 +69,9 @@ type customUser struct {
 	customObject string
 }
 
-func (c customUser) ReadFromMap(writeTo *LocksmithUserStruct, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *LocksmithUserInterface, u map[string]interface{}) {
 	// Load initial locksmith data
-	var user LocksmithUserStruct
+	var user LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
 	lsu := user.(LocksmithUser)
 
@@ -97,7 +97,7 @@ func TestLoadCustomUserFromMap(t *testing.T) {
 		"customObject": "helloworld",
 	}
 
-	var user LocksmithUserStruct
+	var user LocksmithUserInterface
 	customUser{}.ReadFromMap(&user, lsu)
 	converted := user.(customUser)
 

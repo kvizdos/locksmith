@@ -10,7 +10,7 @@ import (
 	"kv.codes/locksmith/database"
 )
 
-type LocksmithUserStruct interface {
+type LocksmithUserInterface interface {
 	GetUsername() string
 	GetPasswordInfo() authentication.PasswordInfo
 	ValidatePassword(string) (bool, error)
@@ -18,7 +18,7 @@ type LocksmithUserStruct interface {
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
 
 	// Read from Database
-	ReadFromMap(*LocksmithUserStruct, map[string]interface{})
+	ReadFromMap(*LocksmithUserInterface, map[string]interface{})
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -42,7 +42,7 @@ type LocksmithUser struct {
 	PasswordSessions []authentication.PasswordSession `bson:"sessions"`
 }
 
-func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserStruct, user map[string]interface{}) {
+func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[string]interface{}) {
 	sessions := []authentication.PasswordSession{}
 
 	if user["sessions"] != nil {

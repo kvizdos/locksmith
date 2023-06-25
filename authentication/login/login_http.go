@@ -63,7 +63,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tmpUser users.LocksmithUserStruct
+	var tmpUser users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
 	user := tmpUser.(users.LocksmithUser)
 

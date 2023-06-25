@@ -456,7 +456,7 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 		"username": "kenton",
 	})
 
-	var tmpUser users.LocksmithUserStruct
+	var tmpUser users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
 	user := tmpUser.(users.LocksmithUser)
 
@@ -550,7 +550,7 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 		"username": "kenton",
 	})
 
-	var tmpUser users.LocksmithUserStruct
+	var tmpUser users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
 	user := tmpUser.(users.LocksmithUser)
 

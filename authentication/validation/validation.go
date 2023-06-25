@@ -8,7 +8,7 @@ import (
 	"kv.codes/locksmith/users"
 )
 
-func ValidateToken(token authentication.Token, db database.DatabaseAccessor) (users.LocksmithUserStruct, bool, error) {
+func ValidateToken(token authentication.Token, db database.DatabaseAccessor) (users.LocksmithUserInterface, bool, error) {
 	dbUser, usernameExists := db.FindOne("users", map[string]interface{}{
 		"username": token.Username,
 	})
@@ -17,7 +17,7 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor) (us
 		return users.LocksmithUser{}, false, fmt.Errorf("invalid username")
 	}
 
-	var tmpUser users.LocksmithUserStruct
+	var tmpUser users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
 	user := tmpUser.(users.LocksmithUser)
 
