@@ -17,7 +17,9 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor) (us
 		return users.LocksmithUser{}, false, fmt.Errorf("invalid username")
 	}
 
-	user := users.LocksmithUserFromMap(dbUser.(map[string]interface{}))
+	var tmpUser users.LocksmithUserStruct
+	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
+	user := tmpUser.(users.LocksmithUser)
 
 	validated := user.ValidateSessionToken(token.Token, db)
 

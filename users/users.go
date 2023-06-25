@@ -34,41 +34,6 @@ type LocksmithUserStruct interface {
 	GetSessions() []webauthn.SessionData
 }
 
-func LocksmithUserFromMap(user map[string]interface{}) LocksmithUser {
-	sessions := []authentication.PasswordSession{}
-
-	if user["sessions"] != nil {
-		for _, v := range user["sessions"].([]interface{}) {
-			session, ok := v.(authentication.PasswordSession)
-			if !ok {
-				newSession := v.(map[string]interface{})
-				sessions = append(sessions, authentication.PasswordSession{
-					Token:     newSession["token"].(string),
-					ExpiresAt: newSession["expire"].(int64),
-				})
-
-				continue
-			}
-
-			sessions = append(sessions, session)
-		}
-	}
-
-	var passinfo authentication.PasswordInfo
-	switch user["password"].(type) {
-	case authentication.PasswordInfo:
-		passinfo = user["password"].(authentication.PasswordInfo)
-	case map[string]interface{}:
-		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]interface{}))
-	}
-	return LocksmithUser{
-		ID:               user["id"].(string),
-		Username:         user["username"].(string),
-		PasswordInfo:     passinfo,
-		PasswordSessions: sessions,
-	}
-}
-
 type LocksmithUser struct {
 	ID               string                           `bson:"id"`
 	Username         string                           `json:"username" bson:"username"`

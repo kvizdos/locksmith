@@ -199,7 +199,9 @@ func TestLoginHandlerValidPassword(t *testing.T) {
 		"username": "kenton",
 	})
 
-	user := users.LocksmithUserFromMap(dbUser.(map[string]interface{}))
+	var tmpUser users.LocksmithUserStruct
+	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
+	user := tmpUser.(users.LocksmithUser)
 
 	if len(user.PasswordSessions) != 1 {
 		t.Errorf("got %d sessions, expected %d", len(user.PasswordSessions), 1)

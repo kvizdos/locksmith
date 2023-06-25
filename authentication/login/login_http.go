@@ -63,7 +63,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := users.LocksmithUserFromMap(dbUser.(map[string]interface{}))
+	var tmpUser users.LocksmithUserStruct
+	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
+	user := tmpUser.(users.LocksmithUser)
 
 	passwordValidated, err := user.ValidatePassword(loginReq.Password)
 

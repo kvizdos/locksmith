@@ -10,7 +10,7 @@
     - [x] Make sure they are logged in
     - [ ] Restrict access to specific endpoints depending on whether or not the logged in user "owns" the endpoint (e.g. view their own data)
 - [ ] Basic admin panel to view / remove users
-- [ ] Deprecate `LocksmithUserFromMap` in favor of `LocksmithUserStruct.ReadFromMap`
+- [x] Deprecate `LocksmithUserFromMap` in favor of `LocksmithUserStruct.ReadFromMap`
     - Also rename `LocksmithUserStruct` -> `LocksmithUserInterface`
 - [ ] User Roles (admin, and customizable roles)
     - [ ] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
