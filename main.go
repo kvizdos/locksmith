@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"kv.codes/locksmith/administration"
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/authentication/login"
 	"kv.codes/locksmith/authentication/register"
@@ -68,11 +69,14 @@ func main() {
 
 	serveAppPage := validation.ValidateUserToken(TestAppHandler{}, db)
 
-	http.HandleFunc("/login", login.ServeLoginPage)
-	http.HandleFunc("/register", register.ServeRegisterPage)
 	http.Handle("/api/login", loginAPIHandler)
 	http.Handle("/api/register", registrationAPIHandler)
+
 	http.Handle("/app", serveAppPage)
+	http.HandleFunc("/login", login.ServeLoginPage)
+	http.HandleFunc("/register", register.ServeRegisterPage)
+
+	http.HandleFunc("/locksmith", administration.ServeAdminPage)
 
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", nil)

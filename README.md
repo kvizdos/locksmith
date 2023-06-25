@@ -9,9 +9,9 @@
 - [x] Token validation middleware
     - [x] Make sure they are logged in
     - [ ] Restrict access to specific endpoints depending on whether or not the logged in user "owns" the endpoint (e.g. view their own data)
-- [ ] Secure registration & login endpoints
-    - Only allow requests from the same domain.
 - [ ] Basic admin panel to view / remove users
+- [ ] Deprecate `LocksmithUserFromMap` in favor of `LocksmithUserStruct.ReadFromMap`
+    - Also rename `LocksmithUserStruct` -> `LocksmithUserInterface`
 - [ ] User Roles (admin, and customizable roles)
     - [ ] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
     - [ ] Let admin UI modify roles
@@ -20,7 +20,11 @@
 - [ ] Create users in the Admin UI, they'll need to setup their own password
     - [ ] This should give them a unique registration link to send to individuals.
     - [ ] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
+- [ ] Make URL redirects dynamic
+    - e.g. modify redirect for successful auth, let API endpoints be changed for components
 - [ ] Password Policies set on Server
+- [ ] Secure registration & login endpoints
+    - Only allow requests from the same domain.
 - [ ] Multifactor support
     - [ ] WebAuthn support
     - [ ] TOTP support

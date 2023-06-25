@@ -17,6 +17,9 @@ type LocksmithUserStruct interface {
 	GeneratePasswordSession() (authentication.PasswordSession, error)
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
 
+	// Read from Database
+	ReadFromMap(*LocksmithUserStruct, map[string]interface{})
+
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
 	WebAuthnName() string
@@ -72,6 +75,41 @@ type LocksmithUser struct {
 	PasswordInfo     authentication.PasswordInfo      `bson:"password"`
 	WebAuthnSessions []webauthn.SessionData           `bson:"websessions"`
 	PasswordSessions []authentication.PasswordSession `bson:"sessions"`
+}
+
+func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserStruct, user map[string]interface{}) {
+	sessions := []authentication.PasswordSession{}
+
+	if user["sessions"] != nil {
+		for _, v := range user["sessions"].([]interface{}) {
+			session, ok := v.(authentication.PasswordSession)
+			if !ok {
+				newSession := v.(map[string]interface{})
+				sessions = append(sessions, authentication.PasswordSession{
+					Token:     newSession["token"].(string),
+					ExpiresAt: newSession["expire"].(int64),
+				})
+
+				continue
+			}
+
+			sessions = append(sessions, session)
+		}
+	}
+
+	var passinfo authentication.PasswordInfo
+	switch user["password"].(type) {
+	case authentication.PasswordInfo:
+		passinfo = user["password"].(authentication.PasswordInfo)
+	case map[string]interface{}:
+		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]interface{}))
+	}
+	*writeTo = LocksmithUser{
+		ID:               user["id"].(string),
+		Username:         user["username"].(string),
+		PasswordInfo:     passinfo,
+		PasswordSessions: sessions,
+	}
 }
 
 func (u LocksmithUser) GetUsername() string {
@@ -130,7 +168,7 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 
 	for _, session := range u.PasswordSessions {
 		// Maybe renew the token here if its getting soon to expiring..
-		if session.ExpiresAt-time.Now().Unix() > 60 {
+		if !session.IsExpired() {
 			nonexpiredTokens = append(nonexpiredTokens, session)
 			if session.Token == token {
 				found = true

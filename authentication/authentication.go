@@ -28,11 +28,7 @@ func (p PasswordSession) Marshal() ([]byte, error) {
 }
 
 func (p PasswordSession) IsExpired() bool {
-	currentTime := time.Now()
-
-	futureTime := time.Unix(p.ExpiresAt, 0)
-
-	return currentTime.Before(futureTime)
+	return p.ExpiresAt-time.Now().Unix() <= 60
 }
 
 func PasswordSessionFromJson(data string) (PasswordSession, error) {

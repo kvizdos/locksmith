@@ -17,6 +17,7 @@ type DatabaseAccessor interface {
 	InsertOne(table string, body map[string]interface{}) (interface{}, error)
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
+	Find(table string, query map[string]interface{}) ([]interface{}, bool)
 }
 
 type TestDatabase struct {
@@ -139,6 +140,36 @@ func (db TestDatabase) FindOne(table string, query map[string]interface{}) (inte
 			if match {
 				return row, true
 			}
+		}
+	}
+
+	return nil, false
+}
+
+func (db TestDatabase) Find(table string, query map[string]interface{}) ([]interface{}, bool) {
+	if tableData, ok := db.Tables[table]; ok {
+		var results []interface{}
+		for _, row := range tableData {
+			match := true
+			for queryKey, queryValue := range query {
+				if rowData, ok := row.(map[string]interface{}); ok {
+					if fieldValue, ok := rowData[queryKey]; ok && fieldValue != queryValue {
+						match = false
+						break
+					}
+				} else {
+					match = false
+					break
+				}
+			}
+
+			if match {
+				results = append(results, row)
+			}
+		}
+
+		if len(results) > 0 {
+			return results, true
 		}
 	}
 

@@ -56,6 +56,28 @@ func (db MongoDatabase) FindOne(table string, query map[string]interface{}) (int
 	return result, true
 }
 
+func (db MongoDatabase) Find(table string, query map[string]interface{}) ([]interface{}, bool) {
+	col := db.database.Collection(table)
+
+	res, err := col.Find(context.Background(), query)
+
+	if err != nil {
+		return []interface{}{}, false
+	}
+
+	var results []map[string]interface{}
+	res.All(context.Background(), &results)
+
+	finalResults := make([]interface{}, len(results))
+
+	for i, result := range results {
+		convertArraysToSlices(result)
+		finalResults[i] = result
+	}
+
+	return finalResults, true
+}
+
 func convertArraysToSlices(data interface{}) {
 	switch val := data.(type) {
 	case map[string]interface{}:

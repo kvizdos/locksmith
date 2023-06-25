@@ -265,3 +265,54 @@ func TestFindOneDoesNotExist(t *testing.T) {
 		return
 	}
 }
+
+func TestFindGetsAllWithEmptyQuery(t *testing.T) {
+	testDb := TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"sessions": []interface{}{"abc"},
+				},
+				"abcdze12-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	users, found := testDb.Find("users", map[string]interface{}{})
+
+	if !found {
+		t.Error("should have found the objects")
+		return
+	}
+
+	expecting := 2
+	if len(users) != expecting {
+		t.Errorf("received incorrect number of results, expected %d got %d", expecting, len(users))
+	}
+}
+
+func TestFindReturnsZeroForEmptyTable(t *testing.T) {
+	testDb := TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {},
+		},
+	}
+
+	users, found := testDb.Find("users", map[string]interface{}{})
+
+	expecting := 0
+	if len(users) != expecting {
+		t.Errorf("received incorrect number of results, expected %d got %d", expecting, len(users))
+	}
+
+	if found {
+		t.Error("should have found the objects")
+		return
+	}
+}

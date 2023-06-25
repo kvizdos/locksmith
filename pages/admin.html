@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Users & Administration - Locksmith</title>
+    <script type="module" src="/components/signin.component.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+    <div id="root" style="--color: ${this.backgroundColor};">
+
+        <style>
+            html {
+                font-family: 'Lato', sans-serif;
+                --primary: #2f3235;
+                --secondary: #575b60;
+            }
+
+            body {
+                height: 100vh;
+                margin: 0;
+            }
+
+            p,
+            h1 {
+                margin: 0;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                color: var(--primary);
+            }
+
+            nav {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background-color: #e6ebf2;
+                height: fit-content;
+                padding: 1rem;
+                width: calc(100% - 2rem);
+            }
+
+            nav div {
+                display: flex;
+                gap: 2rem;
+            }
+
+            nav p#title {
+                font-weight: bold;
+            }
+
+            div#contentWrapper {
+                display: flex;
+                justify-content: center;
+            }
+
+            main {
+                padding: 1rem;
+                max-width: 64rem;
+                width: 100%;
+            }
+
+            .user {
+                display: flex;
+                border-bottom: 2px solid var(--primary);
+                padding-bottom: 1rem;
+                padding-top: 1rem;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .user #about {
+                display: flex;
+                gap: 0.65rem;
+                align-items: center;
+                margin-bottom: 0.2rem;
+            }
+
+            .user #about #username {
+                font-size: 1.15rem;
+                font-weight: 600;
+            }
+
+            .user #about #role {
+                font-size: 1rem;
+                color: var(--secondary);
+            }
+
+            .user #info {
+                font-size: 0.85rem;
+                display: flex;
+                gap: 0.65rem;
+                color: var(--secondary);
+            }
+
+            .user #info p:not(:last-of-type)::after {
+                content: "\2219";
+                margin-left: 0.65rem;
+            }
+
+            div#actions {
+                display: flex;
+                gap: 1rem;
+            }
+
+            div#actions button {
+                font-size: 0.75rem;
+                padding: 0.5rem;
+                border: 0;
+                transition: 200ms;
+                border-radius: 0.25rem;
+                --color: white;
+                --baseText: #000;
+                --hoverText: #000;
+
+                color: var(--baseText);
+                border: 2px solid var(--baseText);
+                background-color: white;
+            }
+
+            div#actions button:hover {
+                transition: 200ms;
+                color: var(--hoverText);
+                background-color: var(--baseText);
+            }
+
+            div#actions button#details {
+                --baseText: #a7afba;
+                --hoverText: #FFF;
+            }
+
+            div#actions button#delete {
+                --baseText: #d13c32;
+                --hoverText: #FFF;
+            }
+
+        </style>
+</head>
+
+<body>
+    <nav>
+        <div>
+            <p id="title">Locksmith</p>
+            <p>Users</p>
+        </div>
+
+        <div>
+            <p>Log out</p>
+        </div>
+    </nav>
+
+    <div id="contentWrapper">
+        <main>
+            <h1>Users</h1>
+
+            <section>
+                <div class="user">
+                    <div>
+                        <div id="about">
+                            <p id="username">kvizdos</p>
+                            <p id="role">Admin (+)</p>
+                        </div>
+                        <div id="info">
+                            <p>Last Active: 4/6/23</p>
+                            <p>Active Sessions: 2</p>
+                        </div>
+                    </div>
+
+                    <div id="actions">
+                        <button id="details">Details</button>
+                        <button id="delete">Delete</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

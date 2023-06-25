@@ -100,6 +100,54 @@ func TestMongoFindOne(t *testing.T) {
 	})
 }
 
+func TestMongoFindMany(t *testing.T) {
+	type test struct {
+		Value string `bson:"value"`
+	}
+
+	_, err := db.InsertOne("test", map[string]interface{}{
+		"username": "kenton",
+		"hello": test{
+			Value: "world",
+		},
+		"arraytest": []string{"testing", "1", "2", "3"},
+		"itsint":    1,
+	})
+
+	if err != nil {
+		t.Errorf("failed insertion prereq: %s", err.Error())
+		return
+	}
+
+	_, err = db.InsertOne("test", map[string]interface{}{
+		"username": "bob",
+		"hello": test{
+			Value: "world",
+		},
+	})
+
+	if err != nil {
+		t.Errorf("failed insertion prereq: %s", err.Error())
+		return
+	}
+
+	res, found := db.Find("test", map[string]interface{}{})
+
+	if found == false {
+		t.Errorf("didnt find items")
+		return
+	}
+
+	expecting := 2
+	if len(res) != 2 {
+		t.Errorf("expected %d users got %d", expecting, len(res))
+	}
+
+	t.Cleanup(func() {
+		db.database.Drop(context.Background())
+	})
+}
+
 func TestMongoUpdateOnePUSH(t *testing.T) {
 	db.InsertOne("test", map[string]interface{}{
 		"username": "kenton",
