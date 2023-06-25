@@ -1,41 +1,74 @@
-# todo:
-## sorted:
-- [x] Only allow [A-z0-9] in username
-- [x] Save token as cookie
-- [x] Save username with token in cookie
-- [x] Create mongo database tester
-- [x] Let registration happen in the Web UI
-- [x] Let logins happen in the Web UI
-- [x] Token validation middleware
-    - [x] Make sure they are logged in
-    - [ ] Restrict access to specific endpoints depending on whether or not the logged in user "owns" the endpoint (e.g. view their own data)
-- [ ] Basic admin panel to view / remove users
-- [x] Deprecate `LocksmithUserFromMap` in favor of `LocksmithUserStruct.ReadFromMap`
-    - [x] rename `LocksmithUserStruct` -> `LocksmithUserInterface`
-- [ ] User Roles (admin, and customizable roles)
-    - [ ] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
-    - [ ] Let admin UI modify roles
-- [ ] Disallow public registration flag
-    - [ ] This will need a way to bootstrap the first user. Maybe push a URL to the CLI on first boot w/ an access token to register an admin user?
-- [ ] Create users in the Admin UI, they'll need to setup their own password
-    - [ ] This should give them a unique registration link to send to individuals.
-    - [ ] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
-- [ ] Make URL redirects dynamic
-    - e.g. modify redirect for successful auth, let API endpoints be changed for components
-- [ ] Password Policies set on Server
-- [ ] Secure registration & login endpoints
-    - Only allow requests from the same domain.
-- [ ] Multifactor support
-    - [ ] WebAuthn support
-    - [ ] TOTP support
-    - [ ] Option to require MFA on sign up
-- [ ] User lockout policy (invalid passwords, etc)
+# Locksmith
 
-## unsorted:
-- [ ] Inherited encrypted values on registration
-    - e.g. for kanban board, automatically give new users access to the HashiCorp Vault API key (maybe different keys for each user?) and encrypt w/ user password.
-        - admin adds a new user -> admin creates a new encryption key in HashiCorp Vault -> admin encrypts their copy of the real API key with ephemeral hashicorp key -> send encrypted key to frontend registration -> frontend registration encrypts key w/ password -> key gets sent with registration
-- [ ] Federated Logins (Google, Google Workspace, etc)
-- [ ] Become an OAuth provider (allow external apps to authenticate with this service)
-- [ ] Prometheus Support (exports basic metrics: # users, # login attempts, # failed logins, etc)
-- [ ] Audit Logging system (easily create audit logs, allow apps to push to said audit log)
+Locksmith is a robust authentication project designed to simplify user authentication in web applications. It provides secure registration and login features, enforcing strong username requirements. By saving authentication tokens as cookies, Locksmith offers a seamless login experience while maintaining data security.
+
+Key Features:
+
+- User-friendly, drop-in web interface for registration and logins (or, bring your own and just use the Locksmith Authentication endpoints)
+- Securely stores authentication tokens as cookies
+- Token & role validation middleware to restrict access to protected endpoints
+- Admin panel for user management, including viewing and removal of users
+- User roles, customizable roles, and administrative privileges
+- User invitation system for streamlined onboarding
+- Customizable password policies to protect your users
+- User Lockout system to reduce brute force attacks
+- Multifactor authentication for TOTP and WebAuthn (including PassKeys)
+- Built-in password reset flows and endpoints (bring your own UI, or use ours!)
+
+With Locksmith, you can easily implement a reliable authentication system that ensures user account security and provides a smooth login experience.
+
+## Get Started
+
+If you are just using Locksmith for basic authentication, you can get started with this boilerplate code:
+
+**this will be changing**
+
+```
+package main
+
+func main() {
+	fs := http.FileServer(http.Dir("./components"))
+
+	// Open the Locksmith UI components if you aren't bringing your own UI
+	http.Handle("/components/", http.StripPrefix("/components/", fs))
+
+	ctx, timeout := context.WithTimeout(context.Background(), 20*time.Second)
+	db := database.MongoDatabase{
+		Ctx:    ctx,
+		Cancel: timeout,
+	}
+	err := db.Initialize("mongodb://localhost:27017", "locksmith")
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{}, db)
+	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
+
+	// Secure endpoints with just one line!
+	serveAppPage := validation.ValidateUserToken(TestAppHandler{}, db)
+
+	// This will open the API endpoints for registration and logging in. As of now, these are static and the paths should not be changed.
+	http.Handle("/api/login", loginAPIHandler)
+	http.Handle("/api/register", registrationAPIHandler)
+
+	// Serve our pre-built login and registration UI
+	http.HandleFunc("/login", login.ServeLoginPage)
+	http.HandleFunc("/register", register.ServeRegisterPage)
+
+	// Serve your app!
+	http.Handle("/app", serveAppPage)
+
+	log.Print("Listening on :3000...")
+	err = http.ListenAndServe(":3000", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## Contribute
+
+This project has a list of todo's at [TODO.md](./TODO.md). Feel free to submit a PR!
