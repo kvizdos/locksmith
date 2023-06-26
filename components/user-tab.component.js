@@ -82,18 +82,31 @@ export class UserTabComponent extends LitElement {
     `;
 
   static properties = {
+    user: { type: String },
+    userObj: { type: Object }
   };
+
+  constructor() {
+    super()
+    this.userObj = {}
+  }
+
+  firstUpdated() {
+    if (this.user == undefined) return;
+
+    this.userObj = JSON.parse(this.user)
+  }
 
   render() {
     return html`<div class="user">
               <div>
                   <div id="about">
-                      <p id="username">kvizdos</p>
-                      <p id="role">Admin (+)</p>
+                      <p id="username">${this.userObj["username"] || "Unknown"}</p>
+                      <p id="role">${this.userObj["role"] || "Unknown"}</p>
                   </div>
                   <div id="info">
-                      <p>Last Active: 4/6/23</p>
-                      <p>Active Sessions: 2</p>
+                      <p>Last Active: ${this.userObj["lastactive"] || "Unknown"}</p>
+                      <p>Active Sessions: ${this.userObj["sessions"] || "Unknown"}</p>
                   </div>
               </div>
 

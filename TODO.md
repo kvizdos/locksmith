@@ -1,6 +1,8 @@
 # todo:
 ## sorted:
 - [ ] Basic admin panel to view / remove users
+    - [x] Backend API
+    - [ ] Frontend integration
 - [ ] User Roles (admin, and customizable roles)
     - [ ] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
         - Rename `ValidateUserTokenMiddleware` to `SecureEndpointMiddleware` which can take a custom `SecureOptions` struct to define allowed roles and such

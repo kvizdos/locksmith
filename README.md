@@ -215,7 +215,7 @@ Alongside `ListUsers()`, you can also pass the `customUser{}` interface into the
 
 ```
 listUsersAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationListUsersHandler{
-    UserInterface: customUSer{},
+    UserInterface: customUser{},
 }, db)
 ```
 
