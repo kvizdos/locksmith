@@ -184,3 +184,53 @@ func TestListUsersOneUserCustomStruct(t *testing.T) {
 		t.Errorf("customObject incorrect: %s\n", value.CustomObject)
 	}
 }
+
+func TestDeleteUserNoUser(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {},
+		},
+	}
+
+	deleted, err := DeleteUser(testDb, "kvizdos")
+
+	if err != nil {
+		t.Errorf("unexpected listing error: %s", err)
+		return
+	}
+
+	if deleted {
+		t.Errorf("user should not have been deleted as none exist")
+	}
+}
+
+func TestDeleteUser(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"password": "password",
+					"sessions": []interface{}{},
+				},
+			},
+		},
+	}
+
+	deleted, err := DeleteUser(testDb, "kenton")
+
+	if err != nil {
+		t.Errorf("unexpected listing error: %s", err)
+		return
+	}
+
+	if !deleted {
+		t.Errorf("user should have been deleted")
+		return
+	}
+
+	if _, exists := testDb.Tables["users"]["c8531661-22a7-493f-b228-028842e09a05"]; exists {
+		t.Errorf("user not deleted")
+	}
+}

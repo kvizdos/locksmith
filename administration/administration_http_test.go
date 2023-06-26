@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"kv.codes/locksmith/authentication"
@@ -24,8 +25,8 @@ func TestListUsersInvalidMethod(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusNotAcceptable {
-		t.Errorf("unexpected status code got %v, want %v", status, http.StatusBadRequest)
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusMethodNotAllowed)
 	}
 }
 
@@ -161,5 +162,113 @@ func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 
 	if usersList[0].CustomObject != "hello" {
 		t.Errorf("could not read custom object: %s", usersList[0].CustomObject)
+	}
+}
+
+func TestDeleteUserHTTPInvalidMethod(t *testing.T) {
+	handler := AdministrationDeleteUsersHandler{}
+
+	req, err := http.NewRequest("POST", "/locksmith/api/list", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestDeleteUserHTTPHandlesNoPayload(t *testing.T) {
+	handler := AdministrationDeleteUsersHandler{}
+
+	req, err := http.NewRequest("DELETE", "/locksmith/api/list", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestDeleteUserHTTPNonexistentUser(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"sessions":     []interface{}{},
+					"customObject": "hello",
+				},
+			},
+		},
+	}
+
+	handler := AdministrationDeleteUsersHandler{}
+
+	payload := `{"username": "random"}`
+
+	req, err := http.NewRequest("DELETE", "/locksmith/api/list", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusNotFound)
+	}
+}
+
+func TestDeleteUserHTTP(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"sessions":     []interface{}{},
+					"customObject": "hello",
+				},
+			},
+		},
+	}
+
+	handler := AdministrationDeleteUsersHandler{}
+
+	payload := `{"username": "kenton"}`
+
+	req, err := http.NewRequest("DELETE", "/locksmith/api/list", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusOK)
 	}
 }

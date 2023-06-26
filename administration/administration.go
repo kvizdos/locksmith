@@ -5,6 +5,18 @@ import (
 	"kv.codes/locksmith/users"
 )
 
+func DeleteUser(db database.DatabaseAccessor, username string) (bool, error) {
+	deleted, err := db.DeleteOne("users", map[string]interface{}{
+		"username": username,
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return deleted, nil
+}
+
 func ListUsers(db database.DatabaseAccessor, withStruct ...users.LocksmithUserInterface) ([]users.PublicLocksmithUserInterface, error) {
 	var useStruct users.LocksmithUserInterface
 

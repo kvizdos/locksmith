@@ -3,6 +3,7 @@ package administration
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -19,7 +20,7 @@ type AdministrationListUsersHandler struct {
 
 func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		w.WriteHeader(http.StatusNotAcceptable)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -47,6 +48,53 @@ func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http
 	}
 
 	w.Write(jsond)
+}
+
+type AdministrationDeleteUsersHandler struct {
+	UserInterface users.LocksmithUserInterface
+}
+
+func (h AdministrationDeleteUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "DELETE" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	type deleteRequest struct {
+		Username string `json:"username"`
+	}
+
+	if r.Body == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		// handle the error
+		fmt.Println("Error reading request body:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var delReq deleteRequest
+	err = json.Unmarshal(body, &delReq)
+
+	if err != nil || (err == nil && delReq.Username == "") {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	db := r.Context().Value("database").(database.DatabaseAccessor)
+
+	deleted, err := DeleteUser(db, delReq.Username)
+
+	if !deleted {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func ServeAdminPage(w http.ResponseWriter, r *http.Request) {
