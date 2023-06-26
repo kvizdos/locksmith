@@ -28,7 +28,8 @@
     - Set on `LoginHandler{}`
 - [ ] Password reset
 - [ ] Convert `InjectDatabaseIntoContext` into passing the DB into the `RegistrationHandler{}` and `LoginHandler{}`
-
+- [ ] Attach a "Device Cookie" to the token system. If a user logs in on the same device, log them out of their previous session.
+- [ ] Save last active time to Session
 ## unsorted:
 - [ ] Encrypt User info
     - Allow specific User interface keys to be encrypted before getting sent to the database

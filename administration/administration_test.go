@@ -93,10 +93,6 @@ func TestListUsersMultipleUsers(t *testing.T) {
 	}
 }
 
-type customUserInterface interface {
-	users.LocksmithUserInterface
-}
-
 type customUser struct {
 	users.LocksmithUser
 
@@ -116,12 +112,16 @@ type publicCustomUser struct {
 }
 
 func (u publicCustomUser) FromRegular(user users.LocksmithUserInterface) (users.PublicLocksmithUserInterface, error) {
-	publicUser := publicCustomUser{}
+	lsPub, err := u.PublicLocksmithUser.FromRegular(user)
 
-	publicUser.Username = user.GetUsername()
-	publicUser.ActiveSessionCount = len(user.GetPasswordSessions())
-	publicUser.ID = user.GetID()
-	publicUser.LastActive = -1
+	if err != nil {
+		return publicCustomUser{}, nil
+	}
+
+	publicUser := publicCustomUser{
+		PublicLocksmithUser: lsPub.(users.PublicLocksmithUser),
+	}
+
 	publicUser.CustomObject = user.(customUser).CustomObject
 
 	return publicUser, nil
