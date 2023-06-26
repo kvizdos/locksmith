@@ -1,8 +1,5 @@
 # todo:
 ## sorted:
-- [ ] Basic admin panel to view / remove users
-    - [x] Backend API
-    - [ ] Frontend integration
 - [ ] User Roles (admin, and customizable roles)
     - [ ] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
         - Rename `ValidateUserTokenMiddleware` to `SecureEndpointMiddleware` which can take a custom `SecureOptions` struct to define allowed roles and such
@@ -32,6 +29,14 @@
 - [ ] Convert `InjectDatabaseIntoContext` into passing the DB into the `RegistrationHandler{}` and `LoginHandler{}`
 - [ ] Attach a "Device Cookie" to the token system. If a user logs in on the same device, log them out of their previous session.
 - [ ] Save last active time to Session
+- [ ] Trust Device
+    - Assign a name to the device
+    - Mark device as trusted in Sessions
+    - Maybe here is where we should auto-renew the token?
+- [ ] User page
+    - Let user delete account
+    - View active sessions (connected IP, lease)
+        - kill a session
 ## unsorted:
 - [ ] Encrypt User info
     - Allow specific User interface keys to be encrypted before getting sent to the database
@@ -84,3 +89,6 @@
     - [x] rename `LocksmithUserStruct` -> `LocksmithUserInterface`
 - [x] Token validation middleware
     - Checks if they are expired & valid
+- [x] Basic admin panel to view / remove users
+    - [x] Backend API
+    - [x] Frontend integration

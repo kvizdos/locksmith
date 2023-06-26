@@ -68,13 +68,15 @@ func main() {
 	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
 
 	listUsersAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationListUsersHandler{}, db)
+	deleteUserAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
 
 	serveAppPage := validation.ValidateUserTokenMiddleware(TestAppHandler{}, db)
 
 	http.Handle("/api/login", loginAPIHandler)
 	http.Handle("/api/register", registrationAPIHandler)
 
-	http.Handle("/api/admin/users/list", listUsersAdminAPIHandler)
+	http.Handle("/api/users/list", listUsersAdminAPIHandler)
+	http.Handle("/api/users/delete", deleteUserAdminAPIHandler)
 
 	http.Handle("/app", serveAppPage)
 	http.HandleFunc("/login", login.ServeLoginPage)

@@ -18,7 +18,7 @@ export class UserListComponent extends LitElement {
   fetchUsers() {
     const options = { method: 'GET', headers: { 'Content-Type': 'application/json' } };
 
-    fetch('/api/admin/users/list', options)
+    fetch('/api/users/list', options)
       .then(response => response.json())
       .then(response => {
         this.users = response

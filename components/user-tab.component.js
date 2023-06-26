@@ -64,6 +64,7 @@ export class UserTabComponent extends LitElement {
         background-color: white;
     }
 
+    div#actions button.waiting,
     div#actions button:hover {
         transition: 200ms;
         color: var(--hoverText);
@@ -75,20 +76,53 @@ export class UserTabComponent extends LitElement {
         --hoverText: #FFF;
     }
 
+    div#actions button#delete.waiting,
     div#actions button#delete {
         --baseText: #d13c32;
         --hoverText: #FFF;
+    }
+
+    div#actions button.waiting {
+      filter: brightness(0.8);
+      transition: 200ms;
     }
     `;
 
   static properties = {
     user: { type: String },
-    userObj: { type: Object }
+    userObj: { type: Object },
+    isDeleting: { type: Boolean }
   };
 
   constructor() {
     super()
     this.userObj = {}
+    this.isDeleting = false
+  }
+
+  delete() {
+    if (this.isDeleting) return;
+
+    this.isDeleting = true;
+    const payload = {
+      "username": this.userObj["username"]
+    }
+    const options = { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) };
+
+    fetch('/api/users/delete', options)
+      .then(response => response.status)
+      .then(response => {
+        if (response !== 200) {
+          this.isDeleting = false;
+          alert("Something went wrong, please reload and try again.")
+          return
+        }
+
+        setTimeout(() => {
+          this.parentNode.removeChild(this)
+        }, 1000)
+      })
+      .catch(err => console.error(err));
   }
 
   firstUpdated() {
@@ -112,7 +146,7 @@ export class UserTabComponent extends LitElement {
 
               <div id="actions">
                   <button id="details">Details</button>
-                  <button id="delete">Delete</button>
+                  <button id="delete" class="${this.isDeleting ? 'waiting' : ''}" @click=${this.delete}>${this.isDeleting ? "Deleting..." : "Delete"}</button>
               </div>
           </div>`;
   }
