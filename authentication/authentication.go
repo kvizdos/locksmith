@@ -28,6 +28,10 @@ func (p PasswordSession) Marshal() ([]byte, error) {
 }
 
 func (p PasswordSession) IsExpired() bool {
+	// 60 second period before its "invalid"
+	// Maybe add an extra return value (another bool)
+	// that defines whether or not the token is
+	// "near" expiring
 	return p.ExpiresAt-time.Now().Unix() <= 60
 }
 

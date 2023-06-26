@@ -37,9 +37,9 @@ type LocksmithUserInterface interface {
 type LocksmithUser struct {
 	ID               string                           `bson:"id"`
 	Username         string                           `json:"username" bson:"username"`
-	PasswordInfo     authentication.PasswordInfo      `bson:"password"`
-	WebAuthnSessions []webauthn.SessionData           `bson:"websessions"`
-	PasswordSessions []authentication.PasswordSession `bson:"sessions"`
+	PasswordInfo     authentication.PasswordInfo      `json:"-" bson:"password"`
+	WebAuthnSessions []webauthn.SessionData           `json:"-" bson:"websessions"`
+	PasswordSessions []authentication.PasswordSession `json:"-" bson:"sessions"`
 }
 
 func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[string]interface{}) {

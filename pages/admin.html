@@ -4,7 +4,8 @@
 <head>
     <meta charset="utf-8">
     <title>Users & Administration - Locksmith</title>
-    <script type="module" src="/components/signin.component.js"></script>
+    <script type="module" src="/components/user-list.component.js"></script>
+    <script type="module" src="/components/user-tab.component.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
@@ -65,80 +66,6 @@
                 width: 100%;
             }
 
-            .user {
-                display: flex;
-                border-bottom: 2px solid var(--primary);
-                padding-bottom: 1rem;
-                padding-top: 1rem;
-                align-items: center;
-                justify-content: space-between;
-            }
-
-            .user #about {
-                display: flex;
-                gap: 0.65rem;
-                align-items: center;
-                margin-bottom: 0.2rem;
-            }
-
-            .user #about #username {
-                font-size: 1.15rem;
-                font-weight: 600;
-            }
-
-            .user #about #role {
-                font-size: 1rem;
-                color: var(--secondary);
-            }
-
-            .user #info {
-                font-size: 0.85rem;
-                display: flex;
-                gap: 0.65rem;
-                color: var(--secondary);
-            }
-
-            .user #info p:not(:last-of-type)::after {
-                content: "\2219";
-                margin-left: 0.65rem;
-            }
-
-            div#actions {
-                display: flex;
-                gap: 1rem;
-            }
-
-            div#actions button {
-                font-size: 0.75rem;
-                padding: 0.5rem;
-                border: 0;
-                transition: 200ms;
-                border-radius: 0.25rem;
-                --color: white;
-                --baseText: #000;
-                --hoverText: #000;
-
-                color: var(--baseText);
-                border: 2px solid var(--baseText);
-                background-color: white;
-            }
-
-            div#actions button:hover {
-                transition: 200ms;
-                color: var(--hoverText);
-                background-color: var(--baseText);
-            }
-
-            div#actions button#details {
-                --baseText: #a7afba;
-                --hoverText: #FFF;
-            }
-
-            div#actions button#delete {
-                --baseText: #d13c32;
-                --hoverText: #FFF;
-            }
-
         </style>
 </head>
 
@@ -158,25 +85,9 @@
         <main>
             <h1>Users</h1>
 
-            <section>
-                <div class="user">
-                    <div>
-                        <div id="about">
-                            <p id="username">kvizdos</p>
-                            <p id="role">Admin (+)</p>
-                        </div>
-                        <div id="info">
-                            <p>Last Active: 4/6/23</p>
-                            <p>Active Sessions: 2</p>
-                        </div>
-                    </div>
-
-                    <div id="actions">
-                        <button id="details">Details</button>
-                        <button id="delete">Delete</button>
-                    </div>
-                </div>
-            </section>
+            <user-list>
+                <user-tab></user-tab>
+            </user-list>
         </main>
     </div>
 </body>

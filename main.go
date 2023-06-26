@@ -77,6 +77,7 @@ func main() {
 	http.HandleFunc("/register", register.ServeRegisterPage)
 
 	http.HandleFunc("/locksmith", administration.ServeAdminPage)
+	http.HandleFunc("/locksmith/users/list", administration.ServeAdminPage)
 
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", nil)
