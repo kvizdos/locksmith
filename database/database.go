@@ -18,6 +18,7 @@ type DatabaseAccessor interface {
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
+	DeleteOne(table string, query map[string]interface{}) (bool, error)
 }
 
 type TestDatabase struct {
@@ -174,4 +175,39 @@ func (db TestDatabase) Find(table string, query map[string]interface{}) ([]inter
 	}
 
 	return nil, false
+}
+
+func (db TestDatabase) DeleteOne(table string, query map[string]interface{}) (bool, error) {
+	if tableData, ok := db.Tables[table]; ok {
+		for key, row := range tableData {
+			match := true
+			for queryKey, queryValue := range query {
+				if rowData, ok := row.(map[string]interface{}); ok {
+					if fieldValue, ok := rowData[queryKey]; ok && fieldValue != queryValue {
+						match = false
+						break
+					}
+				} else {
+					match = false
+					break
+				}
+			}
+
+			if match {
+				// Create a new map without the matching item
+				newTableData := make(map[string]interface{})
+				for k, v := range tableData {
+					if k != key {
+						newTableData[k] = v
+					}
+				}
+
+				// Update the map in the database with the modified map
+				db.Tables[table] = newTableData
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

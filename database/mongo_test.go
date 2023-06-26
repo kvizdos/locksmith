@@ -34,6 +34,32 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestMongoDeleteValue(t *testing.T) {
+	_, err := db.InsertOne("test", map[string]interface{}{
+		"username": "kenton",
+		"hello":    "world",
+	})
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	deleted, err := db.DeleteOne("test", map[string]interface{}{
+		"username": "kenton",
+		"hello":    "world",
+	})
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if !deleted {
+		t.Error("item not delted.")
+	}
+}
+
 func TestMongoInsertValue(t *testing.T) {
 	_, err := db.InsertOne("test", map[string]interface{}{
 		"username": "kenton",

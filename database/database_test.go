@@ -4,6 +4,45 @@ import (
 	"testing"
 )
 
+func TestDeleteOne(t *testing.T) {
+	testDb := TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+				},
+				"ananc-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "ananc-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+				},
+			},
+		},
+	}
+
+	deleted, err := testDb.DeleteOne("users", map[string]interface{}{
+		"username": "kenton",
+	})
+
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	if !deleted {
+		t.Error("failed to delete item")
+		return
+	}
+
+	if _, ok := testDb.Tables["users"]["c8531661-22a7-493f-b228-028842e09a05"]; ok {
+		t.Error("did not delete item")
+	}
+
+	if _, ok := testDb.Tables["users"]["ananc-22a7-493f-b228-028842e09a05"]; !ok {
+		t.Error("deleted too much")
+	}
+}
+
 func TestInsertDatabase(t *testing.T) {
 	testDb := TestDatabase{
 		Tables: make(map[string]map[string]interface{}),

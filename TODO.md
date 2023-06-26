@@ -70,6 +70,8 @@
     - Delete tokens
     - Track usage
     - API Token validation middleware to only allow specific endpoints to be hit if the token has a role associated
+- [ ] Support user profile icons
+- [ ] Email verification for new users
 
 ## done:
 - [x] Only allow [A-z0-9] in username

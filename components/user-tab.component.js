@@ -106,7 +106,7 @@ export class UserTabComponent extends LitElement {
                   </div>
                   <div id="info">
                       <p>Last Active: ${this.userObj["lastactive"] || "Unknown"}</p>
-                      <p>Active Sessions: ${this.userObj["sessions"] || "Unknown"}</p>
+                      <p>Active Sessions: ${this.userObj["sessions"] || "0"}</p>
                   </div>
               </div>
 
