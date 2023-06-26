@@ -100,7 +100,31 @@ type customUserInterface interface {
 type customUser struct {
 	users.LocksmithUser
 
-	customObject string
+	CustomObject string `json:"customObject"`
+}
+
+func (u customUser) ToPublic() (users.PublicLocksmithUserInterface, error) {
+	publicUser, err := publicCustomUser{}.FromRegular(u)
+
+	return publicUser, err
+}
+
+type publicCustomUser struct {
+	users.PublicLocksmithUser
+
+	CustomObject string `json:"customObject"`
+}
+
+func (u publicCustomUser) FromRegular(user users.LocksmithUserInterface) (users.PublicLocksmithUserInterface, error) {
+	publicUser := publicCustomUser{}
+
+	publicUser.Username = user.GetUsername()
+	publicUser.ActiveSessionCount = len(user.GetPasswordSessions())
+	publicUser.ID = user.GetID()
+	publicUser.LastActive = -1
+	publicUser.CustomObject = user.(customUser).CustomObject
+
+	return publicUser, nil
 }
 
 func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
@@ -113,7 +137,7 @@ func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[str
 		LocksmithUser: lsu,
 	}
 
-	converted.customObject = u["customObject"].(string)
+	converted.CustomObject = u["customObject"].(string)
 
 	*writeTo = converted
 }
@@ -134,7 +158,9 @@ func TestListUsersOneUserCustomStruct(t *testing.T) {
 		},
 	}
 
-	usersArr, err := ListUsers(testDb, customUser{})
+	publicUser := customUser{}
+
+	usersArr, err := ListUsers(testDb, publicUser)
 
 	if err != nil {
 		t.Errorf("unexpected listing error: %s", err)
@@ -147,14 +173,14 @@ func TestListUsersOneUserCustomStruct(t *testing.T) {
 		return
 	}
 
-	value, ok := usersArr[0].(customUser)
+	value, ok := usersArr[0].(publicCustomUser)
 
 	if !ok {
 		t.Errorf("failed to convert to custom user object")
 		return
 	}
 
-	if value.customObject != "helloworld" {
-		t.Errorf("customObject incorrect: %s\n", value.customObject)
+	if value.CustomObject != "helloworld" {
+		t.Errorf("customObject incorrect: %s\n", value.CustomObject)
 	}
 }

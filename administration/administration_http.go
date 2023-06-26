@@ -6,13 +6,16 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"text/template"
 
 	"kv.codes/locksmith/database"
 	"kv.codes/locksmith/users"
 )
 
-type AdministrationListUsersHandler struct{}
+type AdministrationListUsersHandler struct {
+	UserInterface users.LocksmithUserInterface
+}
 
 func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -20,9 +23,13 @@ func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http
 		return
 	}
 
+	if h.UserInterface == nil {
+		h.UserInterface = users.LocksmithUser{}
+	}
+
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
-	var lsu users.LocksmithUser
+	lsu := reflect.Zero(reflect.TypeOf(h.UserInterface)).Interface().(users.LocksmithUserInterface)
 	users, err := ListUsers(db, lsu)
 
 	if err != nil {

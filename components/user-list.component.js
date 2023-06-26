@@ -12,6 +12,10 @@ export class UserListComponent extends LitElement {
     users: { type: Array }
   };
 
+  fetchUsers() {
+
+  }
+
   constructor() {
     super()
     console.log("Loading users..")

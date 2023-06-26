@@ -16,7 +16,7 @@ func FinishRegistration(w http.ResponseWriter, r *http.Request, user users.Locks
 	}
 
 	// Get the session data stored from the function above
-	sessions := user.GetSessions()
+	sessions := user.GetWebAuthnSessions()
 
 	if len(sessions) == 0 {
 		// RETURN FAILED STATE

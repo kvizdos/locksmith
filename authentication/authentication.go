@@ -128,6 +128,10 @@ func ParseToken(cookieValue string) (Token, error) {
 
 	splitValue := strings.Split(string(decodedCookie), ":")
 
+	if len(splitValue) != 2 {
+		return Token{}, fmt.Errorf("invalid token")
+	}
+
 	token := splitValue[0]
 	username := splitValue[1]
 

@@ -126,3 +126,38 @@ func TestLoadCustomUserFromMap(t *testing.T) {
 		t.Errorf("Custom object was not set!")
 	}
 }
+
+func TestConvertUserToPublicUser(t *testing.T) {
+	privateUser := LocksmithUser{
+		ID:       "userIDhere",
+		Username: "kvizdos",
+		PasswordInfo: authentication.PasswordInfo{
+			Password: "password",
+			Salt:     "salt",
+		},
+		PasswordSessions: []authentication.PasswordSession{
+			{
+				Token:     "token here",
+				ExpiresAt: 0,
+			},
+			{
+				Token:     "another token here",
+				ExpiresAt: 0,
+			},
+		},
+	}
+
+	convertedUser, err := PublicLocksmithUser{}.FromRegular(privateUser)
+
+	if err != nil {
+		t.Errorf("received error while converting from regular: %s", err.Error())
+		return
+	}
+
+	convertedUser, success := convertedUser.(PublicLocksmithUser)
+
+	if !success {
+		t.Errorf("could not convert to PublicLocksmithUser")
+		return
+	}
+}

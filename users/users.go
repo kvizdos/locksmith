@@ -11,14 +11,17 @@ import (
 )
 
 type LocksmithUserInterface interface {
-	GetUsername() string
-	GetPasswordInfo() authentication.PasswordInfo
 	ValidatePassword(string) (bool, error)
 	GeneratePasswordSession() (authentication.PasswordSession, error)
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
 
 	// Read from Database
 	ReadFromMap(*LocksmithUserInterface, map[string]interface{})
+
+	// Convert to "public" interface
+	// Slimmed down version of this interface
+	// with less sensitive information
+	ToPublic() (PublicLocksmithUserInterface, error)
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -28,10 +31,43 @@ type LocksmithUserInterface interface {
 	// WebAuthnIcon is a deprecated option.
 	// Deprecated: this has been removed from the specification recommendation. Suggest a blank string.
 	WebAuthnIcon() string
-
 	AddNewWebAuthnCredential(*webauthn.Credential)
 
-	GetSessions() []webauthn.SessionData
+	// Getters
+	GetUsername() string
+	GetID() string
+	GetPasswordInfo() authentication.PasswordInfo
+	GetWebAuthnSessions() []webauthn.SessionData
+	GetPasswordSessions() []authentication.PasswordSession
+}
+
+// This interface is used when user structures are
+// sent to the frontend
+type PublicLocksmithUserInterface interface {
+	FromRegular(LocksmithUserInterface) (PublicLocksmithUserInterface, error)
+}
+
+// Only used to show user data to an endpoint
+// This should hide any sensitive data like
+// password session info, etc
+type PublicLocksmithUser struct {
+	ID                 string `json:"id"`
+	Username           string `json:"username"`
+	ActiveSessionCount int    `json:"sessions"`
+	LastActive         int64  `json:"lastActive"`
+}
+
+// Convert a LocksmithUser{} into
+// the public equivalent.
+func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLocksmithUserInterface, error) {
+	publicUser := PublicLocksmithUser{}
+
+	publicUser.Username = user.GetUsername()
+	publicUser.ActiveSessionCount = len(user.GetPasswordSessions())
+	publicUser.ID = user.GetID()
+	publicUser.LastActive = -1
+
+	return publicUser, nil
 }
 
 type LocksmithUser struct {
@@ -40,6 +76,20 @@ type LocksmithUser struct {
 	PasswordInfo     authentication.PasswordInfo      `json:"-" bson:"password"`
 	WebAuthnSessions []webauthn.SessionData           `json:"-" bson:"websessions"`
 	PasswordSessions []authentication.PasswordSession `json:"-" bson:"sessions"`
+}
+
+func (u LocksmithUser) ToPublic() (PublicLocksmithUserInterface, error) {
+	publicUser, err := PublicLocksmithUser{}.FromRegular(u)
+
+	return publicUser, err
+}
+
+func (u LocksmithUser) GetID() string {
+	return u.ID
+}
+
+func (u LocksmithUser) GetPasswordSessions() []authentication.PasswordSession {
+	return u.PasswordSessions
 }
 
 func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[string]interface{}) {
@@ -179,7 +229,7 @@ func (u LocksmithUser) WebAuthnIcon() string {
 	// IS DEPRECATED.
 	return ""
 }
-func (u LocksmithUser) GetSessions() []webauthn.SessionData {
+func (u LocksmithUser) GetWebAuthnSessions() []webauthn.SessionData {
 	return u.WebAuthnSessions
 }
 func (u LocksmithUser) AddNewWebAuthnCredential(cred *webauthn.Credential) {
