@@ -90,7 +90,7 @@ type DatabaseAccessor interface {
 ### Customizing Users
 
 Sometimes, you may want to store custom data on users. This can be accomplished by:
-1. Create a User structure that defines any new method and *inherits the LocksmithUserInterface*
+1. Create a User structure that defines any new method and *inherits the* `LocksmithUserInterface`
 2. Define your custom User structure
 3. Override the default `ReadFromMap()` function to read in any new data that would be stored on the user
 
@@ -136,16 +136,6 @@ customUser{}.ReadFromMap(&user, mongoUserData)
 converted := user.(CustomUser)
 ```
 
-Alongside `ListUsers()`, you can also pass the `customUser{}` interface into the `Administration*Handler{}` to return the values over the HTTP API:
-
-```
-listUsersAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationListUsersHandler{
-    UserInterface: customUSer{},
-}, db)
-```
-
-*Works with AdministrationListUsersHandler*
-
 ## Customizing ListUsers() API
 
 By default, Locksmith's `ListUsers()` API returns a simplified version of the `LocksmithUser{}` struct with less sensitive information. When you use the code below, it will only return user info that is supplied by the `PublicLocksmithUserInterface`:
@@ -173,7 +163,7 @@ Using the example above, we can add the "CustomObject" by:
 
 Let's hit this step by step.
 
-1 + 2. Create the new structure and define keys:
+**1 + 2. Create the new structure and define keys:**
 ```
 type publicCustomUser struct {
 	users.PublicLocksmithUser
@@ -182,7 +172,7 @@ type publicCustomUser struct {
 }
 ```
 
-3. Add `FromRegular()` to `publicCustomUser{}`:
+**3. Add `FromRegular()` to `publicCustomUser{}`:**
 ```
 func (u publicCustomUser) FromRegular(user users.LocksmithUserInterface) (users.PublicLocksmithUserInterface, error) {
 	lsPub, err := u.PublicLocksmithUser.FromRegular(user)
@@ -203,7 +193,7 @@ func (u publicCustomUser) FromRegular(user users.LocksmithUserInterface) (users.
 }
 ```
 
-4. Add `ToPublic()` to `customUser{}`:
+**4. Add `ToPublic()` to `customUser{}`:**
 ```
 func (u customUser) ToPublic() (users.PublicLocksmithUserInterface, error) {
 	publicUser, err := publicCustomUser{}.FromRegular(u)
@@ -221,7 +211,15 @@ usersArr, err := ListUsers(testDb, publicUser)
 
 **Note that you're passing the default customUser{} and not the publicCustomUser{}**
 
+Alongside `ListUsers()`, you can also pass the `customUser{}` interface into the `Administration*Handler{}` to return the values over the HTTP API:
 
+```
+listUsersAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationListUsersHandler{
+    UserInterface: customUSer{},
+}, db)
+```
+
+*Works with AdministrationListUsersHandler*
 
 ### Custom Users Security Notice
 
