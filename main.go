@@ -10,9 +10,9 @@ import (
 	"github.com/joho/godotenv"
 	"kv.codes/locksmith/administration"
 	"kv.codes/locksmith/authentication"
+	"kv.codes/locksmith/authentication/endpoints"
 	"kv.codes/locksmith/authentication/login"
 	"kv.codes/locksmith/authentication/register"
-	"kv.codes/locksmith/authentication/validation"
 	"kv.codes/locksmith/database"
 	"kv.codes/locksmith/httpHelpers"
 )
@@ -64,13 +64,21 @@ func main() {
 		return
 	}
 
-	registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{}, db)
+	registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
+		DefaultRoleName: "user",
+	}, db)
 	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
 
-	listUsersAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationListUsersHandler{}, db)
-	deleteUserAdminAPIHandler := validation.ValidateUserTokenMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
+	listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
+		MinimalPermissions: []string{"users.list"},
+	})
+	deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
 
-	serveAppPage := validation.ValidateUserTokenMiddleware(TestAppHandler{}, db)
+	serveAdminPage := endpoints.SecureEndpointHTTPMiddleware(administration.ServeAdminPage{}, db, endpoints.EndpointSecurityOptions{
+		MinimalPermissions: []string{"view.ls-admin"},
+	})
+
+	serveAppPage := endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db)
 
 	http.Handle("/api/login", loginAPIHandler)
 	http.Handle("/api/register", registrationAPIHandler)
@@ -82,7 +90,7 @@ func main() {
 	http.HandleFunc("/login", login.ServeLoginPage)
 	http.HandleFunc("/register", register.ServeRegisterPage)
 
-	http.HandleFunc("/locksmith", administration.ServeAdminPage)
+	http.Handle("/locksmith", serveAdminPage)
 
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", nil)

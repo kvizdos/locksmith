@@ -1,80 +1,37 @@
 package validation
 
 import (
-	"context"
+	"fmt"
 	"net/http"
-	"time"
 
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/users"
 )
 
-func ValidateUserTokenMiddleware(next http.Handler, db database.DatabaseAccessor) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Inject the database into the request
-		r = r.WithContext(context.WithValue(r.Context(), "database", db))
+func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor) (users.LocksmithUser, error) {
+	// Validate token
+	token, err := r.Cookie("token")
 
-		// Validate token
-		token, err := r.Cookie("token")
+	if err != nil {
+		return users.LocksmithUser{}, fmt.Errorf("no cookie present")
+	}
 
-		if err != nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
+	parsedToken, err := authentication.ParseToken(token.Value)
 
-		parsedToken, err := authentication.ParseToken(token.Value)
+	if err != nil {
+		return users.LocksmithUser{}, fmt.Errorf("token could not be parsed")
+	}
 
-		if err != nil {
-			c := &http.Cookie{
-				Name:     "token",
-				Value:    "",
-				Path:     "/",
-				Expires:  time.Unix(0, 0),
-				HttpOnly: true,
-			}
+	user, validated, err := ValidateToken(parsedToken, db)
 
-			http.SetCookie(w, c)
-			// Add logging that a fake token was passed
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
+	if err != nil {
+		return users.LocksmithUser{}, fmt.Errorf("token could not be validated")
+	}
 
-		user, validated, err := ValidateToken(parsedToken, db)
+	if !validated {
+		return users.LocksmithUser{}, fmt.Errorf("token did not validate")
+	}
 
-		if err != nil {
-			c := &http.Cookie{
-				Name:    "token",
-				Value:   "",
-				Path:    "/",
-				Expires: time.Unix(0, 0),
-
-				HttpOnly: true,
-			}
-
-			http.SetCookie(w, c)
-			// Add logging that a fake token was passed
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-
-		if !validated {
-			c := &http.Cookie{
-				Name:    "token",
-				Value:   "",
-				Path:    "/",
-				Expires: time.Unix(0, 0),
-
-				HttpOnly: true,
-			}
-
-			http.SetCookie(w, c)
-			// Add logging that a FORGED token was passed
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-
-		r = r.WithContext(context.WithValue(r.Context(), "authUser", user))
-
-		next.ServeHTTP(w, r)
-	})
+	return user.(users.LocksmithUser), nil
 }

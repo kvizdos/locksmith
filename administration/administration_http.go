@@ -97,7 +97,9 @@ func (h AdministrationDeleteUsersHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusOK)
 }
 
-func ServeAdminPage(w http.ResponseWriter, r *http.Request) {
+type ServeAdminPage struct{}
+
+func (p ServeAdminPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	fp := filepath.Join("pages", "admin.html")

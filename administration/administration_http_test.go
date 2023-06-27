@@ -183,6 +183,10 @@ func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 	if usersList[0].CustomObject != "hello" {
 		t.Errorf("could not read custom object: %s", usersList[0].CustomObject)
 	}
+
+	if usersList[0].Role != "user" {
+		t.Errorf("did not receive role")
+	}
 }
 
 func TestDeleteUserHTTPInvalidMethod(t *testing.T) {

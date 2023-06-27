@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -19,7 +18,7 @@ func (lh testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK!"))
 }
 
-func injectTokenToDatabase(db database.DatabaseAccessor) string {
+func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 	token, _ := authentication.GenerateRandomString(64)
 	db.UpdateOne("users", map[string]interface{}{
 		"username": "kenton",
@@ -35,43 +34,32 @@ func injectTokenToDatabase(db database.DatabaseAccessor) string {
 	return token
 }
 
-func TestValidationMiddlewareNoCookiePresent(t *testing.T) {
+func TestValidateHTTPNoCookiePresent(t *testing.T) {
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"users": {},
 		},
 	}
-
-	handler := testHandler{}
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (no cookie): got %v, want %v", status, http.StatusSeeOther)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url.Path != "/login" {
-		t.Errorf("did not redirect to /login: %s", url.Path)
+	if err == nil {
+		fmt.Printf("expected to receive an error")
+		return
 	}
 }
 
-func TestValidationMiddlewareMalformedTokenNotBase64Encoded(t *testing.T) {
+func TestValidationHTTPMalformedTokenNotBase64Encoded(t *testing.T) {
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"users": {},
 		},
 	}
-
-	handler := testHandler{}
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
@@ -89,33 +77,24 @@ func TestValidationMiddlewareMalformedTokenNotBase64Encoded(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (invalid token): got %v, want %v", status, http.StatusSeeOther)
+	if err == nil {
+		t.Error("expected error")
+		return
 	}
 
-	url, _ := rr.Result().Location()
-
-	if url == nil || url.Path != "/login" {
-		if url != nil {
-			t.Errorf("did not redirect to /login: %s", url.Path)
-		} else {
-			t.Errorf("response URL is nil")
-		}
+	if err.Error() != "token could not be parsed" {
+		t.Errorf("Received incorrect error: %s", err.Error())
 	}
 }
 
-func TestValidationMiddlewareMalformedTokenBase64EncodedInvalidTokenLength(t *testing.T) {
+func TestValidationHTTPalformedTokenBase64EncodedInvalidTokenLength(t *testing.T) {
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"users": {},
 		},
 	}
-
-	handler := testHandler{}
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
@@ -135,33 +114,19 @@ func TestValidationMiddlewareMalformedTokenBase64EncodedInvalidTokenLength(t *te
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (invalid token): got %v, want %v", status, http.StatusSeeOther)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url == nil || url.Path != "/login" {
-		if url != nil {
-			t.Errorf("did not redirect to /login: %s", url.Path)
-		} else {
-			t.Errorf("response URL is nil")
-		}
+	if err.Error() != "token could not be parsed" {
+		t.Errorf("Received incorrect error: %s", err.Error())
 	}
 }
 
-func TestValidationMiddlewareMalformedTokenBase64EncodedValidLength(t *testing.T) {
+func TestValidationMiddlewareInvalidTokenUserDoesNotExist(t *testing.T) {
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"users": {},
 		},
 	}
-
-	handler := testHandler{}
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
@@ -182,22 +147,10 @@ func TestValidationMiddlewareMalformedTokenBase64EncodedValidLength(t *testing.T
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (invalid token): got %v, want %v", status, http.StatusSeeOther)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url == nil || url.Path != "/login" {
-		if url != nil {
-			t.Errorf("did not redirect to /login: %s", url.Path)
-		} else {
-			t.Errorf("response URL is nil")
-		}
+	if err.Error() != "token could not be validated" {
+		t.Errorf("Received incorrect error: %s", err.Error())
 	}
 }
 
@@ -207,8 +160,6 @@ func TestValidationMiddlewareInvalidTokenBadUsername(t *testing.T) {
 			"users": {},
 		},
 	}
-
-	handler := testHandler{}
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
@@ -236,22 +187,10 @@ func TestValidationMiddlewareInvalidTokenBadUsername(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (invalid username): got %v, want %v", status, http.StatusSeeOther)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url == nil || url.Path != "/login" {
-		if url != nil {
-			t.Errorf("did not redirect to /login: %s", url.Path)
-		} else {
-			t.Errorf("response URL is nil")
-		}
+	if err.Error() != "token could not be validated" {
+		t.Errorf("Received incorrect error: %s", err.Error())
 	}
 }
 
@@ -269,9 +208,7 @@ func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 		},
 	}
 
-	injectTokenToDatabase(testDb)
-
-	handler := testHandler{}
+	InjectTokenToDatabase(testDb)
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
@@ -302,22 +239,10 @@ func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (invalid username): got %v, want %v", status, http.StatusSeeOther)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url == nil || url.Path != "/login" {
-		if url != nil {
-			t.Errorf("did not redirect to /login: %s", url.Path)
-		} else {
-			t.Errorf("response URL is nil")
-		}
+	if err.Error() != "token did not validate" {
+		t.Errorf("Received incorrect error: %s", err.Error())
 	}
 }
 
@@ -335,9 +260,7 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 		},
 	}
 
-	validToken := injectTokenToDatabase(testDb)
-
-	handler := testHandler{}
+	validToken := InjectTokenToDatabase(testDb)
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
@@ -366,18 +289,15 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	user, err := ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("unexpected status code (valid token): got %v, want %v", status, http.StatusOK)
+	if err != nil {
+		t.Errorf("received unexpected error: %s", err.Error())
+		return
 	}
 
-	url, _ := rr.Result().Location()
-
-	if url != nil {
-		t.Errorf("unexpected redirect: %s", url.Path)
+	if user.Username != "kenton" {
+		t.Errorf("received invalid username")
 	}
 }
 
@@ -407,8 +327,6 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 		},
 	})
 
-	handler := testHandler{}
-
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -436,22 +354,10 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusSeeOther {
-		t.Errorf("unexpected status code (expired token): got %v, want %v", status, http.StatusSeeOther)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url == nil || url.Path != "/login" {
-		if url != nil {
-			t.Errorf("did not redirect to /login: %s", url.Path)
-		} else {
-			t.Errorf("response URL is nil")
-		}
+	if err.Error() != "token did not validate" {
+		t.Errorf("Received incorrect error: %s", err.Error())
 	}
 
 	// Validate that expired token was removed from database
@@ -506,8 +412,6 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 		},
 	})
 
-	handler := testHandler{}
-
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -535,18 +439,10 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 	}
 	req.AddCookie(&token)
 
-	rr := httptest.NewRecorder()
-	middleware := ValidateUserTokenMiddleware(handler, testDb)
-	middleware.ServeHTTP(rr, req)
+	_, err = ValidateHTTPUserToken(req, testDb)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("unexpected status code (valid token): got %v, want %v", status, http.StatusOK)
-	}
-
-	url, _ := rr.Result().Location()
-
-	if url != nil {
-		t.Errorf("unexpected redirect: %s", url.Path)
+	if err != nil {
+		t.Errorf("Received error: %s", err.Error())
 	}
 
 	// Validate that expired token was removed from database

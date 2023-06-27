@@ -131,12 +131,17 @@ export class UserTabComponent extends LitElement {
     this.userObj = JSON.parse(this.user)
   }
 
+  capitalize(string) {
+    return string.charAt(0).toUpperCase()
+      + string.slice(1)
+  }
+
   render() {
     return html`<div class="user">
               <div>
                   <div id="about">
                       <p id="username">${this.userObj["username"] || "Unknown"}</p>
-                      <p id="role">${this.userObj["role"] || "Unknown"}</p>
+                      <p id="role">${this.capitalize(this.userObj["role"] || "unknown")}</p>
                   </div>
                   <div id="info">
                       <p>Last Active: ${this.userObj["lastactive"] || "Unknown"}</p>

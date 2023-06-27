@@ -16,6 +16,14 @@ func init() {
 		},
 	}
 	AddRole(adminRole)
+
+	userRole := Role{
+		Name: "user",
+		Permissions: []string{
+			"users.delete.self",
+		},
+	}
+	AddRole(userRole)
 }
 
 type Role struct {

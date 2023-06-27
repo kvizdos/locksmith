@@ -1,10 +1,11 @@
 # todo:
 ## sorted:
 - [ ] User Roles (admin, and customizable roles)
-    - [ ] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
-        - Rename `ValidateUserTokenMiddleware` to `SecureEndpointMiddleware` which can take a custom `SecureOptions` struct to define allowed roles and such
+    - [ ] Tighten preexisting endpoint security
+    - [x] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
+        - [x] Rename `ValidateUserTokenMiddleware` to `SecureEndpointMiddleware` which can take a custom `SecureOptions` struct to define allowed roles and such
     - [ ] Let admin UI modify roles
-    - Roles will be hardcoded with privileges in the code, modifiable by changing `roles.AvailableRoles map[string][]string`
+    - [x] Roles will be hardcoded with privileges in the code, modifiable by changing `roles.AvailableRoles map[string][]string`
 - [ ] Disallow public registration flag
     - [ ] This will need a way to bootstrap the first user. Maybe push a URL to the CLI on first boot w/ an access token to register an admin user?
     - Set this on `register.RegistrationHandler{}` "DisablePublicRegistration"
