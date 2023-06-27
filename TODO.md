@@ -25,7 +25,6 @@
     - [ ] Option to require MFA on sign up
 - [ ] User lockout policy (invalid passwords, etc)
     - Set on `LoginHandler{}`
-- [ ] Password reset
 - [ ] Convert `InjectDatabaseIntoContext` into passing the DB into the `RegistrationHandler{}` and `LoginHandler{}`
 - [ ] Attach a "Device Cookie" to the token system. If a user logs in on the same device, log them out of their previous session.
 - [ ] Save last active time to Session
@@ -38,6 +37,7 @@
     - View active sessions (connected IP, lease)
         - kill a session
 ## unsorted:
+- [ ] Password reset
 - [ ] Encrypt User info
     - Allow specific User interface keys to be encrypted before getting sent to the database
         - Make this dynamic so any struct can also have explicit encryption
@@ -77,6 +77,7 @@
     - API Token validation middleware to only allow specific endpoints to be hit if the token has a role associated
 - [ ] Support user profile icons
 - [ ] Email verification for new users
+- [ ] Make roles & permissions editable on the UI
 
 ## done:
 - [x] Only allow [A-z0-9] in username

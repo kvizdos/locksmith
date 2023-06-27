@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
 	// "kv.codes/locksmith/database"
 )
 
@@ -25,11 +26,25 @@ func (r registrationRequest) HasRequiredFields() bool {
 	return !(r.Username == "" || r.Password == "")
 }
 
-type RegistrationHandler struct{}
+type RegistrationHandler struct {
+	DefaultRoleName string
+}
 
 func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	if rr.DefaultRoleName == "" {
+		fmt.Println("Registration role name must be set!")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !roles.RoleExists(rr.DefaultRoleName) {
+		fmt.Println("Registration role name is invalid!")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -92,6 +107,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		"password":    password,
 		"sessions":    []interface{}{},
 		"websessions": []interface{}{},
+		"role":        rr.DefaultRoleName,
 	})
 
 	if err != nil {

@@ -9,10 +9,68 @@ import (
 
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
 )
 
-func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
+func TestMain(m *testing.M) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+
+	m.Run()
+
+	roles.AVAILABLE_ROLES = map[string][]string{}
+}
+
+func TestRegistrationHandlerMissingRole(t *testing.T) {
 	handler := RegistrationHandler{}
+
+	// Test Missing Username
+	payload := `{"username": "kvizdos", "password": "password123"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestRegistrationHandlerInvalidRole(t *testing.T) {
+	handler := RegistrationHandler{
+		DefaultRoleName: "not-set",
+	}
+
+	// Test Missing Username
+	payload := `{"username": "kvizdos", "password": "password123"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
 
 	// Test Missing Username
 	payload := `{"password": "password123"}`
@@ -60,7 +118,9 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{}
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
 
 	payload := `{"username": "kenton", "password": "password123"}`
 
@@ -86,7 +146,9 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{}
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
 
 	payload := `{"username": "kenton", "password": "password123"}`
 
@@ -134,7 +196,9 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{}
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
 
 	payload := `{"username": "<i want xss>!", "password": "password123"}`
 

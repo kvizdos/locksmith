@@ -23,6 +23,8 @@ type LocksmithUserInterface interface {
 	// with less sensitive information
 	ToPublic() (PublicLocksmithUserInterface, error)
 
+	GetRole() string
+
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
 	WebAuthnName() string
@@ -55,6 +57,7 @@ type PublicLocksmithUser struct {
 	Username           string `json:"username"`
 	ActiveSessionCount int    `json:"sessions"`
 	LastActive         int64  `json:"lastActive"`
+	Role               string `json:"role"`
 }
 
 // Convert a LocksmithUser{} into
@@ -66,6 +69,7 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 	publicUser.ActiveSessionCount = len(user.GetPasswordSessions())
 	publicUser.ID = user.GetID()
 	publicUser.LastActive = -1
+	publicUser.Role = user.GetRole()
 
 	return publicUser, nil
 }
@@ -76,6 +80,11 @@ type LocksmithUser struct {
 	PasswordInfo     authentication.PasswordInfo      `json:"-" bson:"password"`
 	WebAuthnSessions []webauthn.SessionData           `json:"-" bson:"websessions"`
 	PasswordSessions []authentication.PasswordSession `json:"-" bson:"sessions"`
+	Role             string                           `json:"role" bson:"role"`
+}
+
+func (u LocksmithUser) GetRole() string {
+	return u.Role
 }
 
 func (u LocksmithUser) ToPublic() (PublicLocksmithUserInterface, error) {
