@@ -6,7 +6,25 @@ import (
 
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
 )
+
+func TestMain(m *testing.M) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+		"user": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+
+	m.Run()
+
+	roles.AVAILABLE_ROLES = map[string][]string{}
+}
 
 func pushSession(db database.DatabaseAccessor) {
 	db.UpdateOne("users", map[string]interface{}{
@@ -34,6 +52,7 @@ func TestValidateInvalidUsername(t *testing.T) {
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"sessions": []interface{}{},
+					"role":     "user",
 				},
 			},
 		},
@@ -65,6 +84,7 @@ func TestValidateInvalidToken(t *testing.T) {
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"sessions": []interface{}{},
+					"role":     "user",
 				},
 			},
 		},
@@ -98,6 +118,7 @@ func TestValidateValidToken(t *testing.T) {
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"sessions": []interface{}{},
+					"role":     "user",
 				},
 			},
 		},

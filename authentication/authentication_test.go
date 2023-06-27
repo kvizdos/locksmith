@@ -2,7 +2,26 @@ package authentication
 
 import (
 	"testing"
+
+	"kv.codes/locksmith/roles"
 )
+
+func TestMain(m *testing.M) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+		"user": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+
+	m.Run()
+
+	roles.AVAILABLE_ROLES = map[string][]string{}
+}
 
 func TestValidateMalformedLocksmithPasswordNoPasswordOrSalt(t *testing.T) {
 	password := PasswordInfo{}

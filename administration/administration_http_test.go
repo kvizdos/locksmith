@@ -10,8 +10,26 @@ import (
 
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
 	"kv.codes/locksmith/users"
 )
+
+func TestMain(m *testing.M) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+		"user": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+
+	m.Run()
+
+	roles.AVAILABLE_ROLES = map[string][]string{}
+}
 
 func TestListUsersInvalidMethod(t *testing.T) {
 	handler := AdministrationListUsersHandler{}
@@ -55,6 +73,7 @@ func TestListUsersReceivesValidJSON(t *testing.T) {
 						Password: "testpassword",
 						Salt:     "testsalt",
 					},
+					"role":     "user",
 					"sessions": sessions,
 				},
 			},
@@ -120,6 +139,7 @@ func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 						Salt:     "testsalt",
 					},
 					"sessions":     sessions,
+					"role":         "user",
 					"customObject": "hello",
 				},
 			},
@@ -211,6 +231,7 @@ func TestDeleteUserHTTPNonexistentUser(t *testing.T) {
 						Salt:     "testsalt",
 					},
 					"sessions":     []interface{}{},
+					"role":         "user",
 					"customObject": "hello",
 				},
 			},
@@ -248,6 +269,7 @@ func TestDeleteUserHTTP(t *testing.T) {
 						Salt:     "testsalt",
 					},
 					"sessions":     []interface{}{},
+					"role":         "user",
 					"customObject": "hello",
 				},
 			},

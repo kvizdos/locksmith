@@ -11,8 +11,26 @@ import (
 
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
 	"kv.codes/locksmith/users"
 )
+
+func TestMain(m *testing.M) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+		"user": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+
+	m.Run()
+
+	roles.AVAILABLE_ROLES = map[string][]string{}
+}
 
 func TestLoginHandlerMissingBodyParams(t *testing.T) {
 	handler := LoginHandler{}
@@ -86,6 +104,7 @@ func TestLoginHandlerInvalidPassword(t *testing.T) {
 					"username": "kenton",
 					"password": testPassword,
 					"sessions": []interface{}{},
+					"role":     "user",
 				},
 			},
 		},
@@ -120,6 +139,7 @@ func TestLoginHandlerValidPassword(t *testing.T) {
 					"username": "kenton",
 					"password": testPassword,
 					"sessions": []interface{}{},
+					"role":     "user",
 				},
 			},
 		},

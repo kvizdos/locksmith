@@ -4,7 +4,25 @@ import (
 	"testing"
 
 	"kv.codes/locksmith/authentication"
+	"kv.codes/locksmith/roles"
 )
+
+func TestMain(m *testing.M) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+		"user": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+
+	m.Run()
+
+	roles.AVAILABLE_ROLES = map[string][]string{}
+}
 
 func TestLoadLocksmithUserFromMap(t *testing.T) {
 	var sessions []interface{}
@@ -31,6 +49,7 @@ func TestLoadLocksmithUserFromMap(t *testing.T) {
 			"salt":     "salthere",
 		},
 		"sessions": sessions,
+		"role":     "user",
 	}
 
 	var user LocksmithUserInterface
@@ -94,6 +113,7 @@ func TestLoadCustomUserFromMap(t *testing.T) {
 			"salt":     "salthere",
 		},
 		"sessions":     []interface{}{},
+		"role":         "user",
 		"customObject": "helloworld",
 	}
 
@@ -145,6 +165,7 @@ func TestConvertUserToPublicUser(t *testing.T) {
 				ExpiresAt: 0,
 			},
 		},
+		Role: "user",
 	}
 
 	convertedUser, err := PublicLocksmithUser{}.FromRegular(privateUser)

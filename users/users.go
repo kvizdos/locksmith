@@ -8,6 +8,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
 )
 
 type LocksmithUserInterface interface {
@@ -23,7 +24,7 @@ type LocksmithUserInterface interface {
 	// with less sensitive information
 	ToPublic() (PublicLocksmithUserInterface, error)
 
-	GetRole() string
+	GetRole() (roles.Role, error)
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -65,11 +66,17 @@ type PublicLocksmithUser struct {
 func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLocksmithUserInterface, error) {
 	publicUser := PublicLocksmithUser{}
 
+	role, err := user.GetRole()
+
+	if err != nil {
+		return PublicLocksmithUser{}, err
+	}
+
 	publicUser.Username = user.GetUsername()
 	publicUser.ActiveSessionCount = len(user.GetPasswordSessions())
 	publicUser.ID = user.GetID()
 	publicUser.LastActive = -1
-	publicUser.Role = user.GetRole()
+	publicUser.Role = role.Name
 
 	return publicUser, nil
 }
@@ -83,8 +90,14 @@ type LocksmithUser struct {
 	Role             string                           `json:"role" bson:"role"`
 }
 
-func (u LocksmithUser) GetRole() string {
-	return u.Role
+func (u LocksmithUser) GetRole() (roles.Role, error) {
+	role, err := roles.GetRole(u.Role)
+
+	if err != nil {
+		return roles.Role{}, err
+	}
+
+	return role, nil
 }
 
 func (u LocksmithUser) ToPublic() (PublicLocksmithUserInterface, error) {
@@ -131,6 +144,7 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 	*writeTo = LocksmithUser{
 		ID:               user["id"].(string),
 		Username:         user["username"].(string),
+		Role:             user["role"].(string),
 		PasswordInfo:     passinfo,
 		PasswordSessions: sessions,
 	}
