@@ -69,6 +69,14 @@ func (h AdministrationDeleteUsersHandler) ServeHTTP(w http.ResponseWriter, r *ht
 		return
 	}
 
+	user, ok := r.Context().Value("authUser").(users.LocksmithUser)
+
+	if !ok {
+		fmt.Println("Delete users endpoint is required to be wrapped in SecureEndpointHTTPMiddleware()")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		// handle the error
@@ -82,6 +90,25 @@ func (h AdministrationDeleteUsersHandler) ServeHTTP(w http.ResponseWriter, r *ht
 
 	if err != nil || (err == nil && delReq.Username == "") {
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	role, err := user.GetRole()
+
+	if err != nil {
+		// handle the error
+		fmt.Println("Error parsing role:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if delReq.Username != user.GetUsername() {
+		if !role.HasPermission("user.delete.other") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	} else if !role.HasPermission("user.delete.self") {
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 

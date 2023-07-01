@@ -1,10 +1,10 @@
 # todo:
 ## sorted:
-- [ ] User Roles (admin, and customizable roles)
-    - [ ] Tighten preexisting endpoint security
+- [x] User Roles (admin, and customizable roles)
+    - [x] Tighten preexisting endpoint security
+        - Only let users delete themselves unless they have `users.delete.others` permission
     - [x] Middleware to validate required roles (maybe through context that gets read by token validator middleware?)
         - [x] Rename `ValidateUserTokenMiddleware` to `SecureEndpointMiddleware` which can take a custom `SecureOptions` struct to define allowed roles and such
-    - [ ] Let admin UI modify roles
     - [x] Roles will be hardcoded with privileges in the code, modifiable by changing `roles.AvailableRoles map[string][]string`
 - [ ] Disallow public registration flag
     - [ ] This will need a way to bootstrap the first user. Maybe push a URL to the CLI on first boot w/ an access token to register an admin user?
@@ -38,6 +38,9 @@
     - View active sessions (connected IP, lease)
         - kill a session
 ## unsorted:
+- [ ] Let admin UI modify roles + permissions for each user
+- [ ] max login sessions
+    - delete oldest ones limit is reached
 - [ ] Password reset
 - [ ] Encrypt User info
     - Allow specific User interface keys to be encrypted before getting sent to the database

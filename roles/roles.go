@@ -10,9 +10,9 @@ func init() {
 		Name: "admin",
 		Permissions: []string{
 			"view.ls-admin",
-			"users.delete.self",
-			"users.delete.other",
-			"users.list",
+			"user.delete.self",
+			"user.delete.other",
+			"users.list.all",
 		},
 	}
 	AddRole(adminRole)
@@ -20,7 +20,7 @@ func init() {
 	userRole := Role{
 		Name: "user",
 		Permissions: []string{
-			"users.delete.self",
+			"user.delete.self",
 		},
 	}
 	AddRole(userRole)

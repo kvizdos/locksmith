@@ -70,7 +70,7 @@ func main() {
 	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
 
 	listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
-		MinimalPermissions: []string{"users.list"},
+		MinimalPermissions: []string{"users.list.all"},
 	})
 	deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
 
