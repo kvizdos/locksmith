@@ -13,7 +13,7 @@ func TestInviteUserInvalidRole(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "email@email.com", "fakerole")
+	_, err := InviteUser(testDb, "email@email.com", "fakerole", "random-uid")
 
 	if err.Error() != "invalid role" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -27,7 +27,7 @@ func TestInviteUserInvalidEmail(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "malformed.email@", "user")
+	_, err := InviteUser(testDb, "malformed.email@", "user", "random-uid")
 
 	if err.Error() != "invalid email address" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -50,7 +50,7 @@ func TestInviteUserEmailExistsAsRegisteredUser(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "email@email.com", "user")
+	_, err := InviteUser(testDb, "email@email.com", "user", "random-uid")
 
 	if err.Error() != "email already registered" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -79,7 +79,7 @@ func TestInviteUserEmailExistsAsInvite(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "new@email.com", "user")
+	_, err := InviteUser(testDb, "new@email.com", "user", "random-uid")
 
 	if err.Error() != "email already invited" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -108,7 +108,7 @@ func TestInviteUserSuccess(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "new@email.com", "user")
+	_, err := InviteUser(testDb, "new@email.com", "user", "random-uid")
 
 	if err != nil {
 		t.Errorf("received unexpected error message: %s", err.Error())

@@ -10,6 +10,7 @@ func init() {
 		Name: "admin",
 		Permissions: []string{
 			"view.ls-admin",
+			"user.invite",
 			"user.delete.self",
 			"user.delete.other",
 			"users.list.all",

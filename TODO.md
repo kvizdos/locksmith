@@ -1,7 +1,9 @@
 # todo:
 ## sorted:
 - [ ] Create users in the Admin UI, they'll need to setup their own password
-    - [ ] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
+    - [x] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
+    - [ ] HTTP endpoint to call InviteUser from admin dashboard
+    - [ ] Admin UI integration to invite users
     - This should give them a unique registration link to send to individuals.
         - [ ] Register using custom key on /register endpoint (e.g. ?invite=STRING). Hard code to the email into the registration page where it cannot be changed.
 - [ ] Disallow public registration flag

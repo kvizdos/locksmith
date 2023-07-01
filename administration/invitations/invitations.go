@@ -11,16 +11,20 @@ import (
 )
 
 type Invitation struct {
-	Code   string `json:"code"`
-	Email  string `json:"email"`
-	SentAt int64  `json:"sentAt"` // time that invite was sent
+	Code      string `json:"code"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	InvitedBy string `json:"inviter"`
+	SentAt    int64  `json:"sentAt"` // time that invite was sent
 }
 
 func (i Invitation) ToMap() map[string]interface{} {
 	return map[string]interface{}{
-		"code":   i.Code,
-		"email":  i.Email,
-		"sentAt": i.SentAt,
+		"code":    i.Code,
+		"email":   i.Email,
+		"sentAt":  i.SentAt,
+		"role":    i.Role,
+		"inviter": i.InvitedBy,
 	}
 }
 
@@ -28,9 +32,14 @@ func (i Invitation) ToMap() map[string]interface{} {
 // import users (think through migration, importing, etc). It returns
 // a string and an error, where the string is the "invite code" used
 // to register an account.
-func InviteUser(db database.DatabaseAccessor, email string, role string) (string, error) {
+// InvitedBy is the UID of the user who invited this email.
+func InviteUser(db database.DatabaseAccessor, email string, role string, invitedBy string) (string, error) {
 	if !roles.RoleExists(role) {
 		return "", fmt.Errorf("invalid role")
+	}
+
+	if invitedBy == "" {
+		return "", fmt.Errorf("invitedBy is required")
 	}
 
 	emailPattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
@@ -66,6 +75,7 @@ func InviteUser(db database.DatabaseAccessor, email string, role string) (string
 		Code:   inviteCode,
 		Email:  email,
 		SentAt: time.Now().Unix(),
+		Role:   role,
 	}
 
 	_, err = db.InsertOne("invites", newInvite.ToMap())
