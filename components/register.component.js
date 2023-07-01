@@ -24,8 +24,8 @@ export class RegisterFormComponent extends LitElement {
     div.input input {
       font-size: 1rem;
       padding: 0.5rem;
-      border-radius: 0.35rem;
-      border: 2px solid #c9ccd4;
+      border-radius: 0.25rem;
+      border: 1px solid #c9ccd4;
     }
 
     div.input.error input {
@@ -33,17 +33,19 @@ export class RegisterFormComponent extends LitElement {
     }
 
     button {
+      margin-top: 0.5rem;
       border: 0;
       color: white;
       display: flex;
       gap: 0.65rem;
       background-color: var(--color);
-      border-radius: 0.35rem;
+      border-radius: 0.25rem;
       padding: 0.65rem 1rem 0.65rem 1rem;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: 200ms;
+      font-size: 1rem;
     }
 
     p#error {
@@ -167,7 +169,7 @@ export class RegisterFormComponent extends LitElement {
         this.registrationSuccess = true;
         setTimeout(() => {
           window.location.href = "/login"
-        }, 4000)
+        }, 1000)
         break;
       case 409:
         this.registrationError = 2;
@@ -193,15 +195,15 @@ export class RegisterFormComponent extends LitElement {
     return html`<div id="root">
       <div class="input${this.registrationError == 2 ? " error" : ''}">
         <label for="username">Username</label>
-        <input id="username" type="text" placeholder="Username" value="${this.username}" @input="${this.updateUsername}" />
+        <input id="username" type="text" placeholder="Username" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
       </div>
       <div class="input">
           <label for="password">Password</label>
-          <input id="password" type="password" placeholder="Password" value="${this.password}" @input="${this.updatePassword}" />
+          <input id="password" type="password" placeholder="Password" autocorrect="off" autocapitalize="off" value="${this.password}" @input="${this.updatePassword}" />
       </div>
       <div class="input${this.registrationError == 1 ? " error" : ''}">
           <label for="confPassword">Confirm Password</label>
-          <input id="confPassword" type="password" placeholder="Confirm Password" value="${this.confirmedPassword}" @input="${this.updateConfirmedPassword}" />
+          <input id="confPassword" type="password" placeholder="Confirm Password" autocorrect="off" autocapitalize="off" value="${this.confirmedPassword}" @input="${this.updateConfirmedPassword}" />
       </div>
 
       <button style="--color: ${this.backgroundColor};" @click="${this.register}">Register</button>

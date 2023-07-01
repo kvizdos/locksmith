@@ -5,7 +5,7 @@ export class SignInComponent extends LitElement {
       display: flex;
       gap: 0.65rem;
       background-color: var(--color);
-      border-radius: 0.35rem;
+      border-radius: 0.25rem;
       padding: 0.65rem 1rem 0.65rem 1rem;
       align-items: center;
       justify-content: center;
@@ -157,8 +157,8 @@ export class LoginFormComponent extends LitElement {
     div.input input {
       font-size: 1rem;
       padding: 0.5rem;
-      border-radius: 0.35rem;
-      border: 2px solid #c9ccd4;
+      border-radius: 0.25rem;
+      border: 1px solid #c9ccd4;
     }
 
     div.input.error input {
@@ -177,6 +177,10 @@ export class LoginFormComponent extends LitElement {
       padding: 0;
       margin: 0;
       text-align: center;
+    }
+
+    sign-in {
+      margin-top: 0.5rem;
     }
     `;
 
@@ -285,12 +289,12 @@ export class LoginFormComponent extends LitElement {
     return html`<div id="root">
       <div class="input">
         <label for="username">Username</label>
-        <input id="username" type="text" placeholder="Username" value="${this.username}" @input="${this.updateUsername}" />
+        <input id="username" type="text" placeholder="Username" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
       </div>
       ${this.stage == 0 ? html`
       <div class="input">
           <label for="password">Password</label>
-          <input id="password" type="password" placeholder="Password" value="${this.password}" @input="${this.updatePassword}" />
+          <input id="password" type="password" placeholder="Password" autocorrect="off" autocapitalize="off" value="${this.password}" @input="${this.updatePassword}" />
         </div>
         ` : ""}
       <sign-in backgroundColor="${this.backgroundColor}" stage="2" @next-stage=${this.stageChange} @click=${this.signin}></sign-in>
