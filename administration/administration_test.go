@@ -37,6 +37,7 @@ func TestListUsersOneUser(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": testPassword,
 					"sessions": []interface{}{},
 					"role":     "user",
@@ -67,6 +68,7 @@ func TestListUsersMultipleUsers(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": testPassword,
 					"sessions": []interface{}{},
 					"role":     "user",
@@ -74,6 +76,7 @@ func TestListUsersMultipleUsers(t *testing.T) {
 				"a2bHHs4L-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "a2bHHs4L-22a7-493f-b228-028842e09a05",
 					"username": "bob",
+					"email":    "email@email.com",
 					"password": testPassword,
 					"sessions": []interface{}{},
 					"role":     "user",
@@ -153,6 +156,7 @@ func TestListUsersOneUserCustomStruct(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":           "c8531661-22a7-493f-b228-028842e09a05",
 					"username":     "kenton",
+					"email":        "email@email.com",
 					"password":     testPassword,
 					"sessions":     []interface{}{},
 					"role":         "user",
@@ -215,6 +219,7 @@ func TestDeleteUser(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": "password",
 					"sessions": []interface{}{},
 					"role":     "user",

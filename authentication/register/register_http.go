@@ -20,10 +20,11 @@ import (
 type registrationRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 func (r registrationRequest) HasRequiredFields() bool {
-	return !(r.Username == "" || r.Password == "")
+	return !(r.Username == "" || r.Password == "" || r.Email == "")
 }
 
 type RegistrationHandler struct {
@@ -93,6 +94,15 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	_, emailTaken := db.FindOne("users", map[string]interface{}{
+		"email": registrationReq.Email,
+	})
+
+	if emailTaken {
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
+
 	password, err := authentication.CompileLocksmithPassword(registrationReq.Password)
 
 	if err != nil {
@@ -105,6 +115,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		"id":          uuid.New().String(),
 		"username":    registrationReq.Username,
 		"password":    password,
+		"email":       registrationReq.Email,
 		"sessions":    []interface{}{},
 		"websessions": []interface{}{},
 		"role":        rr.DefaultRoleName,

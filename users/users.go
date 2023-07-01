@@ -38,6 +38,7 @@ type LocksmithUserInterface interface {
 
 	// Getters
 	GetUsername() string
+	GetEmail() string
 	GetID() string
 	GetPasswordInfo() authentication.PasswordInfo
 	GetWebAuthnSessions() []webauthn.SessionData
@@ -56,6 +57,7 @@ type PublicLocksmithUserInterface interface {
 type PublicLocksmithUser struct {
 	ID                 string `json:"id"`
 	Username           string `json:"username"`
+	Email              string `json:"email"`
 	ActiveSessionCount int    `json:"sessions"`
 	LastActive         int64  `json:"lastActive"`
 	Role               string `json:"role"`
@@ -73,6 +75,7 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 	}
 
 	publicUser.Username = user.GetUsername()
+	publicUser.Email = user.GetEmail()
 	publicUser.ActiveSessionCount = len(user.GetPasswordSessions())
 	publicUser.ID = user.GetID()
 	publicUser.LastActive = -1
@@ -84,6 +87,7 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 type LocksmithUser struct {
 	ID               string                           `bson:"id"`
 	Username         string                           `json:"username" bson:"username"`
+	Email            string                           `json:"email" bson:"email"`
 	PasswordInfo     authentication.PasswordInfo      `json:"-" bson:"password"`
 	WebAuthnSessions []webauthn.SessionData           `json:"-" bson:"websessions"`
 	PasswordSessions []authentication.PasswordSession `json:"-" bson:"sessions"`
@@ -108,6 +112,10 @@ func (u LocksmithUser) ToPublic() (PublicLocksmithUserInterface, error) {
 
 func (u LocksmithUser) GetID() string {
 	return u.ID
+}
+
+func (u LocksmithUser) GetEmail() string {
+	return u.Email
 }
 
 func (u LocksmithUser) GetPasswordSessions() []authentication.PasswordSession {
@@ -144,6 +152,7 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 	*writeTo = LocksmithUser{
 		ID:               user["id"].(string),
 		Username:         user["username"].(string),
+		Email:            user["email"].(string),
 		Role:             user["role"].(string),
 		PasswordInfo:     passinfo,
 		PasswordSessions: sessions,

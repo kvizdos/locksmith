@@ -83,6 +83,7 @@ func TestValidateInvalidToken(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"sessions": []interface{}{},
 					"role":     "user",
 				},
@@ -117,6 +118,7 @@ func TestValidateValidToken(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"sessions": []interface{}{},
 					"role":     "user",
 				},

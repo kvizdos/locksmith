@@ -122,7 +122,42 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 		DefaultRoleName: "admin",
 	}
 
-	payload := `{"username": "kenton", "password": "password123"}`
+	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusConflict {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
+	}
+}
+
+func TestRegistrationHandlerEmailTaken(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"email":    "email@email.com",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
+
+	payload := `{"username": "kvizdos", "password": "password123", "email": "email@email.com"}`
 
 	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
 	if err != nil {
@@ -150,7 +185,7 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 		DefaultRoleName: "admin",
 	}
 
-	payload := `{"username": "kenton", "password": "password123"}`
+	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
 
 	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
 	if err != nil {
@@ -185,6 +220,10 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 
 	if len(passwordInfo.Salt) != 32 {
 		t.Errorf("Salt not a correct length, expected %d, got %d", 32, len(passwordInfo.Salt))
+	}
+
+	if user["email"] != "email@email.com" {
+		t.Error("did not receive correct email on registration")
 	}
 }
 

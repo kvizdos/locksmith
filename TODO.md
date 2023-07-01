@@ -1,5 +1,6 @@
 # todo:
 ## sorted:
+- [ ] Require email on registration
 - [ ] Create users in the Admin UI, they'll need to setup their own password
     - [ ] This should give them a unique registration link to send to individuals.
     - [ ] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
@@ -31,6 +32,7 @@
     - Let user delete account
     - View active sessions (connected IP, lease)
         - kill a session
+
 ## unsorted:
 - [ ] Let admin UI modify roles + permissions for each user
 - [ ] max login sessions

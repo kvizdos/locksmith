@@ -71,6 +71,7 @@ func TestListUsersReceivesValidJSON(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",
@@ -136,6 +137,7 @@ func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",
@@ -232,6 +234,7 @@ func TestDeleteUserHTTPNonexistentUser(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",
@@ -275,6 +278,7 @@ func TestDeleteUserSelfHTTP(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",
@@ -318,6 +322,7 @@ func TestDeleteUserSelfUnauthorizedHTTP(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",
@@ -361,6 +366,7 @@ func TestDeleteUserHTTPUnauthorizedCantDeleteOtherUsers(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",
@@ -404,6 +410,7 @@ func TestDeleteUserHTTPAuthorizedCanDeleteOtherUsers(t *testing.T) {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
+					"email":    "email@email.com",
 					"password": authentication.PasswordInfo{
 						Password: "testpassword",
 						Salt:     "testsalt",

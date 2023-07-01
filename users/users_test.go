@@ -44,6 +44,7 @@ func TestLoadLocksmithUserFromMap(t *testing.T) {
 	lsu := map[string]interface{}{
 		"id":       "c8531661-22a7-493f-b228-028842e09a05",
 		"username": "kenton",
+		"email":    "email@email.com",
 		"password": map[string]interface{}{
 			"password": "passwordhere",
 			"salt":     "salthere",
@@ -108,6 +109,7 @@ func TestLoadCustomUserFromMap(t *testing.T) {
 	lsu := map[string]interface{}{
 		"id":       "c8531661-22a7-493f-b228-028842e09a05",
 		"username": "kenton",
+		"email":    "email@email.com",
 		"password": map[string]interface{}{
 			"password": "passwordhere",
 			"salt":     "salthere",
@@ -151,6 +153,7 @@ func TestConvertUserToPublicUser(t *testing.T) {
 	privateUser := LocksmithUser{
 		ID:       "userIDhere",
 		Username: "kvizdos",
+		Email:    "email@email.com",
 		PasswordInfo: authentication.PasswordInfo{
 			Password: "password",
 			Salt:     "salt",
