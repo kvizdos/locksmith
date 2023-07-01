@@ -93,7 +93,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
-	_, usernameOrEmailTaken := db.Find("users", map[string]interface{}{
+	usernameAndEmailCheck, _ := db.Find("users", map[string]interface{}{
 		"$or": []map[string]interface{}{
 			{
 				"username": registrationReq.Username,
@@ -104,7 +104,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		},
 	})
 
-	if usernameOrEmailTaken {
+	if len(usernameAndEmailCheck) != 0 {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
