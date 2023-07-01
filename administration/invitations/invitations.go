@@ -1,0 +1,78 @@
+package invitations
+
+import (
+	"fmt"
+	"regexp"
+	"time"
+
+	"kv.codes/locksmith/authentication"
+	"kv.codes/locksmith/database"
+	"kv.codes/locksmith/roles"
+)
+
+type Invitation struct {
+	Code   string `json:"code"`
+	Email  string `json:"email"`
+	SentAt int64  `json:"sentAt"` // time that invite was sent
+}
+
+func (i Invitation) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"code":   i.Code,
+		"email":  i.Email,
+		"sentAt": i.SentAt,
+	}
+}
+
+// InviteUser() is a handler that allows applications to directly
+// import users (think through migration, importing, etc). It returns
+// a string and an error, where the string is the "invite code" used
+// to register an account.
+func InviteUser(db database.DatabaseAccessor, email string, role string) (string, error) {
+	if !roles.RoleExists(role) {
+		return "", fmt.Errorf("invalid role")
+	}
+
+	emailPattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
+	isValidemail, _ := regexp.MatchString(emailPattern, email)
+
+	if !isValidemail {
+		return "", fmt.Errorf("invalid email address")
+	}
+
+	_, alreadyRegistered := db.FindOne("users", map[string]interface{}{
+		"email": email,
+	})
+
+	if alreadyRegistered {
+		return "", fmt.Errorf("email already registered")
+	}
+
+	_, alreadyInvited := db.FindOne("invites", map[string]interface{}{
+		"email": email,
+	})
+
+	if alreadyInvited {
+		return "", fmt.Errorf("email already invited")
+	}
+
+	inviteCode, err := authentication.GenerateRandomString(96)
+
+	if err != nil {
+		return "", fmt.Errorf("error generating secure invite code: %s", err.Error())
+	}
+
+	newInvite := Invitation{
+		Code:   inviteCode,
+		Email:  email,
+		SentAt: time.Now().Unix(),
+	}
+
+	_, err = db.InsertOne("invites", newInvite.ToMap())
+
+	if err != nil {
+		return "", fmt.Errorf("unable to insert invite into database: %s", err.Error())
+	}
+
+	return inviteCode, nil
+}

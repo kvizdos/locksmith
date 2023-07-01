@@ -1,9 +1,9 @@
 # todo:
 ## sorted:
-- [ ] Require email on registration
 - [ ] Create users in the Admin UI, they'll need to setup their own password
-    - [ ] This should give them a unique registration link to send to individuals.
     - [ ] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
+    - This should give them a unique registration link to send to individuals.
+        - [ ] Register using custom key on /register endpoint (e.g. ?invite=STRING). Hard code to the email into the registration page where it cannot be changed.
 - [ ] Disallow public registration flag
     - [ ] This will need a way to bootstrap the first user. Maybe push a URL to the CLI on first boot w/ an access token to register an admin user?
     - Set this on `register.RegistrationHandler{}` "DisablePublicRegistration"
@@ -78,8 +78,10 @@
 - [ ] Support user profile icons
 - [ ] Email verification for new users
 - [ ] Make roles & permissions editable on the UI
+- [ ] Store a "preferred language" for each user for i18n
 
 ## done:
+- [x] Require email on registration
 - [x] Only allow [A-z0-9] in username
 - [x] Save token as cookie
 - [x] Save username with token in cookie
