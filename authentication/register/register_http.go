@@ -83,22 +83,28 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	db := r.Context().Value("database").(database.DatabaseAccessor)
+	emailPattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
+	isValidemail, _ := regexp.MatchString(emailPattern, registrationReq.Email)
 
-	_, usernameTaken := db.FindOne("users", map[string]interface{}{
-		"username": registrationReq.Username,
-	})
-
-	if usernameTaken {
-		w.WriteHeader(http.StatusConflict)
+	if !isValidemail {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	_, emailTaken := db.FindOne("users", map[string]interface{}{
-		"email": registrationReq.Email,
+	db := r.Context().Value("database").(database.DatabaseAccessor)
+
+	_, usernameOrEmailTaken := db.Find("users", map[string]interface{}{
+		"$or": []map[string]interface{}{
+			{
+				"username": registrationReq.Username,
+			},
+			{
+				"email": registrationReq.Email,
+			},
+		},
 	})
 
-	if emailTaken {
+	if usernameOrEmailTaken {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}

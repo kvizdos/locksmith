@@ -91,6 +91,12 @@ export class RegisterFormComponent extends LitElement {
     this.username = e.srcElement.value;
     e.srcElement.parentElement.classList.remove("error")
     e.srcElement.setCustomValidity("")
+
+    if (this.registrationError == 2) {
+      const el = this.shadowRoot.querySelector("#email")
+      el.parentElement.classList.remove("error")
+      el.parentElement.setCustomValidity("")
+    }
   }
 
   updatePassword(e) {
@@ -107,16 +113,56 @@ export class RegisterFormComponent extends LitElement {
 
   updateEmail(e) {
     this.email = e.srcElement.value;
+    e.srcElement.parentElement.classList.remove("error")
+    e.srcElement.setCustomValidity("")
+  }
+
+  isValidUsername(input) {
+    const pattern = /^[a-zA-Z0-9]+$/;
+    return pattern.test(input);
+  }
+
+  isValidEmail(email) {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(email);
   }
 
   register() {
+    let fail = false;
+
     this.username = this.username.trim()
     if (this.username.length == 0) {
       const input = this.shadowRoot.getElementById("username")
       input.setCustomValidity("Please enter a username")
       input.reportValidity()
       input.parentElement.classList.add("error")
+      fail = true;
+    } else if (!this.isValidUsername(this.username)) {
+      const input = this.shadowRoot.getElementById("username")
+      input.setCustomValidity("Username can only contain alphanumerical characters.")
+      input.reportValidity()
+      input.parentElement.classList.add("error")
+      fail = true;
     }
+
+    this.email = this.email.trim()
+
+    if (this.email.length == 0) {
+      const input = this.shadowRoot.getElementById("email")
+      if (this.username.length != 0) {
+        input.setCustomValidity("Please enter your email")
+        input.reportValidity()
+      }
+      input.parentElement.classList.add("error")
+      fail = true;
+    } else if (!this.isValidEmail(this.email)) {
+      const input = this.shadowRoot.getElementById("email")
+      input.setCustomValidity("Invalid email")
+      input.reportValidity()
+      input.parentElement.classList.add("error")
+      fail = true;
+    }
+
     this.password = this.password.trim()
     this.confirmedPassword = this.confirmedPassword.trim()
 
@@ -125,11 +171,9 @@ export class RegisterFormComponent extends LitElement {
       return
     }
 
-    let fail = false;
-
     if (this.password.length == 0) {
       const input = this.shadowRoot.getElementById("password")
-      if (this.username.length != 0) {
+      if (this.email.length != 0) {
         input.setCustomValidity("Please enter a password")
         input.reportValidity()
       }
@@ -154,7 +198,7 @@ export class RegisterFormComponent extends LitElement {
     const options = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: `{"username":"${this.username}","password":"${this.password}"}`
+      body: `{"username":"${this.username}","password":"${this.password}","email":"${this.email}"}`
     };
 
     fetch('/api/register', options)
@@ -187,7 +231,7 @@ export class RegisterFormComponent extends LitElement {
       case 1:
         return "Passwords do not match."
       case 2:
-        return "Username taken."
+        return "Username or email taken."
     }
   }
 
@@ -196,6 +240,10 @@ export class RegisterFormComponent extends LitElement {
       <div class="input${this.registrationError == 2 ? " error" : ''}">
         <label for="username">Username</label>
         <input id="username" type="text" placeholder="Username" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
+      </div>
+      <div class="input${this.registrationError == 2 ? " error" : ''}">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="Email" autocorrect="off" autocapitalize="off" value="${this.email}" @input="${this.updateEmail}" />
       </div>
       <div class="input">
           <label for="password">Password</label>

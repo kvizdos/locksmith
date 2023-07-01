@@ -150,27 +150,44 @@ func (db TestDatabase) FindOne(table string, query map[string]interface{}) (inte
 func (db TestDatabase) Find(table string, query map[string]interface{}) ([]interface{}, bool) {
 	if tableData, ok := db.Tables[table]; ok {
 		var results []interface{}
-		for _, row := range tableData {
-			match := true
-			for queryKey, queryValue := range query {
-				if rowData, ok := row.(map[string]interface{}); ok {
-					if fieldValue, ok := rowData[queryKey]; ok && fieldValue != queryValue {
+
+		// Special case for $or query
+		if orQueries, ok := query["$or"]; ok {
+			if orQueriesList, ok := orQueries.([]map[string]interface{}); ok {
+				for _, orQuery := range orQueriesList {
+					if result, ok := db.FindOne(table, orQuery); ok {
+						results = append(results, result)
+					}
+				}
+
+				if len(results) > 0 {
+					return results, true
+				}
+			}
+		} else {
+			// Regular query
+			for _, row := range tableData {
+				match := true
+				for queryKey, queryValue := range query {
+					if rowData, ok := row.(map[string]interface{}); ok {
+						if fieldValue, ok := rowData[queryKey]; ok && fieldValue != queryValue {
+							match = false
+							break
+						}
+					} else {
 						match = false
 						break
 					}
-				} else {
-					match = false
-					break
+				}
+
+				if match {
+					results = append(results, row)
 				}
 			}
 
-			if match {
-				results = append(results, row)
+			if len(results) > 0 {
+				return results, true
 			}
-		}
-
-		if len(results) > 0 {
-			return results, true
 		}
 	}
 

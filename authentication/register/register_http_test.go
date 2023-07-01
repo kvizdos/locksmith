@@ -174,10 +174,52 @@ func TestRegistrationHandlerEmailTaken(t *testing.T) {
 	}
 }
 
+func TestRegistrationHandlerEmailInvalid(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"email":    "email@email.com",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
+
+	payload := `{"username": "kvizdos", "password": "password123", "email": "email@ema"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+	}
+}
+
 func TestRegistrationHandlerSuccess(t *testing.T) {
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
-			"users": {},
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
 		},
 	}
 
