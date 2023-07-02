@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -20,12 +21,18 @@ func (lh testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 	token, _ := authentication.GenerateRandomString(64)
+
+	hasher := sha256.New()
+	hasher.Write([]byte(token))
+	hashedCode := hasher.Sum(nil)
+	hashedToken := fmt.Sprintf("%x", hashedCode)
+
 	db.UpdateOne("users", map[string]interface{}{
 		"username": "kenton",
 	}, map[database.DatabaseUpdateActions]map[string]interface{}{
 		database.PUSH: {
 			"sessions": authentication.PasswordSession{
-				Token:     token,
+				Token:     hashedToken,
 				ExpiresAt: time.Now().Unix() + 60000,
 			},
 		},
@@ -392,29 +399,7 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 		},
 	}
 
-	tokenString, _ := authentication.GenerateRandomString(64)
-	testDb.UpdateOne("users", map[string]interface{}{
-		"username": "kenton",
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
-		database.PUSH: {
-			"sessions": authentication.PasswordSession{
-				Token:     tokenString,
-				ExpiresAt: time.Now().Unix() - 5000,
-			},
-		},
-	})
-
-	tokenString, _ = authentication.GenerateRandomString(64)
-	testDb.UpdateOne("users", map[string]interface{}{
-		"username": "kenton",
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
-		database.PUSH: {
-			"sessions": authentication.PasswordSession{
-				Token:     tokenString,
-				ExpiresAt: time.Now().Unix() + 50000,
-			},
-		},
-	})
+	tokenString := InjectTokenToDatabase(testDb)
 
 	req, err := http.NewRequest("GET", "/app", nil)
 	if err != nil {

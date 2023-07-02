@@ -20,11 +20,9 @@ type Invitation struct {
 }
 
 func (i Invitation) Expire(db database.DatabaseAccessor) {
-	deleted, err := db.DeleteOne("invites", map[string]interface{}{
+	db.DeleteOne("invites", map[string]interface{}{
 		"code": i.Code,
 	})
-
-	fmt.Println(deleted, err)
 }
 
 func (i Invitation) ToMap() map[string]interface{} {
@@ -110,7 +108,6 @@ func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, e
 	hasher.Write([]byte(code))
 	hashedCode := hasher.Sum(nil)
 
-	fmt.Printf("CODE: %x\n", hashedCode)
 	rawInvite, inviteFound := db.FindOne("invites", map[string]interface{}{
 		"code": fmt.Sprintf("%x", hashedCode),
 	})

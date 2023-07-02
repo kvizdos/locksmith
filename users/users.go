@@ -1,6 +1,7 @@
 package users
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -197,6 +198,13 @@ func (u LocksmithUser) GenerateCookieValueFromSession(session authentication.Pas
 }
 
 func (u LocksmithUser) SavePasswordSession(session authentication.PasswordSession, db database.DatabaseAccessor) error {
+	hasher := sha256.New()
+	hasher.Write([]byte(session.Token))
+	hashedCode := hasher.Sum(nil)
+	hashedToken := fmt.Sprintf("%x", hashedCode)
+
+	session.Token = hashedToken
+
 	_, err := db.UpdateOne("users", map[string]interface{}{
 		"username": u.Username,
 	}, map[database.DatabaseUpdateActions]map[string]interface{}{
@@ -213,11 +221,16 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 
 	nonexpiredTokens := []authentication.PasswordSession{}
 
+	hasher := sha256.New()
+	hasher.Write([]byte(token))
+	hashedCode := hasher.Sum(nil)
+	hashedToken := fmt.Sprintf("%x", hashedCode)
+
 	for _, session := range u.PasswordSessions {
 		// Maybe renew the token here if its getting soon to expiring..
 		if !session.IsExpired() {
 			nonexpiredTokens = append(nonexpiredTokens, session)
-			if session.Token == token {
+			if session.Token == hashedToken {
 				found = true
 			}
 		}
@@ -240,7 +253,6 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 			},
 		})
 	}
-	// fmt.Printf("%d - %d\n", len(nonexpiredTokens), len(u.PasswordSessions))
 
 	return found
 }

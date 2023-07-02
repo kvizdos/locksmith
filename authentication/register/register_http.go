@@ -107,7 +107,6 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	var invite invitations.Invitation
 	if len(registrationReq.Code) > 0 {
 		if len(registrationReq.Code) != 96 {
-			fmt.Println("here")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

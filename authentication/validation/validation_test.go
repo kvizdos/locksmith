@@ -1,6 +1,8 @@
 package validation
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"testing"
 	"time"
 
@@ -27,12 +29,17 @@ func TestMain(m *testing.M) {
 }
 
 func pushSession(db database.DatabaseAccessor) {
+	hasher := sha256.New()
+	hasher.Write([]byte("correct-token"))
+	hashedCode := hasher.Sum(nil)
+	hashedToken := fmt.Sprintf("%x", hashedCode)
+
 	db.UpdateOne("users", map[string]interface{}{
 		"username": "kenton",
 	}, map[database.DatabaseUpdateActions]map[string]interface{}{
 		database.PUSH: {
 			"sessions": authentication.PasswordSession{
-				Token:     "correct-token",
+				Token:     hashedToken,
 				ExpiresAt: time.Now().Unix() + 60000,
 			},
 		},

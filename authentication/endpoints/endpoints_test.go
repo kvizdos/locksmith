@@ -1,6 +1,8 @@
 package endpoints
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,8 +26,13 @@ func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 	}
 
 	token, _ := authentication.GenerateRandomString(64)
+	hasher := sha256.New()
+	hasher.Write([]byte(token))
+	hashedCode := hasher.Sum(nil)
+	hashedToken := fmt.Sprintf("%x", hashedCode)
+
 	session := authentication.PasswordSession{
-		Token:     token,
+		Token:     hashedToken,
 		ExpiresAt: time.Now().Unix() + 60000,
 	}
 	db.UpdateOne("users", map[string]interface{}{
@@ -35,6 +42,8 @@ func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 			"sessions": session,
 		},
 	})
+
+	session.Token = token
 
 	return u.GenerateCookieValueFromSession(session)
 }
@@ -84,7 +93,6 @@ func TestSecureEndpointHTTPMiddlewareInvalidPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Inject cookie..
 	cookie := http.Cookie{
 		Name:     "token",

@@ -1,8 +1,5 @@
 # todo:
 ## sorted:
-- [ ] Hash user tokens and invite tokens
-    - [x] Hash invite tokens
-    - [ ] Hash session tokens
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -77,6 +74,9 @@
 - [ ] Store a "preferred language" for each user for i18n
 
 ## done:
+- [x] Hash user tokens and invite tokens
+    - [x] Hash invite tokens
+    - [x] Hash session tokens
 - [x] Disable public registration flag
     - Bootstrapping the first user will come once password resets are enabled. It will force you to change the admin password once you login the first time.
     - [x] Set this on `register.RegistrationHandler{}` "DisablePublicRegistration"
