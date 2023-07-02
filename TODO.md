@@ -1,11 +1,11 @@
 # todo:
 ## sorted:
-- [ ] Create users in the Admin UI, they'll need to setup their own password
+- [x] Create users in the Admin UI, they'll need to setup their own password
     - [x] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
     - [x] HTTP endpoint to call InviteUser from admin dashboard
     - [x] Admin UI integration to invite users
     - This should give them a unique registration link to send to individuals.
-        - [ ] Register using custom key on /register endpoint (e.g. ?invite=STRING). Hard code to the email into the registration page where it cannot be changed.
+        - [x] Register using custom key on /register endpoint (e.g. ?invite=STRING). Hard code to the email into the registration page where it cannot be changed.
 - [ ] Hash user tokens and invite tokens
 - [ ] Disallow public registration flag
     - [ ] This will need a way to bootstrap the first user. Maybe push a URL to the CLI on first boot w/ an access token to register an admin user?

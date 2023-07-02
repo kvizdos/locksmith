@@ -71,6 +71,8 @@ export class RegisterFormComponent extends LitElement {
     email: { type: String },
     registrationError: { type: Number },
     registrationSuccess: { type: Boolean },
+    emailDisabled: { type: Boolean },
+    code: { type: this.toString },
   };
 
   constructor() {
@@ -81,6 +83,8 @@ export class RegisterFormComponent extends LitElement {
     this.confirmedPassword = ""
     this.email = ""
     this.registrationError = 0
+    this.emailDisabled = false;
+    this.code = ""
     // 0 = none
     // 1 = password confirmation error
     // 2 = username taken
@@ -198,7 +202,7 @@ export class RegisterFormComponent extends LitElement {
     const options = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: `{"username":"${this.username}","password":"${this.password}","email":"${this.email}"}`
+      body: `{"username":"${this.username}","password":"${this.password}","email":"${this.email}","code":"${this.code}"}`
     };
 
     fetch('/api/register', options)
@@ -214,6 +218,9 @@ export class RegisterFormComponent extends LitElement {
         setTimeout(() => {
           window.location.href = "/login"
         }, 1000)
+        break;
+      case 400:
+        alert("Email does not match invitation email. Please reload and try again.")
         break;
       case 409:
         this.registrationError = 2;
@@ -243,7 +250,7 @@ export class RegisterFormComponent extends LitElement {
       </div>
       <div class="input${this.registrationError == 2 ? " error" : ''}">
         <label for="email">Email</label>
-        <input id="email" type="email" placeholder="Email" autocorrect="off" autocapitalize="off" value="${this.email}" @input="${this.updateEmail}" />
+        <input id="email" type="email" placeholder="Email" autocorrect="off" autocapitalize="off" value="${this.email}" @input="${this.updateEmail}" ?disabled=${this.emailDisabled} />
       </div>
       <div class="input">
           <label for="password">Password</label>

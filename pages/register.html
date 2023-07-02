@@ -71,7 +71,12 @@
     </header>
     <main id="subsection">
         <p>Locksmith</p>
+        {{if .HasInvite}}
+        <register-form backgroundColor="#3057cf" email="{{.Invitation.Email}}" emailDisabled
+            code="{{.Invitation.Code}}"></register-form>
+        {{else}}
         <register-form backgroundColor="#3057cf"></register-form>
+        {{end}}
     </main>
 </body>
 

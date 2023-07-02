@@ -94,7 +94,7 @@ func main() {
 
 	http.Handle("/app", serveAppPage)
 	http.HandleFunc("/login", login.ServeLoginPage)
-	http.HandleFunc("/register", register.ServeRegisterPage)
+	http.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{}, db))
 
 	http.Handle("/locksmith", serveAdminPage)
 

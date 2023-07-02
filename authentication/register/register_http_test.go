@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
@@ -296,5 +297,152 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
 		return
+	}
+}
+
+// Test invite code stuff..
+func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:           "admin",
+		DisablePublicRegistration: true,
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com", "code": "asdadsasd"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+		return
+	}
+}
+
+func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"code":    "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+					"email":   "bob@bob.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+				},
+			},
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:           "admin",
+		DisablePublicRegistration: true,
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "notbob@bob.com", "code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+		return
+	}
+}
+
+func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"code":    "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+					"email":   "bob@bob.com",
+					"role":    "admin",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+				},
+			},
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:           "admin",
+		DisablePublicRegistration: true,
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "bob@bob.com", "code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
+		return
+	}
+
+	_, correct := testDb.FindOne("users", map[string]interface{}{
+		"username": "kenton",
+		"role":     "admin",
+	})
+
+	if !correct {
+		t.Errorf("could not find user in database.")
+	}
+
+	_, shouldBeFalse := testDb.FindOne("invites", map[string]interface{}{
+		"code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+	})
+
+	if shouldBeFalse {
+		t.Errorf("invite was not expired after usage.")
 	}
 }

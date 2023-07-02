@@ -87,3 +87,29 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 
 	return inviteCode, nil
 }
+
+func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, error) {
+	if len(code) != 96 {
+		return Invitation{}, fmt.Errorf("invalid token length")
+	}
+
+	rawInvite, inviteFound := db.FindOne("invites", map[string]interface{}{
+		"code": code,
+	})
+
+	if !inviteFound {
+		return Invitation{}, fmt.Errorf("could not find token")
+	}
+
+	inv := rawInvite.(map[string]interface{})
+
+	invite := Invitation{
+		Code:      inv["code"].(string),
+		Email:     inv["email"].(string),
+		Role:      inv["role"].(string),
+		InvitedBy: inv["inviter"].(string),
+		SentAt:    inv["sentAt"].(int64),
+	}
+
+	return invite, nil
+}

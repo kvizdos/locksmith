@@ -2,6 +2,7 @@ package invitations
 
 import (
 	"testing"
+	"time"
 
 	"kv.codes/locksmith/database"
 )
@@ -113,5 +114,69 @@ func TestInviteUserSuccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("received unexpected error message: %s", err.Error())
 		return
+	}
+}
+
+func TestGetInviteCodeMalformedToken(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {},
+			"users":   {},
+		},
+	}
+
+	_, err := GetInviteFromCode(testDb, "too-short")
+
+	if err.Error() != "invalid token length" {
+		t.Errorf("received unexpected error message: %s", err.Error())
+		return
+	}
+}
+
+func TestGetInviteCodeInvalidToken(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+				},
+			},
+			"users": {},
+		},
+	}
+
+	_, err := GetInviteFromCode(testDb, "BBBBBBBBB-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M")
+
+	if err.Error() != "could not find token" {
+		t.Errorf("received unexpected error message: %s", err.Error())
+		return
+	}
+}
+
+func TestGetInviteCodeValidToken(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"email":   "kvizdos@email.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+				},
+			},
+			"users": {},
+		},
+	}
+
+	invite, err := GetInviteFromCode(testDb, "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M")
+
+	if err != nil {
+		t.Errorf("received unexpected error message: %s", err.Error())
+		return
+	}
+
+	if invite.Email != "kvizdos@email.com" {
+		t.Errorf("could not find correct email")
 	}
 }

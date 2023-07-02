@@ -6,11 +6,13 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"text/template"
 
 	"github.com/google/uuid"
+	"kv.codes/locksmith/administration/invitations"
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/database"
 	"kv.codes/locksmith/roles"
@@ -21,6 +23,7 @@ type registrationRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
+	Code     string `json:"code"`
 }
 
 func (r registrationRequest) HasRequiredFields() bool {
@@ -28,7 +31,8 @@ func (r registrationRequest) HasRequiredFields() bool {
 }
 
 type RegistrationHandler struct {
-	DefaultRoleName string
+	DefaultRoleName           string
+	DisablePublicRegistration bool
 }
 
 func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +97,29 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
+	useRole := rr.DefaultRoleName
+
+	if rr.DisablePublicRegistration || len(registrationReq.Code) > 0 {
+		if len(registrationReq.Code) != 96 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		invite, err := invitations.GetInviteFromCode(db, registrationReq.Code)
+
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if invite.Email != registrationReq.Email {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		useRole = invite.Role
+	}
+
 	usernameAndEmailCheck, _ := db.Find("users", map[string]interface{}{
 		"$or": []map[string]interface{}{
 			{
@@ -124,7 +151,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		"email":       registrationReq.Email,
 		"sessions":    []interface{}{},
 		"websessions": []interface{}{},
-		"role":        rr.DefaultRoleName,
+		"role":        useRole,
 	})
 
 	if err != nil {
@@ -133,10 +160,21 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if rr.DisablePublicRegistration || len(registrationReq.Code) > 0 {
+		db.DeleteOne("invites", map[string]interface{}{
+			"code": registrationReq.Code,
+		})
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
-func ServeRegisterPage(w http.ResponseWriter, r *http.Request) {
+type RegistrationPageHandler struct {
+	// Only allow users with an invite code to register
+	DisablePublicRegistration bool
+}
+
+func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	fp := filepath.Join("pages", "register.html")
@@ -147,10 +185,44 @@ func ServeRegisterPage(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	err = tmpl.Execute(w, nil)
+	type TemplateData struct {
+		HasInvite  bool
+		Invitation invitations.Invitation
+	}
+	inv := TemplateData{}
+
+	if len(invite) > 0 {
+		inv.HasInvite = true
+		inv.Invitation = invite[0]
+	}
+
+	err = tmpl.Execute(w, inv)
 
 	if err != nil {
 		log.Println("Error executing template :", err)
 		return
+	}
+}
+
+func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	db := r.Context().Value("database").(database.DatabaseAccessor)
+
+	myUrl, _ := url.Parse(r.RequestURI)
+	params, _ := url.ParseQuery(myUrl.RawQuery)
+
+	inviteCode := params.Get("invite")
+
+	if inviteCode != "" {
+		invite, err := invitations.GetInviteFromCode(db, inviteCode)
+
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("invalid invitation code."))
+			return
+		}
+
+		rr.servePublicHTML(w, r, invite)
+	} else {
+		rr.servePublicHTML(w, r)
 	}
 }
