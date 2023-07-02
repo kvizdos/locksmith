@@ -104,13 +104,15 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	useRole := rr.DefaultRoleName
 
+	var invite invitations.Invitation
 	if len(registrationReq.Code) > 0 {
 		if len(registrationReq.Code) != 96 {
+			fmt.Println("here")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		invite, err := invitations.GetInviteFromCode(db, registrationReq.Code)
+		invite, err = invitations.GetInviteFromCode(db, registrationReq.Code)
 
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -166,9 +168,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if len(registrationReq.Code) > 0 {
-		db.DeleteOne("invites", map[string]interface{}{
-			"code": registrationReq.Code,
-		})
+		invite.Expire(db)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -230,6 +230,8 @@ func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 			w.Write([]byte("invalid invitation code."))
 			return
 		}
+
+		invite.Code = inviteCode
 
 		rr.servePublicHTML(w, r, invite)
 	} else {

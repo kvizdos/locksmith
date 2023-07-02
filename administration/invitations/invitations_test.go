@@ -1,6 +1,8 @@
 package invitations
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"testing"
 	"time"
 
@@ -154,6 +156,10 @@ func TestGetInviteCodeInvalidToken(t *testing.T) {
 }
 
 func TestGetInviteCodeValidToken(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"invites": {
@@ -162,7 +168,7 @@ func TestGetInviteCodeValidToken(t *testing.T) {
 					"role":    "user",
 					"inviter": "a-uuid",
 					"sentAt":  time.Now().Unix(),
-					"code":    "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+					"code":    fmt.Sprintf("%x", hashedCode),
 				},
 			},
 			"users": {},

@@ -1,6 +1,8 @@
 # todo:
 ## sorted:
 - [ ] Hash user tokens and invite tokens
+    - [x] Hash invite tokens
+    - [ ] Hash session tokens
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -23,15 +25,15 @@
     - Mark device as trusted in Sessions
     - Maybe here is where we should auto-renew the token?
 - [ ] User page
-    - Let user delete account
-    - View active sessions (connected IP, lease)
-        - kill a session
+    - [ ] Let user delete account
+    - [ ] View active sessions (connected IP, lease)
+        - [ ] Kill a session
+    - [ ] Reset passwords
 
 ## unsorted:
 - [ ] Let admin UI modify roles + permissions for each user
 - [ ] max login sessions
     - delete oldest ones limit is reached
-- [ ] Password reset
 - [ ] Encrypt User info
     - Allow specific User interface keys to be encrypted before getting sent to the database
         - Make this dynamic so any struct can also have explicit encryption

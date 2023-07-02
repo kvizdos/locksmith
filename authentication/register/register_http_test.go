@@ -2,6 +2,8 @@ package register
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -385,11 +387,15 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 }
 
 func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"invites": {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"code":    "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+					"code":    fmt.Sprintf("%x", hashedCode),
 					"email":   "bob@bob.com",
 					"role":    "admin",
 					"inviter": "a-uuid",
@@ -439,7 +445,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 	}
 
 	_, shouldBeFalse := testDb.FindOne("invites", map[string]interface{}{
-		"code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+		"code": fmt.Sprintf("%x", hashedCode),
 	})
 
 	if shouldBeFalse {

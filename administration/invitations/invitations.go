@@ -1,6 +1,7 @@
 package invitations
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"regexp"
 	"time"
@@ -16,6 +17,14 @@ type Invitation struct {
 	Role      string `json:"role"`
 	InvitedBy string `json:"inviter"`
 	SentAt    int64  `json:"sentAt"` // time that invite was sent
+}
+
+func (i Invitation) Expire(db database.DatabaseAccessor) {
+	deleted, err := db.DeleteOne("invites", map[string]interface{}{
+		"code": i.Code,
+	})
+
+	fmt.Println(deleted, err)
 }
 
 func (i Invitation) ToMap() map[string]interface{} {
@@ -67,12 +76,16 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 
 	inviteCode, err := authentication.GenerateRandomString(96)
 
+	hasher := sha256.New()
+	hasher.Write([]byte(inviteCode))
+	hashedCode := hasher.Sum(nil)
+
 	if err != nil {
 		return "", fmt.Errorf("error generating secure invite code: %s", err.Error())
 	}
 
 	newInvite := Invitation{
-		Code:      inviteCode,
+		Code:      fmt.Sprintf("%x", hashedCode),
 		Email:     email,
 		SentAt:    time.Now().Unix(),
 		InvitedBy: invitedBy,
@@ -93,8 +106,13 @@ func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, e
 		return Invitation{}, fmt.Errorf("invalid token length")
 	}
 
+	hasher := sha256.New()
+	hasher.Write([]byte(code))
+	hashedCode := hasher.Sum(nil)
+
+	fmt.Printf("CODE: %x\n", hashedCode)
 	rawInvite, inviteFound := db.FindOne("invites", map[string]interface{}{
-		"code": code,
+		"code": fmt.Sprintf("%x", hashedCode),
 	})
 
 	if !inviteFound {
