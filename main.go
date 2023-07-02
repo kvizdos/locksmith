@@ -66,7 +66,8 @@ func main() {
 	}
 
 	registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
-		DefaultRoleName: "user",
+		DefaultRoleName:           "user",
+		DisablePublicRegistration: false,
 	}, db)
 	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
 
@@ -94,7 +95,9 @@ func main() {
 
 	http.Handle("/app", serveAppPage)
 	http.HandleFunc("/login", login.ServeLoginPage)
-	http.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{}, db))
+	http.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
+		DisablePublicRegistration: false,
+	}, db))
 
 	http.Handle("/locksmith", serveAdminPage)
 

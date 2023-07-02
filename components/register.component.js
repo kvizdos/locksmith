@@ -207,7 +207,9 @@ export class RegisterFormComponent extends LitElement {
 
     fetch('/api/register', options)
       .then(response => this.handleAPIResponse(response))
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err)
+      });
   }
 
   handleAPIResponse(response) {
@@ -221,6 +223,9 @@ export class RegisterFormComponent extends LitElement {
         break;
       case 400:
         alert("Email does not match invitation email. Please reload and try again.")
+        break;
+      case 404:
+        alert("Public registration is disabled.")
         break;
       case 409:
         this.registrationError = 2;

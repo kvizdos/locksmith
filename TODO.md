@@ -1,15 +1,6 @@
 # todo:
 ## sorted:
-- [x] Create users in the Admin UI, they'll need to setup their own password
-    - [x] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
-    - [x] HTTP endpoint to call InviteUser from admin dashboard
-    - [x] Admin UI integration to invite users
-    - This should give them a unique registration link to send to individuals.
-        - [x] Register using custom key on /register endpoint (e.g. ?invite=STRING). Hard code to the email into the registration page where it cannot be changed.
 - [ ] Hash user tokens and invite tokens
-- [ ] Disallow public registration flag
-    - [ ] This will need a way to bootstrap the first user. Maybe push a URL to the CLI on first boot w/ an access token to register an admin user?
-    - Set this on `register.RegistrationHandler{}` "DisablePublicRegistration"
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -84,6 +75,15 @@
 - [ ] Store a "preferred language" for each user for i18n
 
 ## done:
+- [x] Disable public registration flag
+    - Bootstrapping the first user will come once password resets are enabled. It will force you to change the admin password once you login the first time.
+    - [x] Set this on `register.RegistrationHandler{}` "DisablePublicRegistration"
+- [x] Create users in the Admin UI, they'll need to setup their own password
+    - [x] Allow user creation through locksmith.InviteUser(email string) (inviteURL string)
+    - [x] HTTP endpoint to call InviteUser from admin dashboard
+    - [x] Admin UI integration to invite users
+    - This should give them a unique registration link to send to individuals.
+        - [x] Register using custom key on /register endpoint (e.g. ?invite=STRING). Hard code to the email into the registration page where it cannot be changed.
 - [x] Require email on registration
 - [x] Only allow [A-z0-9] in username
 - [x] Save token as cookie

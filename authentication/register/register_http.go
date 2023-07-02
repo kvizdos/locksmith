@@ -74,6 +74,11 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if rr.DisablePublicRegistration && len(registrationReq.Code) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	if !registrationReq.HasRequiredFields() {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -99,7 +104,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	useRole := rr.DefaultRoleName
 
-	if rr.DisablePublicRegistration || len(registrationReq.Code) > 0 {
+	if len(registrationReq.Code) > 0 {
 		if len(registrationReq.Code) != 96 {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -160,7 +165,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if rr.DisablePublicRegistration || len(registrationReq.Code) > 0 {
+	if len(registrationReq.Code) > 0 {
 		db.DeleteOne("invites", map[string]interface{}{
 			"code": registrationReq.Code,
 		})
@@ -211,6 +216,11 @@ func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	params, _ := url.ParseQuery(myUrl.RawQuery)
 
 	inviteCode := params.Get("invite")
+
+	if rr.DisablePublicRegistration && len(inviteCode) == 0 {
+		w.Write([]byte("public registrations are not allowed."))
+		return
+	}
 
 	if inviteCode != "" {
 		invite, err := invitations.GetInviteFromCode(db, inviteCode)
