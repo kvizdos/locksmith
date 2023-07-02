@@ -66,7 +66,139 @@
                 width: 100%;
             }
 
+            button#invite {
+                margin-top: 0.5rem;
+                border-radius: 0.25rem;
+                border: 2px solid #32d16c;
+                color: #32d16c;
+                font-weight: bold;
+                background-color: white;
+                padding: 0.5rem;
+                transition: 200ms;
+            }
+
+            button#invite:hover {
+                transition: 200ms;
+                background-color: #32d16c;
+                color: white;
+            }
+
+            #modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #modal #content {
+                background-color: white;
+                padding: 1rem;
+                border-radius: 0.35rem;
+                min-width: 18rem;
+            }
+
+            #modal #content #step1 {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #modal #content #header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+            }
+
+            #modal #content #header button {
+                margin: 0 !important;
+                background: unset;
+                border: unset;
+                padding: 0 !important;
+                font-size: 1.25rem;
+            }
+
+            .hidden {
+                display: none !important;
+            }
+
+            #modal #content * #title {
+                font-weight: bold;
+            }
+
+            #modal #content #step1 input {
+                padding: 0.5rem;
+                border-radius: 0.25rem;
+                border: 1px solid rgb(220, 220, 220);
+            }
+
+            #modal #content #step1 input:not(:last-of-type) {
+                margin-bottom: 0.75rem;
+            }
+
+            #modal #content #step1 button {
+                padding: 0.5rem;
+                border-radius: 0.25rem;
+                margin-top: 1rem;
+            }
+
         </style>
+
+        <script>
+            const closeModal = () => {
+                document.querySelector("#modal").classList.add("hidden")
+            }
+            const openModal = () => {
+                document.querySelector("#modal").classList.remove("hidden")
+            }
+            const isValidEmail = (email) => {
+                const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return pattern.test(email);
+            }
+            const sendInvite = async () => {
+                const email = document.querySelector("#modal #content #email")
+                const role = document.querySelector("#modal #content #role")
+
+                if (!isValidEmail(email.value)) {
+                    alert("Invalid email.")
+                    return
+                }
+
+                if (role.value.length == 0) {
+                    alert("A role must be specified.")
+                    return
+                }
+
+                const options = {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: `{"email":"${email.value}","role":"${role.value}"}`
+                };
+
+                fetch('/api/users/invite', options)
+                    .then(async response => {
+                        switch (response.status) {
+                            case 500:
+                                alert("Invalid role")
+                                return
+                            case 409:
+                                alert("User already invited / registered.")
+                                return
+                            case 200:
+                                const code = await response.text();
+                                const url = `${window.location.protocol}//${window.location.host}/register?invite=${code}`
+                                document.querySelector("#modal #code").setAttribute("href", url)
+                                document.querySelector("#modal #step1").classList.add("hidden")
+                                document.querySelector("#modal #step2").classList.remove("hidden")
+                        }
+                    })
+                    .catch(err => console.error(err));
+            }
+        </script>
 </head>
 
 <body>
@@ -81,9 +213,31 @@
         </div>
     </nav>
 
+    <div id="modal" class="hidden">
+        <div id="content">
+            <div id="step1">
+                <div id="header">
+                    <p id="title">Invite a user</p>
+                    <button onclick="closeModal()">&times;</button>
+                </div>
+                <input id="email" type="email" placeholder="Email" />
+                <input id="role" type="text" placeholder="Role" />
+                <button id="invite" onclick="sendInvite()">Get Invite Code</button>
+            </div>
+            <div id="step2" class="hidden">
+                <div id="header">
+                    <p id="title">User invited!</p>
+                    <button onclick="closeModal()">&times;</button>
+                </div>
+                <p>Their registration URL is <a href="#" target="_blank" id="code">this link.</a></p>
+            </div>
+        </div>
+    </div>
+
     <div id="contentWrapper">
         <main>
             <h1>Users</h1>
+            <button id="invite" onclick="openModal()">Invite User</button>
 
             <user-list>
                 <user-tab slot="tab"></user-tab>

@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"kv.codes/locksmith/administration"
+	"kv.codes/locksmith/administration/invitations"
 	"kv.codes/locksmith/authentication"
 	"kv.codes/locksmith/authentication/endpoints"
 	"kv.codes/locksmith/authentication/login"
@@ -74,6 +75,10 @@ func main() {
 	})
 	deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
 
+	inviteUserAPIHandler := endpoints.SecureEndpointHTTPMiddleware(invitations.AdministrationInviteUserHandler{}, db, endpoints.EndpointSecurityOptions{
+		MinimalPermissions: []string{"user.invite"},
+	})
+
 	serveAdminPage := endpoints.SecureEndpointHTTPMiddleware(administration.ServeAdminPage{}, db, endpoints.EndpointSecurityOptions{
 		MinimalPermissions: []string{"view.ls-admin"},
 	})
@@ -85,6 +90,7 @@ func main() {
 
 	http.Handle("/api/users/list", listUsersAdminAPIHandler)
 	http.Handle("/api/users/delete", deleteUserAdminAPIHandler)
+	http.Handle("/api/users/invite", inviteUserAPIHandler)
 
 	http.Handle("/app", serveAppPage)
 	http.HandleFunc("/login", login.ServeLoginPage)

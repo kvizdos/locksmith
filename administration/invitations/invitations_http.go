@@ -40,24 +40,11 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 		return
 	}
 
-	db, ok := r.Context().Value("db").(database.DatabaseAccessor)
+	db, ok := r.Context().Value("database").(database.DatabaseAccessor)
 
 	if !ok {
 		fmt.Println("Inviting users endpoint is required to have database context")
 		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	role, err := user.GetRole()
-
-	if err != nil {
-		fmt.Println("invalid user role passed")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if !role.HasPermission("user.invite") {
-		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -99,5 +86,5 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 		}
 	}
 
-	fmt.Println("inviteCode", inviteCode)
+	w.Write([]byte(inviteCode))
 }

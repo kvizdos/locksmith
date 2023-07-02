@@ -42,7 +42,7 @@ func TestInviteUserHTTPInvalidMethod(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 
 	handler.ServeHTTP(rr, req)
 
@@ -68,43 +68,12 @@ func TestInviteUserHTTPAuthUserNotPassed(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code got %v, want %v", status, http.StatusBadRequest)
-	}
-}
-
-func TestInviteUserHTTPUserDoesNotHavePermission(t *testing.T) {
-	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
-			"users":   {},
-			"invites": {},
-		},
-	}
-
-	handler := AdministrationInviteUserHandler{}
-
-	req, err := http.NewRequest("POST", "/api/invite", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	withUser := users.LocksmithUser{
-		Username: "kenton",
-		Role:     "user",
-	}
-	req = req.WithContext(context.WithValue(req.Context(), "authUser", withUser))
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
-
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusUnauthorized {
-		t.Errorf("unexpected status code got %v, want %v", status, http.StatusUnauthorized)
 	}
 }
 
@@ -131,7 +100,7 @@ func TestInviteUserHTTPInvalidPayload(t *testing.T) {
 		Role:     "admin",
 	}
 	req = req.WithContext(context.WithValue(req.Context(), "authUser", withUser))
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 
 	handler.ServeHTTP(rr, req)
 
@@ -167,7 +136,7 @@ func TestInviteUserHTTPAlreadyInvited(t *testing.T) {
 		Username: "kenton",
 		Role:     "admin",
 	}
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 	req = req.WithContext(context.WithValue(req.Context(), "authUser", withUser))
 
 	handler.ServeHTTP(rr, req)
@@ -204,7 +173,7 @@ func TestInviteUserHTTPAlreadyRegistered(t *testing.T) {
 		Username: "kenton",
 		Role:     "admin",
 	}
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 	req = req.WithContext(context.WithValue(req.Context(), "authUser", withUser))
 
 	handler.ServeHTTP(rr, req)
@@ -237,7 +206,7 @@ func TestInviteUserHTTPSuccess(t *testing.T) {
 		Username: "kenton",
 		Role:     "admin",
 	}
-	req = req.WithContext(context.WithValue(req.Context(), "db", testDb))
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 	req = req.WithContext(context.WithValue(req.Context(), "authUser", withUser))
 
 	handler.ServeHTTP(rr, req)

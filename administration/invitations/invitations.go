@@ -72,10 +72,11 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 	}
 
 	newInvite := Invitation{
-		Code:   inviteCode,
-		Email:  email,
-		SentAt: time.Now().Unix(),
-		Role:   role,
+		Code:      inviteCode,
+		Email:     email,
+		SentAt:    time.Now().Unix(),
+		InvitedBy: invitedBy,
+		Role:      role,
 	}
 
 	_, err = db.InsertOne("invites", newInvite.ToMap())
