@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WebAuthn Demo</title>
+    <title>Register - {{.Title}}</title>
     <script type="module" src="/components/register.component.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
         }
 
         header {
-            background: linear-gradient(#476ade, #2744a3);
+            background: linear-gradient(var(--startGradient), var(--endGradient));
             height: 50vh;
         }
 
@@ -67,15 +67,15 @@
 </head>
 
 <body>
-    <header>
+    <header style="--startGradient: {{.Styling.StartGradient}}; --endGradient: {{.Styling.EndGradient}};">
     </header>
     <main id="subsection">
-        <p>Locksmith</p>
+        <p>{{.Title}}</p>
         {{if .HasInvite}}
-        <register-form backgroundColor="#3057cf" email="{{.Invitation.Email}}" emailDisabled
+        <register-form backgroundColor="{{.Styling.SubmitColor}}" email="{{.Invitation.Email}}" emailDisabled
             code="{{.Invitation.Code}}"></register-form>
         {{else}}
-        <register-form backgroundColor="#3057cf"></register-form>
+        <register-form backgroundColor="{{.Styling.SubmitColor}}"></register-form>
         {{end}}
     </main>
 </body>

@@ -95,7 +95,7 @@ func main() {
 	http.Handle("/api/users/invite", inviteUserAPIHandler)
 
 	http.Handle("/app", serveAppPage)
-	http.HandleFunc("/login", login.ServeLoginPage)
+	http.Handle("/login", login.LoginPageHandler{})
 	http.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
 		DisablePublicRegistration: false,
 	}, db))

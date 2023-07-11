@@ -174,8 +174,16 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 type RegistrationPageHandler struct {
+	AppName string
 	// Only allow users with an invite code to register
 	DisablePublicRegistration bool
+	Styling                   RegistrationPageStyling
+}
+
+type RegistrationPageStyling struct {
+	StartGradient string
+	EndGradient   string
+	SubmitColor   string
 }
 
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
@@ -190,8 +198,29 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http
 	type TemplateData struct {
 		HasInvite  bool
 		Invitation invitations.Invitation
+		Title      string
+		Styling    RegistrationPageStyling
 	}
-	inv := TemplateData{}
+	inv := TemplateData{
+		Title:   rr.AppName,
+		Styling: rr.Styling,
+	}
+
+	if inv.Styling.SubmitColor == "" {
+		inv.Styling.SubmitColor = "#476ade"
+	}
+
+	if inv.Styling.StartGradient == "" {
+		inv.Styling.StartGradient = "#476ade"
+	}
+
+	if inv.Styling.EndGradient == "" {
+		inv.Styling.EndGradient = "#2744a3"
+	}
+
+	if inv.Title == "" {
+		inv.Title = "Locksmith"
+	}
 
 	if len(invite) > 0 {
 		inv.HasInvite = true

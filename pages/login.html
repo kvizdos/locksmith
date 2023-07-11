@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>WebAuthn Demo</title>
+    <title>Login - {{.Title}}</title>
     <script type="module" src="/components/signin.component.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +36,7 @@
         }
 
         header {
-            background: linear-gradient(#476ade, #2744a3);
+            background: linear-gradient(var(--startGradient), var(--endGradient));
             height: 50vh;
         }
 
@@ -69,11 +69,11 @@
 </head>
 
 <body>
-    <header>
+    <header style="--startGradient: {{.Styling.StartGradient}}; --endGradient: {{.Styling.EndGradient}};">
     </header>
     <main id="subsection">
-        <p>Locksmith</p>
-        <login-form backgroundColor="#3057cf"></login-form>
+        <p>{{.Title}}</p>
+        <login-form backgroundColor="{{.Styling.SubmitColor}}"></login-form>
     </main>
 </body>
 

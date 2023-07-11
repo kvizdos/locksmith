@@ -113,7 +113,20 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 }
 
-func ServeLoginPage(w http.ResponseWriter, r *http.Request) {
+type LoginPageHandler struct {
+	AppName string
+	// Only allow users with an invite code to register
+	DisablePublicRegistration bool
+	Styling                   LoginPageStyling
+}
+
+type LoginPageStyling struct {
+	StartGradient string
+	EndGradient   string
+	SubmitColor   string
+}
+
+func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	tmpl, err := template.New("login.html").Parse(string(pages.LoginPageHTML))
@@ -122,7 +135,33 @@ func ServeLoginPage(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	err = tmpl.Execute(w, nil)
+	type PageData struct {
+		Title   string
+		Styling LoginPageStyling
+	}
+
+	data := PageData{
+		Title:   lr.AppName,
+		Styling: lr.Styling,
+	}
+
+	if data.Styling.SubmitColor == "" {
+		data.Styling.SubmitColor = "#476ade"
+	}
+
+	if data.Styling.StartGradient == "" {
+		data.Styling.StartGradient = "#476ade"
+	}
+
+	if data.Styling.EndGradient == "" {
+		data.Styling.EndGradient = "#2744a3"
+	}
+
+	if data.Title == "" {
+		data.Title = "Locksmith"
+	}
+
+	err = tmpl.Execute(w, data)
 
 	if err != nil {
 		log.Println("Error executing template :", err)
