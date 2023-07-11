@@ -9,15 +9,10 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/kvizdos/locksmith/administration"
-	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
-	"github.com/kvizdos/locksmith/authentication/endpoints"
-	"github.com/kvizdos/locksmith/authentication/login"
-	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
-	"github.com/kvizdos/locksmith/httpHelpers"
+	"github.com/kvizdos/locksmith/routes"
 )
 
 // import
@@ -66,44 +61,13 @@ func main() {
 		return
 	}
 
-	registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
-		DefaultRoleName:           "user",
-		DisablePublicRegistration: false,
-	}, db)
-	loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
-
-	listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
-		MinimalPermissions: []string{"users.list.all"},
+	mux := http.NewServeMux()
+	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
+		AppName: "Locksmith Demo UI",
 	})
-	deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
-
-	inviteUserAPIHandler := endpoints.SecureEndpointHTTPMiddleware(invitations.AdministrationInviteUserHandler{}, db, endpoints.EndpointSecurityOptions{
-		MinimalPermissions: []string{"user.invite"},
-	})
-
-	serveAdminPage := endpoints.SecureEndpointHTTPMiddleware(administration.ServeAdminPage{}, db, endpoints.EndpointSecurityOptions{
-		MinimalPermissions: []string{"view.ls-admin"},
-	})
-
-	serveAppPage := endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db)
-
-	http.Handle("/api/login", loginAPIHandler)
-	http.Handle("/api/register", registrationAPIHandler)
-
-	http.Handle("/api/users/list", listUsersAdminAPIHandler)
-	http.Handle("/api/users/delete", deleteUserAdminAPIHandler)
-	http.Handle("/api/users/invite", inviteUserAPIHandler)
-
-	http.Handle("/app", serveAppPage)
-	http.Handle("/login", login.LoginPageHandler{})
-	http.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
-		DisablePublicRegistration: false,
-	}, db))
-
-	http.Handle("/locksmith", serveAdminPage)
 
 	log.Print("Listening on :3000...")
-	err = http.ListenAndServe(":3000", nil)
+	err = http.ListenAndServe(":3000", mux)
 	if err != nil {
 		log.Fatal(err)
 	}

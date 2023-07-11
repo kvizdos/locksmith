@@ -2,6 +2,12 @@ package pages
 
 import _ "embed"
 
+type LocksmithPageStyling struct {
+	StartGradient string
+	EndGradient   string
+	SubmitColor   string
+}
+
 //go:embed admin.html
 var AdminPageHTML []byte
 

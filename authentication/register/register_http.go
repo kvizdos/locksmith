@@ -177,13 +177,7 @@ type RegistrationPageHandler struct {
 	AppName string
 	// Only allow users with an invite code to register
 	DisablePublicRegistration bool
-	Styling                   RegistrationPageStyling
-}
-
-type RegistrationPageStyling struct {
-	StartGradient string
-	EndGradient   string
-	SubmitColor   string
+	Styling                   pages.LocksmithPageStyling
 }
 
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
@@ -199,7 +193,7 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http
 		HasInvite  bool
 		Invitation invitations.Invitation
 		Title      string
-		Styling    RegistrationPageStyling
+		Styling    pages.LocksmithPageStyling
 	}
 	inv := TemplateData{
 		Title:   rr.AppName,
