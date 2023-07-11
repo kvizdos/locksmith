@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 	"reflect"
 	"text/template"
 
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -129,9 +129,7 @@ type ServeAdminPage struct{}
 func (p ServeAdminPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	fp := filepath.Join("pages", "admin.html")
-
-	tmpl, err := template.New("admin.html").ParseFiles(fp)
+	tmpl, err := template.New("admin.html").Parse(string(pages.AdminPageHTML))
 
 	if err != nil {
 		fmt.Println(err)
