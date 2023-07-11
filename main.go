@@ -15,6 +15,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/register"
+	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/httpHelpers"
 )
@@ -37,8 +38,7 @@ func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	fs := http.FileServer(http.Dir("./components"))
-	http.Handle("/components/", http.StripPrefix("/components/", fs))
+	http.HandleFunc("/components/", components.ServeComponents)
 
 	// testPassword, _ := authentication.CompileLocksmithPassword("pass")
 

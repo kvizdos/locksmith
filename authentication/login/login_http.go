@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 	"text/template"
 	"time"
 
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -116,9 +116,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func ServeLoginPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	fp := filepath.Join("pages", "login.html")
-
-	tmpl, err := template.New("login.html").ParseFiles(fp)
+	tmpl, err := template.New("login.html").Parse(string(pages.LoginPageHTML))
 
 	if err != nil {
 		fmt.Println(err)

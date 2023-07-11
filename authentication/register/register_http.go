@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"regexp"
 	"text/template"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/roles"
 	// "kv.codes/locksmith/database"
 )
@@ -181,9 +181,7 @@ type RegistrationPageHandler struct {
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	fp := filepath.Join("pages", "register.html")
-
-	tmpl, err := template.New("register.html").ParseFiles(fp)
+	tmpl, err := template.New("register.html").Parse(string(pages.RegisterPageHTML))
 
 	if err != nil {
 		fmt.Println(err)
