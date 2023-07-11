@@ -1,5 +1,9 @@
 # todo:
 ## sorted:
+- [ ] SecureEndpointMiddleware should be allowed to pass a custom validation function
+    - It'd take the AuthUser as the parameter
+    - Useful for things like validating users have authorization to specific sections of features based on application logic
+        - e.g. Timesheet app: only parents can submit to their *own* timesheets, nobody elses.
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -14,7 +18,6 @@
     - [ ] Option to require MFA on sign up
 - [ ] User lockout policy (invalid passwords, etc)
     - Set on `LoginHandler{}`
-- [ ] Convert `InjectDatabaseIntoContext` into passing the DB into the `RegistrationHandler{}` and `LoginHandler{}`
 - [ ] Attach a "Device Cookie" to the token system. If a user logs in on the same device, log them out of their previous session.
 - [ ] Save last active time to Session
 - [ ] Trust Device

@@ -3,7 +3,7 @@ package structs
 import (
 	"testing"
 
-	"kv.codes/locksmith/crypto"
+	"github.com/kvizdos/locksmith/crypto"
 )
 
 type nestedEncryptedStruct struct {

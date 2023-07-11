@@ -3,8 +3,8 @@ package users
 import (
 	"testing"
 
-	"kv.codes/locksmith/authentication"
-	"kv.codes/locksmith/roles"
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/roles"
 )
 
 func TestMain(m *testing.M) {

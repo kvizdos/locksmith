@@ -10,8 +10,8 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 var (

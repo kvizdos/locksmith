@@ -1,8 +1,8 @@
 package administration
 
 import (
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 func DeleteUser(db database.DatabaseAccessor, username string) (bool, error) {

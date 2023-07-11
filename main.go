@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
-	"kv.codes/locksmith/administration"
-	"kv.codes/locksmith/administration/invitations"
-	"kv.codes/locksmith/authentication"
-	"kv.codes/locksmith/authentication/endpoints"
-	"kv.codes/locksmith/authentication/login"
-	"kv.codes/locksmith/authentication/register"
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/httpHelpers"
+	"github.com/kvizdos/locksmith/administration"
+	"github.com/kvizdos/locksmith/administration/invitations"
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/login"
+	"github.com/kvizdos/locksmith/authentication/register"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/httpHelpers"
 )
 
 // import
@@ -58,7 +59,7 @@ func main() {
 		Ctx:    ctx,
 		Cancel: timeout,
 	}
-	err := db.Initialize("mongodb://localhost:27017", "locksmith")
+	err := db.Initialize("mongodb://localhost:27017", os.Getenv("database"))
 
 	if err != nil {
 		fmt.Println(err)

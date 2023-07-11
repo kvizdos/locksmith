@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"kv.codes/locksmith/database"
+	"github.com/kvizdos/locksmith/database"
 )
 
 func TestInviteUserInvalidRole(t *testing.T) {

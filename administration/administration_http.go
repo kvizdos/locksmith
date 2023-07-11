@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"text/template"
 
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 type AdministrationListUsersHandler struct {

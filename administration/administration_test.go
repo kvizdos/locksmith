@@ -3,9 +3,9 @@ package administration
 import (
 	"testing"
 
-	"kv.codes/locksmith/authentication"
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 func TestListUsersNoUsers(t *testing.T) {

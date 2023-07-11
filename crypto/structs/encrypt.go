@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"kv.codes/locksmith/crypto"
+	"github.com/kvizdos/locksmith/crypto"
 )
 
 // TODO: Support nested structures

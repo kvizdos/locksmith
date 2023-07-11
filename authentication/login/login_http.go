@@ -10,8 +10,8 @@ import (
 	"text/template"
 	"time"
 
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 type loginRequest struct {

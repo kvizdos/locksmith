@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"kv.codes/locksmith/authentication"
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/roles"
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/roles"
 )
 
 func TestMain(m *testing.M) {

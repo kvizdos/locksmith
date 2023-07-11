@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/roles"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/roles"
+	"github.com/kvizdos/locksmith/users"
 )
 
 func TestMain(m *testing.M) {

@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 type HTTPInvite struct {

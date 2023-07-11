@@ -3,9 +3,9 @@ package validation
 import (
 	"fmt"
 
-	"kv.codes/locksmith/authentication"
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/users"
 )
 
 func ValidateToken(token authentication.Token, db database.DatabaseAccessor) (users.LocksmithUserInterface, bool, error) {

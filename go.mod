@@ -1,4 +1,4 @@
-module kv.codes/locksmith
+module github.com/kvizdos/locksmith
 
 go 1.19
 

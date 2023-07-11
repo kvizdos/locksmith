@@ -3,7 +3,7 @@ package authentication
 import (
 	"testing"
 
-	"kv.codes/locksmith/roles"
+	"github.com/kvizdos/locksmith/roles"
 )
 
 func TestMain(m *testing.M) {

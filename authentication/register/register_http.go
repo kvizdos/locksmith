@@ -12,10 +12,10 @@ import (
 	"text/template"
 
 	"github.com/google/uuid"
-	"kv.codes/locksmith/administration/invitations"
-	"kv.codes/locksmith/authentication"
-	"kv.codes/locksmith/database"
-	"kv.codes/locksmith/roles"
+	"github.com/kvizdos/locksmith/administration/invitations"
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/roles"
 	// "kv.codes/locksmith/database"
 )
 

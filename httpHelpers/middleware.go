@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"kv.codes/locksmith/database"
+	"github.com/kvizdos/locksmith/database"
 )
 
 func InjectDatabaseIntoContext(next http.Handler, db database.DatabaseAccessor) http.Handler {

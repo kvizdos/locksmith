@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-webauthn/webauthn/protocol"
-	"kv.codes/locksmith/users"
+	"github.com/kvizdos/locksmith/users"
 )
 
 func FinishRegistration(w http.ResponseWriter, r *http.Request, user users.LocksmithUserInterface) {

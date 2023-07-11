@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"kv.codes/locksmith/authentication/validation"
-	"kv.codes/locksmith/database"
+	"github.com/kvizdos/locksmith/authentication/validation"
+	"github.com/kvizdos/locksmith/database"
 )
 
 type EndpointSecurityOptions struct {
