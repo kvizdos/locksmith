@@ -10,8 +10,9 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/kvizdos/locksmith/authentication"
-	"github.com/kvizdos/locksmith/components"
+	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/routes"
 )
 
@@ -27,14 +28,13 @@ func init() {
 type TestAppHandler struct{}
 
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("hello world")
 	c, _ := r.Cookie("token")
 	parsed, _ := authentication.ParseToken(c.Value)
 	fmt.Fprintf(w, "Hello, %s @ %s", parsed.Username, parsed.Token)
 }
 
 func main() {
-	http.HandleFunc("/components/", components.ServeComponents)
-
 	// testPassword, _ := authentication.CompileLocksmithPassword("pass")
 
 	// db := database.TestDatabase{
@@ -64,7 +64,37 @@ func main() {
 	mux := http.NewServeMux()
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName: "Locksmith Demo UI",
+		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
+			Enabled:     os.Getenv("ENV") != "prod",
+			Caption:     "Locksmith Launchpad helps demo your service. It allow stakeholders to easily swap between users and feel the product from every POV- without worrying about passwords.",
+			AccessToken: "super-secret-password123",
+			BootstrapDatabase: func(da database.DatabaseAccessor) {
+				fmt.Println("Nothing to bootstrap.")
+			},
+			Users: map[string]launchpad.LocksmithLaunchpadUserOptions{
+				"lp-admin": {
+					DisplayName: "Administrator",
+					Email:       "admin@admin.com",
+					Role:        "admin",
+					Redirect:    "/locksmith",
+				},
+				"lp-user": {
+					DisplayName: "General User",
+					Email:       "user@user.com",
+					Role:        "user",
+					Redirect:    "/app",
+				},
+				"lp-user-2": {
+					DisplayName: "Another General User",
+					Email:       "user@user.com",
+					Role:        "user",
+					Redirect:    "/app",
+				},
+			},
+		},
 	})
+
+	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
 
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", mux)

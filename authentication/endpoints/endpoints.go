@@ -2,12 +2,45 @@ package endpoints
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
 )
+
+type EndpointSecurityBasicAuth struct {
+	Enabled bool
+
+	Username string
+	Password string
+}
+
+func (e EndpointSecurityBasicAuth) Middleware(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if ok {
+			usernameHash := sha256.Sum256([]byte(username))
+			passwordHash := sha256.Sum256([]byte(password))
+			expectedUsernameHash := sha256.Sum256([]byte(e.Username))
+			expectedPasswordHash := sha256.Sum256([]byte(e.Password))
+
+			usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
+			passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+
+			if usernameMatch && passwordMatch {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	})
+}
 
 type EndpointSecurityOptions struct {
 	// Specify required permissions to hit the endpoint
@@ -17,6 +50,7 @@ type EndpointSecurityOptions struct {
 	// Eventually, add:
 	// AllowAPITokens bool
 	// If enabled, the API Key Management system will validate the permissions of the token
+	BasicAuth EndpointSecurityBasicAuth
 }
 
 func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccessor, opts ...EndpointSecurityOptions) http.Handler {
@@ -25,6 +59,10 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		secureOptions = EndpointSecurityOptions{}
 	} else {
 		secureOptions = opts[0]
+	}
+	if secureOptions.BasicAuth.Enabled {
+		fmt.Println("Using Basic Auth")
+		return http.HandlerFunc(secureOptions.BasicAuth.Middleware(next.ServeHTTP))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Inject the database into the request

@@ -11,6 +11,7 @@ import (
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/httpHelpers"
+	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
 )
 
@@ -22,6 +23,7 @@ type LocksmithRoutesOptions struct {
 	DisableInvites            bool
 	DisablePublicRegistration bool
 	DisableLocksmithPage      bool
+	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
 }
 
@@ -29,6 +31,9 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	if !options.DisableComponents {
 		mux.HandleFunc("/components/", components.ServeComponents)
 	}
+
+	InitializeLaunchpad(mux, db, options)
+
 	if !options.DisableAPI {
 		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
 			DefaultRoleName:           "user",

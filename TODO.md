@@ -63,6 +63,10 @@
     - e.g. for kanban board, automatically give new users access to the HashiCorp Vault API key (maybe different keys for each user?) and encrypt w/ user password.
         - admin adds a new user -> admin creates a new encryption key in HashiCorp Vault -> admin encrypts their copy of the real API key with ephemeral hashicorp key -> send encrypted key to frontend registration -> frontend registration encrypts key w/ password -> key gets sent with registration
 - [ ] Federated Logins (Google, Google Workspace, etc)
+- [ ] Tailscale authentication
+    - Somehow make it toggleable per endpoint maybe ??
+        - Or just make it a completely separate isolated area
+    - If you're connected to Tailscale, authorize with that and leave permissions as-is (attach tailscale hostname/IP to a username w/ permissions)
 - [ ] Become an OAuth provider (allow external apps to authenticate with this service)
 - [ ] Prometheus Support (exports basic metrics: # users, # login attempts, # failed logins, etc)
 - [ ] Audit Logging system (easily create audit logs, allow apps to push to said audit log)
@@ -77,6 +81,16 @@
 - [ ] Store a "preferred language" for each user for i18n
 
 ## done:
+- [x] Launchpad
+    - [x] Render different test users on frontend
+    - [x] Basic Auth to confirm the user has access to the launchpad
+        - Note in the Docs there is now a BasicAuth handler in SecureEndpointHTTPMiddleware
+    - [x] Completly disable Launchpad code when built for production
+        - You MUST specify the `enable_launchpad` tag when building to get it:
+            - BUILD: `go build -o app -tags enable_launchpad`
+            - RUN: `go run -tags enable_launchpad main.go`
+    - [x] Jump into different user account
+    - [x] Dynamic subtitle
 - [x] Hash user tokens and invite tokens
     - [x] Hash invite tokens
     - [x] Hash session tokens

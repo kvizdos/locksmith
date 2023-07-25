@@ -25,30 +25,6 @@ type TestDatabase struct {
 	Tables map[string]map[string]interface{}
 }
 
-func (db TestDatabase) GetValue(table string, query map[string]interface{}) (interface{}, error) {
-	if tableData, ok := db.Tables[table]; ok {
-		for _, value := range tableData {
-			match := true
-			for queryKey, queryValue := range query {
-				if tableValue, ok := value.(map[string]interface{}); ok {
-					if fieldValue, ok := tableValue[queryKey]; ok && fieldValue != queryValue {
-						match = false
-						break
-					}
-				} else {
-					match = false
-					break
-				}
-			}
-			if match {
-				return value, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("value not found")
-}
-
 func (db TestDatabase) InsertOne(table string, body map[string]interface{}) (interface{}, error) {
 	if _, ok := db.Tables[table]; !ok {
 		db.Tables[table] = make(map[string]interface{})
