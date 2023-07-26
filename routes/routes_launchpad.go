@@ -1,5 +1,5 @@
-//go:build enable_launchpad
-// +build enable_launchpad
+//.go:build enable_launchpad
+//. +build enable_launchpad
 
 package routes
 
@@ -37,6 +37,8 @@ func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, optio
 		mux.Handle("/launchpad", launchpadHandler)
 
 		launchpadRefresh := endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadRefreshHTTPHandler{
+			AccessToken:       options.LaunchpadSettings.AccessToken,
+			AvailableUsers:    options.LaunchpadSettings.Users,
 			BootstrapDatabase: options.LaunchpadSettings.BootstrapDatabase,
 		}, db, endpoints.EndpointSecurityOptions{
 			BasicAuth: endpoints.EndpointSecurityBasicAuth{

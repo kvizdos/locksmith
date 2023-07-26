@@ -88,6 +88,8 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 type LaunchpadRefreshHTTPHandler struct {
+	AccessToken       string
+	AvailableUsers    map[string]LocksmithLaunchpadUserOptions
 	BootstrapDatabase func(db database.DatabaseAccessor)
 }
 
@@ -100,6 +102,7 @@ func (lr LaunchpadRefreshHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.R
 	database := r.Context().Value("database").(database.DatabaseAccessor)
 
 	lr.BootstrapDatabase(database)
+	BootstrapUsers(database, lr.AccessToken, lr.AvailableUsers)
 
 	w.WriteHeader(http.StatusOK)
 	return
