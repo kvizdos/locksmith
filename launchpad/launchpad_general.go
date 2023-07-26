@@ -1,6 +1,8 @@
 package launchpad
 
-import "github.com/kvizdos/locksmith/database"
+import (
+	"github.com/kvizdos/locksmith/database"
+)
 
 type LocksmithLaunchpadUserOptions struct {
 	// Name to show on Launchpad

@@ -9,6 +9,7 @@ import (
 
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/launchpad"
 )
 
 type EndpointSecurityBasicAuth struct {
@@ -63,12 +64,11 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		return secureOptions.BasicAuth.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(context.WithValue(r.Context(), "database", db))
 			next.ServeHTTP(w, r)
+
 		}))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Inject the database into the request
-		r = r.WithContext(context.WithValue(r.Context(), "database", db))
-
 		user, err := validation.ValidateHTTPUserToken(r, db)
 
 		if err != nil {
@@ -102,7 +102,10 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		}
 
 		r = r.WithContext(context.WithValue(r.Context(), "authUser", user))
+		r = r.WithContext(context.WithValue(r.Context(), "database", db))
 
-		next.ServeHTTP(w, r)
+		// next.ServeHTTP(w, r)
+
+		launchpad.LaunchpadRequestMiddleware(next).ServeHTTP(w, r)
 	})
 }

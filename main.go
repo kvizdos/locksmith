@@ -28,10 +28,10 @@ func init() {
 type TestAppHandler struct{}
 
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("hello world")
 	c, _ := r.Cookie("token")
 	parsed, _ := authentication.ParseToken(c.Value)
-	fmt.Fprintf(w, "Hello, %s @ %s", parsed.Username, parsed.Token)
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, "<html><p>Hello World: %s - %s</p></html>", parsed.Username, parsed.Token)
 }
 
 func main() {

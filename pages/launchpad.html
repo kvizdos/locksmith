@@ -83,7 +83,7 @@
     </style>
 
     <script>
-        function Login(username, redirect) {
+        function Login(displayName, username, redirect) {
             const token = "{{ .AccessToken }}"
             const options = {
                 method: 'POST',
@@ -92,7 +92,10 @@
             };
 
             fetch('/api/login', options)
-                .then(response => window.location.href = redirect)
+                .then(response => {
+                    document.cookie = `LaunchpadUser=${displayName};`
+                    window.location.href = redirect
+                })
                 .catch(err => console.error(err));
         }
 
@@ -142,7 +145,7 @@
         {{ range $key, $value := .AvailableUsers }}
         <div class="userOption"
             style="--background: {{$.Styling.StartGradient}}; --hover-background: {{$.Styling.EndGradient}};"
-            onclick="Login('{{$key}}', '{{$value.Redirect}}')">
+            onclick="Login('{{$value.DisplayName}}', '{{$key}}', '{{$value.Redirect}}')">
             <p>{{$value.DisplayName}}</p>
         </div>
         {{ end }}

@@ -1,10 +1,5 @@
 # todo:
 ## sorted:
-- [x] Launchpad "Restore" button
-    - This will reseed the database with entirely new information based on whatever is in the `LocksmithLaunchpadOptions.BootstrapDatabase`
-- [ ] Change Launchpad background color depending on what environment is in use.
-- [ ] When using a Launchpad user, inject an HTML header to show what persona the user is currently in
-
 - [ ] SecureEndpointMiddleware should be allowed to pass a custom validation function
     - It'd take the AuthUser as the parameter
     - Useful for things like validating users have authorization to specific sections of features based on application logic
@@ -92,6 +87,10 @@
 - [ ] Store a "preferred language" for each user for i18n
 
 ## done:
+- [x] Launchpad "Restore" button
+    - This will reseed the database with entirely new information based on whatever is in the `LocksmithLaunchpadOptions.BootstrapDatabase`
+- [x] Change Launchpad background color depending on what environment is in use.
+- [x] When using a Launchpad user, inject an HTML header to show what persona the user is currently in
 - [x] Launchpad
     - [x] Render different test users on frontend
     - [x] Basic Auth to confirm the user has access to the launchpad
