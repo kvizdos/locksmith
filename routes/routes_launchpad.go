@@ -15,8 +15,8 @@ import (
 func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, options LocksmithRoutesOptions) {
 	fmt.Println("WARNING !!! Configuring Launchpad.. DO NOT USE IN PRODUCTIN !!! WARNING")
 	if options.LaunchpadSettings.Enabled {
-		launchpad.BootstrapUsers(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Users)
 		options.LaunchpadSettings.BootstrapDatabase(db)
+		launchpad.BootstrapUsers(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Users)
 
 		launchpadHandler := endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{
 			AppName:                       options.AppName,
