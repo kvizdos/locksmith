@@ -19,7 +19,7 @@ type DatabaseAccessor interface {
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
-	Drop(table string) (bool, error)
+	Drop(table string) error
 }
 
 type TestDatabase struct {
