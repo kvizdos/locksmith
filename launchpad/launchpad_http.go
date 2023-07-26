@@ -9,15 +9,17 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/pages"
 )
 
 type LaunchpadHTTPHandler struct {
-	AppName        string
-	Subtitle       string
-	Styling        pages.LocksmithPageStyling
-	AccessToken    string
-	AvailableUsers map[string]LocksmithLaunchpadUserOptions
+	AppName           string
+	Subtitle          string
+	Styling           pages.LocksmithPageStyling
+	AccessToken       string
+	AvailableUsers    map[string]LocksmithLaunchpadUserOptions
+	RefreshButtonText string
 }
 
 func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -30,19 +32,21 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	type PageData struct {
-		Title          string
-		Styling        pages.LocksmithPageStyling
-		AvailableUsers map[string]LocksmithLaunchpadUserOptions
-		AccessToken    string
-		Subtitle       string
+		Title             string
+		Styling           pages.LocksmithPageStyling
+		AvailableUsers    map[string]LocksmithLaunchpadUserOptions
+		AccessToken       string
+		Subtitle          string
+		RefreshButtonText string
 	}
 
 	data := PageData{
-		Title:          lr.AppName,
-		Styling:        lr.Styling,
-		AvailableUsers: lr.AvailableUsers,
-		AccessToken:    lr.AccessToken,
-		Subtitle: lr.Subtitle,
+		Title:             lr.AppName,
+		Styling:           lr.Styling,
+		AvailableUsers:    lr.AvailableUsers,
+		AccessToken:       lr.AccessToken,
+		Subtitle:          lr.Subtitle,
+		RefreshButtonText: lr.RefreshButtonText,
 	}
 
 	if data.Styling.SubmitColor == "" {
@@ -67,4 +71,22 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		log.Println("Error executing template :", err)
 		return
 	}
+}
+
+type LaunchpadRefreshHTTPHandler struct {
+	BootstrapDatabase func(db database.DatabaseAccessor)
+}
+
+func (lr LaunchpadRefreshHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	database := r.Context().Value("database").(database.DatabaseAccessor)
+
+	lr.BootstrapDatabase(database)
+
+	w.WriteHeader(http.StatusOK)
+	return
 }

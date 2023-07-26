@@ -52,8 +52,31 @@
 
         main {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 1rem;
+        }
+
+        button {
+            background-color: white;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            border: 2px solid red;
+            color: red;
+            cursor: pointer;
+            transition: 200ms;
+        }
+
+        button:hover {
+            transition: 200ms;
+            background-color: red;
+            color: white;
+        }
+
+        @media (min-width: 640px) {
+            main {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+
         }
 
     </style>
@@ -71,6 +94,40 @@
                 .then(response => window.location.href = redirect)
                 .catch(err => console.error(err));
         }
+
+        function Refresh() {
+            const options = {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: ``
+            };
+
+            const button = document.querySelector("button#refreshBtn")
+
+            if (button.innerText == "Loading..") {
+                return
+            }
+
+            const resetValue = `${button.innerText}`;
+
+            button.innerText = "Loading.."
+
+            fetch('/launchpad/refresh', options)
+                .then(response => {
+                    if (response["status"] == 200) {
+                        setTimeout(function () {
+                            alert("Environment refreshed!")
+                            button.innerText = resetValue
+                        }, 30000)
+                        return
+                    }
+
+                    alert(`Something went wrong. Please send a screenshot of this page to the system administrator. Error: ${response["status"]}`)
+                })
+                .catch(err => alert(`Something went wrong. Please send a screenshot of this page to the system administrator. Error: ${err}`));
+        }
+
+
     </script>
 </head>
 
@@ -79,6 +136,7 @@
         <h1 style="--header-color: {{.Styling.EndGradient}};">{{.Title}} Launchpad</h1>
         <p>{{.Subtitle}}</p>
     </header>
+
     <main>
         {{ range $key, $value := .AvailableUsers }}
         <div class="userOption"
@@ -88,6 +146,8 @@
         </div>
         {{ end }}
     </main>
+
+    <button onclick="Refresh()" id="refreshBtn">{{.RefreshButtonText}}</button>
 </body>
 
 </html>

@@ -13,17 +13,18 @@ import (
 )
 
 func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, options LocksmithRoutesOptions) {
-	fmt.Println("configuring launchpad..")
+	fmt.Println("WARNING !!! Configuring Launchpad.. DO NOT USE IN PRODUCTIN !!! WARNING")
 	if options.LaunchpadSettings.Enabled {
 		launchpad.BootstrapUsers(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Users)
 		options.LaunchpadSettings.BootstrapDatabase(db)
 
 		launchpadHandler := endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{
-			AppName:        options.AppName,
-			Styling:        options.Styling,
-			AccessToken:    options.LaunchpadSettings.AccessToken,
-			AvailableUsers: options.LaunchpadSettings.Users,
-			Subtitle: options.LaunchpadSettings.Caption,
+			AppName:           options.AppName,
+			Styling:           options.Styling,
+			AccessToken:       options.LaunchpadSettings.AccessToken,
+			AvailableUsers:    options.LaunchpadSettings.Users,
+			Subtitle:          options.LaunchpadSettings.Caption,
+			RefreshButtonText: options.LaunchpadSettings.RefreshButtonText,
 		}, db, endpoints.EndpointSecurityOptions{
 			BasicAuth: endpoints.EndpointSecurityBasicAuth{
 				Enabled:  true,
@@ -33,5 +34,17 @@ func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, optio
 		})
 
 		mux.Handle("/launchpad", launchpadHandler)
+
+		launchpadRefresh := endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadRefreshHTTPHandler{
+			BootstrapDatabase: options.LaunchpadSettings.BootstrapDatabase,
+		}, db, endpoints.EndpointSecurityOptions{
+			BasicAuth: endpoints.EndpointSecurityBasicAuth{
+				Enabled:  true,
+				Username: "launchpad",
+				Password: options.LaunchpadSettings.AccessToken,
+			},
+		})
+
+		mux.Handle("/launchpad/refresh", launchpadRefresh)
 	}
 }

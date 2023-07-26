@@ -20,7 +20,7 @@ func BootstrapUsers(db database.DatabaseAccessor, accessToken string, importUser
 		})
 
 		if found {
-			fmt.Printf("Launchpad user %s already registered.", username)
+			fmt.Printf("Launchpad user %s already registered.\n", username)
 			continue
 		}
 

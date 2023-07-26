@@ -1,9 +1,20 @@
 # todo:
 ## sorted:
+- [ ] Launchpad "Restore" button
+    - This will reseed the database with entirely new information based on whatever is in the `LocksmithLaunchpadOptions.BootstrapDatabase`
+- [ ] Change Launchpad background color depending on what environment is in use.
+- [ ] When using a Launchpad user, inject an HTML header to show what persona the user is currently in
+
 - [ ] SecureEndpointMiddleware should be allowed to pass a custom validation function
     - It'd take the AuthUser as the parameter
     - Useful for things like validating users have authorization to specific sections of features based on application logic
-        - e.g. Timesheet app: only parents can submit to their *own* timesheets, nobody elses.
+- [ ] Different Launchpads based on environment variable
+    - This would be useful to define a ton of edge cases in development, and then limit the amount of users in staging environments.
+    - LocksmithLaunchpadOptions.Users needs to be read in through a `.launchpad.env` file. Once `InitializeLaunchpad` is called, it will read in `USER_0` as a CSV (Username,DisplayName,Email,Role,Redirect), and then look for `USER_X` until it has read them all in.
+    - This will make it less hard-coded, and make it so even less data is "leaked" in the production binary.
+- [ ] Use `CompileLocksmithPassword` for the Launchpad access token
+    - If there is no access token present in the ENV_VAR file, the `InitializeLaunchpad` would prompt you for input asking what the access token should be, and then write the password to the file. No more plaintext!
+- [ ] Have the app yell at you if you have too wide of permissions of the `.launchpad.env` file
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -61,8 +60,10 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		secureOptions = opts[0]
 	}
 	if secureOptions.BasicAuth.Enabled {
-		fmt.Println("Using Basic Auth")
-		return http.HandlerFunc(secureOptions.BasicAuth.Middleware(next.ServeHTTP))
+		return secureOptions.BasicAuth.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r = r.WithContext(context.WithValue(r.Context(), "database", db))
+			next.ServeHTTP(w, r)
+		}))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Inject the database into the request

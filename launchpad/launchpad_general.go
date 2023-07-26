@@ -14,7 +14,8 @@ type LocksmithLaunchpadUserOptions struct {
 }
 
 type LocksmithLaunchpadOptions struct {
-	// Is the Launchpad enabled?
+	// Is the Launchpad enabled? This will be
+	// ignored if the build tag is not present.
 	Enabled bool
 	// Caption to show under title in
 	// Web Launchpad UI
@@ -26,4 +27,7 @@ type LocksmithLaunchpadOptions struct {
 	AccessToken string
 	// Bootstrap any Demo Database items
 	BootstrapDatabase func(database.DatabaseAccessor)
+	// What label the "Refresh Environment" button
+	// will show.
+	RefreshButtonText string
 }
