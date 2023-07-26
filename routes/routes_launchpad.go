@@ -19,12 +19,13 @@ func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, optio
 		options.LaunchpadSettings.BootstrapDatabase(db)
 
 		launchpadHandler := endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{
-			AppName:           options.AppName,
-			Styling:           options.Styling,
-			AccessToken:       options.LaunchpadSettings.AccessToken,
-			AvailableUsers:    options.LaunchpadSettings.Users,
-			Subtitle:          options.LaunchpadSettings.Caption,
-			RefreshButtonText: options.LaunchpadSettings.RefreshButtonText,
+			AppName:                       options.AppName,
+			Styling:                       options.Styling,
+			AccessToken:                   options.LaunchpadSettings.AccessToken,
+			AvailableUsers:                options.LaunchpadSettings.Users,
+			Subtitle:                      options.LaunchpadSettings.Caption,
+			RefreshButtonText:             options.LaunchpadSettings.RefreshButtonText,
+			IsEarlyDevelopmentEnvironment: options.LaunchpadSettings.IsEarlyDevelopmentEnvironment,
 		}, db, endpoints.EndpointSecurityOptions{
 			BasicAuth: endpoints.EndpointSecurityBasicAuth{
 				Enabled:  true,

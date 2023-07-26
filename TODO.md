@@ -1,6 +1,6 @@
 # todo:
 ## sorted:
-- [ ] Launchpad "Restore" button
+- [x] Launchpad "Restore" button
     - This will reseed the database with entirely new information based on whatever is in the `LocksmithLaunchpadOptions.BootstrapDatabase`
 - [ ] Change Launchpad background color depending on what environment is in use.
 - [ ] When using a Launchpad user, inject an HTML header to show what persona the user is currently in

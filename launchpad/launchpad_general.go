@@ -30,4 +30,10 @@ type LocksmithLaunchpadOptions struct {
 	// What label the "Refresh Environment" button
 	// will show.
 	RefreshButtonText string
+	// Setting this to TRUE will make the
+	// launchpad buttons RED to notify
+	// users that it is an EARLY preview
+	// before it hits an official staging
+	// environment.
+	IsEarlyDevelopmentEnvironment bool
 }

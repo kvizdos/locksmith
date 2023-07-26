@@ -20,6 +20,12 @@ type LaunchpadHTTPHandler struct {
 	AccessToken       string
 	AvailableUsers    map[string]LocksmithLaunchpadUserOptions
 	RefreshButtonText string
+	// Setting this to TRUE will make the
+	// launchpad buttons RED to notify
+	// users that it is an EARLY preview
+	// before it hits an official staging
+	// environment.
+	IsEarlyDevelopmentEnvironment bool
 }
 
 func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +69,14 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	if data.Title == "" {
 		data.Title = "Locksmith"
+	}
+
+	if lr.IsEarlyDevelopmentEnvironment {
+		data.Styling = pages.LocksmithPageStyling{
+			StartGradient: "#d9452b",
+			EndGradient:   "#d9452b",
+			SubmitColor:   "#d9452b",
+		}
 	}
 
 	err = tmpl.Execute(w, data)

@@ -65,9 +65,10 @@ func main() {
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName: "Locksmith Demo UI",
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
-			Enabled:     true,
-			Caption:     "Locksmith Launchpad helps demo your service. It allow stakeholders to easily swap between users and feel the product from every POV- without worrying about passwords.",
-			AccessToken: "super-secret-password123",
+			Enabled:                       true,
+			IsEarlyDevelopmentEnvironment: false,
+			Caption:                       "Locksmith Launchpad helps demo your service. It allow stakeholders to easily swap between users and feel the product from every POV- without worrying about passwords.",
+			AccessToken:                   "super-secret-password123",
 			BootstrapDatabase: func(da database.DatabaseAccessor) {
 				fmt.Println("Nothing to bootstrap.")
 			},
