@@ -39,6 +39,18 @@ func (db *MongoDatabase) Initialize(uri string, database string) error {
 	return nil
 }
 
+func (db MongoDatabase) Drop(table string) error {
+	col := db.database.Collection(table)
+
+	err := col.Drop(context.Background())
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (db MongoDatabase) DeleteOne(table string, query map[string]interface{}) (bool, error) {
 	col := db.database.Collection(table)
 

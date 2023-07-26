@@ -19,10 +19,16 @@ type DatabaseAccessor interface {
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
+	Drop(table string) (bool, error)
 }
 
 type TestDatabase struct {
 	Tables map[string]map[string]interface{}
+}
+
+func (db TestDatabase) Drop(table string) error {
+	db.Tables[table] = map[string]interface{}{}
+	return nil
 }
 
 func (db TestDatabase) InsertOne(table string, body map[string]interface{}) (interface{}, error) {
