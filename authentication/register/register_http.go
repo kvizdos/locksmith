@@ -32,7 +32,7 @@ func (r registrationRequest) HasRequiredFields() bool {
 	return !(r.Username == "" || r.Password == "" || r.Email == "")
 }
 
-type RegisterCustomUserFunc func(users.LocksmithUser) users.LocksmithUserInterface
+type RegisterCustomUserFunc func(users.LocksmithUser, database.DatabaseAccessor) users.LocksmithUserInterface
 
 type RegistrationHandler struct {
 	DefaultRoleName           string
@@ -167,7 +167,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if rr.ConfigureCustomUser != nil {
-		lsu = rr.ConfigureCustomUser(lsu.(users.LocksmithUser))
+		lsu = rr.ConfigureCustomUser(lsu.(users.LocksmithUser), db)
 	}
 
 	_, err = db.InsertOne("users", lsu.ToMap())

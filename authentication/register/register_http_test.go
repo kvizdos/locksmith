@@ -321,7 +321,7 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 
 	handler := RegistrationHandler{
 		DefaultRoleName: "admin",
-		ConfigureCustomUser: func(lui users.LocksmithUser) users.LocksmithUserInterface {
+		ConfigureCustomUser: func(lui users.LocksmithUser, db database.DatabaseAccessor) users.LocksmithUserInterface {
 			user := customUser{
 				LocksmithUser: lui,
 			}
