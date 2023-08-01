@@ -4,13 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
-	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -94,8 +92,6 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		// Inject the database into the request
 		user, err := validation.ValidateHTTPUserToken(r, db, userInterface)
 
-		fmt.Printf("%+v\n", user)
-
 		if err != nil {
 			c := &http.Cookie{
 				Name:     "token",
@@ -137,6 +133,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			}
 		}
 
-		launchpad.LaunchpadRequestMiddleware(next).ServeHTTP(w, r)
+		// launchpad.LaunchpadRequestMiddleware(next).ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 	})
 }

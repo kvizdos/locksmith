@@ -1,73 +1,79 @@
-//go:build enable_launchpad
-// +build enable_launchpad
+//.go:build enable_launchpad
+//. +build enable_launchpad
 
 package launchpad
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
-	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
 )
 
-type responseCaptureWriter struct {
-	http.ResponseWriter
-	ContentType string
-	Body        *bytes.Buffer
-}
+// type responseCaptureWriter struct {
+// 	http.ResponseWriter
+// 	ContentType string
+// 	Body        *bytes.Buffer
+// }
 
-// Hijack the WriteHeader method to capture the Content-Type header
-func (rw *responseCaptureWriter) WriteHeader(statusCode int) {
-	rw.ResponseWriter.WriteHeader(statusCode)
-	rw.ContentType = rw.ResponseWriter.Header().Get("Content-Type")
-}
+// func (w *responseCaptureWriter) Write(p []byte) (int, error) {
+// 	if w.Body == nil {
+// 		w.Body = bytes.NewBuffer([]byte{})
+// 	}
+// 	return w.Body.Write(p)
+// }
 
-// Override the Write method to capture the response body
-func (rw *responseCaptureWriter) Write(b []byte) (int, error) {
-	if rw.Body == nil {
-		rw.Body = &bytes.Buffer{}
-	}
-	return rw.Body.Write(b)
-}
+// func (w *responseCaptureWriter) WriteHeader(statusCode int) {
+// 	w.ResponseWriter.WriteHeader(statusCode)
+// }
 
-func LaunchpadRequestMiddleware(next http.Handler) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("LaunchpadUser")
+// func (w *responseCaptureWriter) Header() http.Header {
+// 	return w.ResponseWriter.Header()
+// }
 
-		if err != nil {
-			fmt.Println("not a launchpad request")
-			next.ServeHTTP(w, r)
-			return
-		}
+// func LaunchpadRequestMiddleware(next http.Handler) http.HandlerFunc {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		cookie, err := r.Cookie("LaunchpadUser")
 
-		launchpadPersona := cookie.Value
+// 		if err != nil {
+// 			fmt.Println("not a launchpad request")
+// 			next.ServeHTTP(w, r)
+// 			return
+// 		}
 
-		// Wrap the original ResponseWriter to capture the rendered template
-		captureWriter := &responseCaptureWriter{ResponseWriter: w}
+// 		launchpadPersona := cookie.Value
 
-		// Call the next handler in the chain
-		next.ServeHTTP(captureWriter, r)
+// 		// Wrap the original ResponseWriter to capture the rendered template
+// 		captureWriter := &responseCaptureWriter{ResponseWriter: w}
 
-		if w.Header().Get("Content-Type") == "text/html" || w.Header().Get("Content-Type") == "text/html; charset=utf-8" {
-			customHTML := fmt.Sprintf(`<div id="launchpad-persona-key" style="padding: 0.5rem 1rem 0.5rem 1rem; border-radius: 0.5rem; position: fixed; top: 0; right: 0; margin: 1rem; display: flex; gap: 1rem; background-color: #93b1ed; align-items: center;box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.25);">
-						<p style="margin: 0; color: #04163b;">%s</p>
-						<a href="/launchpad" style="color: #04163b">Switch Personas</a>
-						<button style="background-color: transparent; border: 0; font-size: 1rem; cursor: pointer;" onclick="(() => { document.querySelector('#launchpad-persona-key').remove() })()">&times;</button>
-					</div>`, launchpadPersona)
+// 		// Call the next handler in the chain
+// 		next.ServeHTTP(captureWriter, r)
 
-			tmpl := template.Must(template.New("custom").Parse(`{{.}}`))
-			fmt.Println(string(captureWriter.Body.Bytes()))
+// 		if w.Header().Get("Content-Type") == "text/html" || w.Header().Get("Content-Type") == "text/html; charset=utf-8" {
+// 			customHTML := fmt.Sprintf(`<div id="launchpad-persona-key" style="padding: 0.5rem 1rem 0.5rem 1rem; border-radius: 0.5rem; position: fixed; top: 0; right: 0; margin: 1rem; display: flex; gap: 1rem; background-color: #93b1ed; align-items: center;box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.25);">
+// 						<p style="margin: 0; color: #04163b;">%s</p>
+// 						<a href="/launchpad" style="color: #04163b">Switch Personas</a>
+// 						<button style="background-color: transparent; border: 0; font-size: 1rem; cursor: pointer;" onclick="(() => { document.querySelector('#launchpad-persona-key').remove() })()">&times;</button>
+// 					</div>`, launchpadPersona)
 
-			tmpl.Execute(w, template.HTML(append(captureWriter.Body.Bytes(), []byte(customHTML)...)))
-		} else {
-			next.ServeHTTP(w, r)
-		}
-	})
-}
+// 			tmpl := template.Must(template.New("custom").Parse(`{{.}}`))
+
+// 			tmpl.Execute(w, template.HTML(append(captureWriter.Body.Bytes(), []byte(customHTML)...)))
+// 		} else {
+// 			// Set the status code and copy the captured headers
+// 			w.WriteHeader(captureWriter.ResponseWriter.)
+// 			for key, values := range captureWriter.Header() {
+// 				for _, value := range values {
+// 					w.Header().Add(key, value)
+// 				}
+// 			}
+
+// 			// In case the content type is not "text/html", simply write the captured response back to the original ResponseWriter (w)
+// 			w.Write(captureWriter.Body.Bytes())
+// 		}
+// 	})
+// }
 
 func combineMaps(map1, map2 map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})

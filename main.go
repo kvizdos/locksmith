@@ -30,7 +30,8 @@ type TestAppHandler struct{}
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c, _ := r.Cookie("token")
 	parsed, _ := authentication.ParseToken(c.Value)
-	w.Header().Set("Content-Type", "text/html")
+	fmt.Println("In here")
+	// w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintf(w, "<html><p>Hello World: %s - %s</p></html>", parsed.Username, parsed.Token)
 }
 
