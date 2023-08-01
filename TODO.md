@@ -1,5 +1,7 @@
 # todo:
 ## sorted:
+- [ ] Fix persona switcher
+    - The issue with the last solution was that headers / other stuff wasn't carrying over..
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
