@@ -354,63 +354,64 @@ func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[str
 	*writeTo = converted
 }
 
-// func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceedsWithCustomUser(t *testing.T) {
-// 	roles.AVAILABLE_ROLES = map[string][]string{
-// 		"admin": {
-// 			"view.admin",
-// 			"user.delete.self",
-// 		},
-// 	}
-// 	testDb := database.TestDatabase{
-// 		Tables: map[string]map[string]interface{}{
-// 			"users": {
-// 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-// 					"id":           "c8531661-22a7-493f-b228-028842e09a05",
-// 					"username":     "kenton",
-// 					"email":        "email@email.com",
-// 					"sessions":     []interface{}{},
-// 					"role":         "admin",
-// 					"customObject": "hello",
-// 				},
-// 			},
-// 		},
-// 	}
+func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceedsWithCustomUser(t *testing.T) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"admin": {
+			"view.admin",
+			"user.delete.self",
+		},
+	}
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":           "c8531661-22a7-493f-b228-028842e09a05",
+					"username":     "kenton",
+					"email":        "custom@email.com",
+					"sessions":     []interface{}{},
+					"role":         "admin",
+					"customObject": "hello",
+				},
+			},
+		},
+	}
 
-// 	token := InjectTokenToDatabase(testDb)
+	token := InjectTokenToDatabase(testDb)
 
-// 	req, err := http.NewRequest("POST", "/api/example", nil)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	req, err := http.NewRequest("POST", "/api/example", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	// Inject cookie..
-// 	cookie := http.Cookie{
-// 		Name:     "token",
-// 		Value:    token,
-// 		Expires:  time.Now(),
-// 		HttpOnly: true,
-// 		Secure:   true,
-// 		Path:     "/",
-// 	}
-// 	req.AddCookie(&cookie)
+	// Inject cookie..
+	cookie := http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  time.Now(),
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+	}
+	req.AddCookie(&cookie)
 
-// 	rr := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 
-// 	opts := EndpointSecurityOptions{
-// 		SecondaryValidation: func(lui users.LocksmithUserInterface, da database.DatabaseAccessor) int {
-// 			user := lui.(customUser)
+	opts := EndpointSecurityOptions{
+		CustomUser: customUser{},
+		SecondaryValidation: func(lui users.LocksmithUserInterface, da database.DatabaseAccessor) int {
+			user := lui.(customUser)
 
-// 			if user.customObject != "hello" {
-// 				return 400
-// 			}
+			if user.customObject != "hello" {
+				return 400
+			}
 
-// 			return 200
-// 		},
-// 	}
-// 	middleware := SecureEndpointHTTPMiddleware(testHandler{}, testDb, opts)
-// 	middleware.ServeHTTP(rr, req)
+			return 200
+		},
+	}
+	middleware := SecureEndpointHTTPMiddleware(testHandler{}, testDb, opts)
+	middleware.ServeHTTP(rr, req)
 
-// 	if status := rr.Code; status != http.StatusOK {
-// 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
-// 	}
-// }
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
+	}
+}

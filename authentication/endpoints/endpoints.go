@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -57,6 +58,10 @@ type EndpointSecurityOptions struct {
 	// AllowAPITokens bool
 	// If enabled, the API Key Management system will validate the permissions of the token
 	BasicAuth EndpointSecurityBasicAuth
+	// If you'd like to unwrap the Locksmith
+	// context user into some other LocksmithUserInterface,
+	// type it ehre.
+	CustomUser users.LocksmithUserInterface
 	// After initial confirmation of a user is confirmed,
 	// you can use this function to validate endpoint-specific
 	// validations.
@@ -78,8 +83,18 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		}))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var userInterface users.LocksmithUserInterface
+
+		if secureOptions.CustomUser != nil {
+			userInterface = secureOptions.CustomUser
+		} else {
+			userInterface = users.LocksmithUser{}
+		}
+
 		// Inject the database into the request
-		user, err := validation.ValidateHTTPUserToken(r, db)
+		user, err := validation.ValidateHTTPUserToken(r, db, userInterface)
+
+		fmt.Printf("%+v\n", user)
 
 		if err != nil {
 			c := &http.Cookie{
