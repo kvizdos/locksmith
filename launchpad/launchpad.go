@@ -69,6 +69,20 @@ func LaunchpadRequestMiddleware(next http.Handler) http.HandlerFunc {
 	})
 }
 
+func combineMaps(map1, map2 map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	for key, value := range map1 {
+		result[key] = value
+	}
+
+	for key, value := range map2 {
+		result[key] = value
+	}
+
+	return result
+}
+
 func BootstrapUsers(db database.DatabaseAccessor, accessToken string, importUsers map[string]LocksmithLaunchpadUserOptions) {
 	password, _ := authentication.CompileLocksmithPassword(accessToken)
 
@@ -82,7 +96,7 @@ func BootstrapUsers(db database.DatabaseAccessor, accessToken string, importUser
 			continue
 		}
 
-		_, err := db.InsertOne("users", map[string]interface{}{
+		insert := map[string]interface{}{
 			"id":          uuid.New().String(),
 			"username":    username,
 			"password":    password,
@@ -90,7 +104,12 @@ func BootstrapUsers(db database.DatabaseAccessor, accessToken string, importUser
 			"sessions":    []interface{}{},
 			"websessions": []interface{}{},
 			"role":        opts.Role,
-		})
+		}
+
+		if opts.Custom != nil {
+			insert = combineMaps(insert, opts.Custom)
+		}
+		_, err := db.InsertOne("users", insert)
 
 		if err != nil {
 			fmt.Println(err)

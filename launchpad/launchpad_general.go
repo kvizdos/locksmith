@@ -13,6 +13,8 @@ type LocksmithLaunchpadUserOptions struct {
 	Role string
 	// Redirect Path on sucecssful login
 	Redirect string
+	// Specify custom params (useful for using Launchpad w/ Custom Users)
+	Custom map[string]interface{}
 }
 
 type LocksmithLaunchpadOptions struct {

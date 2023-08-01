@@ -79,6 +79,9 @@ func main() {
 					Email:       "admin@admin.com",
 					Role:        "admin",
 					Redirect:    "/locksmith",
+					Custom: map[string]interface{}{
+						"customObject": "hello world",
+					},
 				},
 				"lp-user": {
 					DisplayName: "General User",

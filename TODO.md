@@ -1,8 +1,5 @@
 # todo:
 ## sorted:
-- [ ] SecureEndpointMiddleware should be allowed to pass a custom validation function
-    - It'd take the AuthUser as the parameter
-    - Useful for things like validating users have authorization to specific sections of features based on application logic
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -97,6 +94,10 @@
     - Would relie on a Tenant Interface to allow for customizable tenant info (e.g. logos, branding colors, etc)
 
 ## done:
+- [x] SecureEndpointMiddleware supports custom users getting passed into context
+- [x] SecureEndpointMiddleware should be allowed to pass a custom validation function
+    - [x] It'd take the AuthUser as the parameter
+    - Useful for things like validating users have authorization to specific sections of features based on application logic
 - [x] Launchpad "Restore" button
     - This will reseed the database with entirely new information based on whatever is in the `LocksmithLaunchpadOptions.BootstrapDatabase`
 - [x] Change Launchpad background color depending on what environment is in use.
