@@ -20,6 +20,7 @@ type LocksmithUserInterface interface {
 
 	// Read from Database
 	ReadFromMap(*LocksmithUserInterface, map[string]interface{})
+	ToMap() map[string]interface{}
 
 	// Convert to "public" interface
 	// Slimmed down version of this interface
@@ -87,13 +88,13 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 }
 
 type LocksmithUser struct {
-	ID               string                           `bson:"id"`
-	Username         string                           `json:"username" bson:"username"`
-	Email            string                           `json:"email" bson:"email"`
-	PasswordInfo     authentication.PasswordInfo      `json:"-" bson:"password"`
-	WebAuthnSessions []webauthn.SessionData           `json:"-" bson:"websessions"`
-	PasswordSessions []authentication.PasswordSession `json:"-" bson:"sessions"`
-	Role             string                           `json:"role" bson:"role"`
+	ID               string                          `bson:"id"`
+	Username         string                          `json:"username" bson:"username"`
+	Email            string                          `json:"email" bson:"email"`
+	PasswordInfo     authentication.PasswordInfo     `json:"-" bson:"password"`
+	WebAuthnSessions []webauthn.SessionData          `json:"-" bson:"websessions"`
+	PasswordSessions authentication.PasswordSessions `json:"-" bson:"sessions"`
+	Role             string                          `json:"role" bson:"role"`
 }
 
 func (u LocksmithUser) GetRole() (roles.Role, error) {
@@ -124,23 +125,42 @@ func (u LocksmithUser) GetPasswordSessions() []authentication.PasswordSession {
 	return u.PasswordSessions
 }
 
+func (u LocksmithUser) ToMap() map[string]interface{} {
+	out := make(map[string]interface{})
+
+	out["id"] = u.ID
+	out["username"] = u.Username
+	out["email"] = u.Email
+	out["password"] = u.PasswordInfo.ToMap()
+	out["websessions"] = map[string]interface{}{} // TODO
+	out["sessions"] = u.PasswordSessions.ToMap()
+	out["role"] = u.Role
+
+	return out
+}
+
 func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[string]interface{}) {
 	sessions := []authentication.PasswordSession{}
 
 	if user["sessions"] != nil {
-		for _, v := range user["sessions"].([]interface{}) {
-			session, ok := v.(authentication.PasswordSession)
-			if !ok {
-				newSession := v.(map[string]interface{})
-				sessions = append(sessions, authentication.PasswordSession{
-					Token:     newSession["token"].(string),
-					ExpiresAt: newSession["expire"].(int64),
-				})
+		rawSessions := user["sessions"]
+		if mappedSessions, ok := rawSessions.([]map[string]interface{}); ok {
+			sessions = authentication.PasswordSessions{}.FromMap(mappedSessions)
+		} else {
 
-				continue
+			for _, v := range user["sessions"].([]interface{}) {
+				session, ok := v.(authentication.PasswordSession)
+				if !ok {
+					newSession := v.(map[string]interface{})
+					sessions = append(sessions, authentication.PasswordSession{
+						Token:     newSession["token"].(string),
+						ExpiresAt: newSession["expire"].(int64),
+					})
+
+					continue
+				}
+				sessions = append(sessions, session)
 			}
-
-			sessions = append(sessions, session)
 		}
 	}
 

@@ -12,9 +12,45 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+type PasswordSessions []PasswordSession
+
+func (p PasswordSessions) ToMap() []map[string]interface{} {
+	out := make([]map[string]interface{}, len(p))
+
+	for i, pw := range p {
+		out[i] = pw.ToMap()
+	}
+
+	return out
+}
+
+func (p PasswordSessions) FromMap(input []map[string]interface{}) []PasswordSession {
+	out := make([]PasswordSession, len(input))
+
+	for i, m := range input {
+		out[i] = PasswordSession{}.FromMap(m)
+	}
+
+	return out
+}
+
 type PasswordSession struct {
 	Token     string `json:"token" bson:"token"`
 	ExpiresAt int64  `json:"expire" bson:"expire"`
+}
+
+func (p PasswordSession) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"token":  p.Token,
+		"expire": p.ExpiresAt,
+	}
+}
+
+func (p PasswordSession) FromMap(input map[string]interface{}) PasswordSession {
+	return PasswordSession{
+		Token:     input["token"].(string),
+		ExpiresAt: input["expire"].(int64),
+	}
 }
 
 func (p PasswordSession) Marshal() ([]byte, error) {
@@ -48,6 +84,16 @@ type PasswordInfo struct {
 	Password            string                `json:"password" bson:"password"`
 	Salt                string                `json:"salt" bson:"salt"`
 	WebAuthnCredentials []webauthn.Credential `json:"webauthn" bson:"webauthn"`
+}
+
+func (p PasswordInfo) ToMap() map[string]interface{} {
+	out := make(map[string]interface{})
+
+	out["password"] = p.Password
+	out["salt"] = p.Salt
+	out["webauth"] = map[string]interface{}{} // TODO
+
+	return out
 }
 
 func PasswordInfoFromMap(passinfo map[string]interface{}) PasswordInfo {

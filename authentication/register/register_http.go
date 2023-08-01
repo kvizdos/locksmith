@@ -10,12 +10,14 @@ import (
 	"regexp"
 	"text/template"
 
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/roles"
+	"github.com/kvizdos/locksmith/users"
 	// "kv.codes/locksmith/database"
 )
 
@@ -30,9 +32,12 @@ func (r registrationRequest) HasRequiredFields() bool {
 	return !(r.Username == "" || r.Password == "" || r.Email == "")
 }
 
+type RegisterCustomUserFunc func(users.LocksmithUser) users.LocksmithUserInterface
+
 type RegistrationHandler struct {
 	DefaultRoleName           string
 	DisablePublicRegistration bool
+	ConfigureCustomUser       RegisterCustomUserFunc
 }
 
 func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -150,15 +155,22 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = db.InsertOne("users", map[string]interface{}{
-		"id":          uuid.New().String(),
-		"username":    registrationReq.Username,
-		"password":    password,
-		"email":       registrationReq.Email,
-		"sessions":    []interface{}{},
-		"websessions": []interface{}{},
-		"role":        useRole,
-	})
+	var lsu users.LocksmithUserInterface
+	lsu = users.LocksmithUser{
+		ID:               uuid.New().String(),
+		Username:         registrationReq.Username,
+		Email:            registrationReq.Email,
+		PasswordInfo:     password,
+		WebAuthnSessions: []webauthn.SessionData{},
+		PasswordSessions: []authentication.PasswordSession{},
+		Role:             useRole,
+	}
+
+	if rr.ConfigureCustomUser != nil {
+		lsu = rr.ConfigureCustomUser(lsu.(users.LocksmithUser))
+	}
+
+	_, err = db.InsertOne("users", lsu.ToMap())
 
 	if err != nil {
 		fmt.Println("Error adding new user:", err)

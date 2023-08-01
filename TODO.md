@@ -94,6 +94,8 @@
     - Would relie on a Tenant Interface to allow for customizable tenant info (e.g. logos, branding colors, etc)
 
 ## done:
+- [x] Let registration endpoint take a Custom User, and a custom function to get the custom params
+- [x] Launchpad supports bootstrapping custom user data
 - [x] SecureEndpointMiddleware supports custom users getting passed into context
 - [x] SecureEndpointMiddleware should be allowed to pass a custom validation function
     - [x] It'd take the AuthUser as the parameter

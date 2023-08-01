@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
+	"github.com/kvizdos/locksmith/users"
 )
 
 func TestMain(m *testing.M) {
@@ -257,7 +257,11 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 	}
 
 	user := newUser.(map[string]interface{})
-	passwordInfo := user["password"].(authentication.PasswordInfo)
+
+	var lsu users.LocksmithUserInterface
+	lsu = users.LocksmithUser{}
+	lsu.ReadFromMap(&lsu, user)
+	passwordInfo := lsu.GetPasswordInfo()
 	if passwordInfo.Password == "password123" {
 		t.Errorf("PASSWORD NOT ENCRYPTED!")
 		return
@@ -269,6 +273,101 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 
 	if user["email"] != "email@email.com" {
 		t.Error("did not receive correct email on registration")
+	}
+}
+
+type customUser struct {
+	users.LocksmithUser
+
+	CustomObject string `json:"customObject"`
+}
+
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+	// Load initial locksmith data
+	var user users.LocksmithUserInterface
+	c.LocksmithUser.ReadFromMap(&user, u)
+	lsu := user.(users.LocksmithUser)
+
+	converted := customUser{
+		LocksmithUser: lsu,
+	}
+
+	converted.CustomObject = u["customObject"].(string)
+
+	*writeTo = converted
+}
+
+func (c customUser) ToMap() map[string]interface{} {
+	lsu := c.LocksmithUser.ToMap()
+
+	lsu["customObject"] = c.CustomObject
+
+	return lsu
+}
+
+func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+		ConfigureCustomUser: func(lui users.LocksmithUser) users.LocksmithUserInterface {
+			user := customUser{
+				LocksmithUser: lui,
+			}
+			user.CustomObject = "Hello World"
+			return user
+		},
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
+		return
+	}
+
+	newUser, found := testDb.FindOne("users", map[string]interface{}{
+		"username": "kenton",
+	})
+
+	if !found {
+		t.Errorf("new user did not get added to database.")
+		return
+	}
+
+	user := newUser.(map[string]interface{})
+
+	var lsu users.LocksmithUserInterface
+	lsu = customUser{}
+	lsu.ReadFromMap(&lsu, user)
+
+	if user["email"] != "email@email.com" {
+		t.Error("did not receive correct email on registration")
+	}
+
+	if user["customObject"] != "Hello World" {
+		t.Errorf("did not receive custom object on registration: %s", user["customObject"])
 	}
 }
 
