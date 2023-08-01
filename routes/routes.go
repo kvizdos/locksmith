@@ -23,6 +23,7 @@ type LocksmithRoutesOptions struct {
 	DisableInvites            bool
 	DisablePublicRegistration bool
 	DisableLocksmithPage      bool
+	CustomUserRegistration    register.RegisterCustomUserFunc
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
 }
@@ -38,6 +39,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
 			DefaultRoleName:           "user",
 			DisablePublicRegistration: options.DisablePublicRegistration,
+			ConfigureCustomUser:       options.CustomUserRegistration,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
