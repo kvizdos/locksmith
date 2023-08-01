@@ -3,13 +3,6 @@
 - [ ] SecureEndpointMiddleware should be allowed to pass a custom validation function
     - It'd take the AuthUser as the parameter
     - Useful for things like validating users have authorization to specific sections of features based on application logic
-- [ ] Different Launchpads based on environment variable
-    - This would be useful to define a ton of edge cases in development, and then limit the amount of users in staging environments.
-    - LocksmithLaunchpadOptions.Users needs to be read in through a `.launchpad.env` file. Once `InitializeLaunchpad` is called, it will read in `USER_0` as a CSV (Username,DisplayName,Email,Role,Redirect), and then look for `USER_X` until it has read them all in.
-    - This will make it less hard-coded, and make it so even less data is "leaked" in the production binary.
-- [ ] Use `CompileLocksmithPassword` for the Launchpad access token
-    - If there is no access token present in the ENV_VAR file, the `InitializeLaunchpad` would prompt you for input asking what the access token should be, and then write the password to the file. No more plaintext!
-- [ ] Have the app yell at you if you have too wide of permissions of the `.launchpad.env` file
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -21,6 +14,7 @@
 - [ ] Multifactor support
     - [ ] WebAuthn support
     - [ ] TOTP support
+    - [ ] Email sign in link
     - [ ] Option to require MFA on sign up
 - [ ] User lockout policy (invalid passwords, etc)
     - Set on `LoginHandler{}`
@@ -37,9 +31,20 @@
     - [ ] Reset passwords
 
 ## unsorted:
+- [ ] Different Launchpads based on environment variable
+    - This would be useful to define a ton of edge cases in development, and then limit the amount of users in staging environments.
+    - LocksmithLaunchpadOptions.Users needs to be read in through a `.launchpad.env` file. Once `InitializeLaunchpad` is called, it will read in `USER_0` as a CSV (Username,DisplayName,Email,Role,Redirect), and then look for `USER_X` until it has read them all in.
+    - This will make it less hard-coded, and make it so even less data is "leaked" in the production binary.
+- [ ] Use `CompileLocksmithPassword` for the Launchpad access token
+    - If there is no access token present in the ENV_VAR file, the `InitializeLaunchpad` would prompt you for input asking what the access token should be, and then write the password to the file. No more plaintext!
+- [ ] Have the app yell at you if you have too wide of permissions of the `.launchpad.env` file
+- [ ] Launchpad Persona Groups
+    - e.g. "Internal users" would have their own column on the Launchpage, "Public Users", etc. Customizable through the map.
+- [ ] MFA / Select a number on a pre-logged in device
 - [ ] Let admin UI modify roles + permissions for each user
 - [ ] max login sessions
     - delete oldest ones limit is reached
+    - don't delete trusted device sessions
 - [ ] Encrypt User info
     - Allow specific User interface keys to be encrypted before getting sent to the database
         - Make this dynamic so any struct can also have explicit encryption
@@ -52,7 +57,9 @@
         - Maybe only require a relogin for specific privilege levels (like administrators) to help aid in times where IPs may be changing frequently (a user on cell data)
     - Once a session is expired, log it as "IPs used" to track suspicion level of new logins.
 - [ ] Auto-renew session tokens
-    - If the token is "soon-to-be" expired, issue a new token on the refresh after it's been validated. Automatically delete the current token and replace it with the new one.
+    - Issue a Refresh token with each session token.
+        - Refreshing the session would require a valid Session Token + Refresh Token.
+        - It will use and give a new refresh token if the user logs in during a valid time period before the session token expires (e.g. 7 days until expiration)
     - Customizable settings in `SecureEndpointMiddleware`:
         - Enable feature
             - Only enable if they are a specific role (e.g. maybe let `users` refresh automatically, but require `admins` to login)
@@ -85,6 +92,9 @@
 - [ ] Email verification for new users
 - [ ] Make roles & permissions editable on the UI
 - [ ] Store a "preferred language" for each user for i18n
+- [ ] Multi-Tenancy
+    - Allow logins to multiple "orgs" within one app.
+    - Would relie on a Tenant Interface to allow for customizable tenant info (e.g. logos, branding colors, etc)
 
 ## done:
 - [x] Launchpad "Restore" button

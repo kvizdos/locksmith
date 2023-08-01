@@ -298,7 +298,8 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	user, err := ValidateHTTPUserToken(req, testDb)
+	ruser, err := ValidateHTTPUserToken(req, testDb)
+	user := ruser.(users.LocksmithUser)
 
 	if err != nil {
 		t.Errorf("received unexpected error: %s", err.Error())
@@ -307,6 +308,93 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 
 	if user.Username != "kenton" {
 		t.Errorf("received invalid username")
+	}
+}
+
+type customUserInterface interface {
+	users.LocksmithUserInterface
+}
+
+type customUser struct {
+	users.LocksmithUser
+
+	customObject string
+}
+
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+	// Load initial locksmith data
+	var user users.LocksmithUserInterface
+	c.LocksmithUser.ReadFromMap(&user, u)
+	lsu := user.(users.LocksmithUser)
+
+	converted := customUser{
+		LocksmithUser: lsu,
+	}
+
+	converted.customObject = u["customObject"].(string)
+
+	*writeTo = converted
+}
+
+func TestValidationMiddlewareValidTokenCustomUser(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":           "c8531661-22a7-493f-b228-028842e09a05",
+					"username":     "kenton",
+					"email":        "email@email.com",
+					"sessions":     []interface{}{},
+					"role":         "user",
+					"customObject": "hello",
+				},
+			},
+		},
+	}
+
+	validToken := InjectTokenToDatabase(testDb)
+
+	req, err := http.NewRequest("GET", "/app", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Inject Token..
+	u := users.LocksmithUser{
+		Username: "kenton",
+	}
+
+	session := authentication.PasswordSession{
+		Token:     validToken,
+		ExpiresAt: time.Now().Unix(),
+	}
+
+	v := u.GenerateCookieValueFromSession(session)
+
+	token := http.Cookie{
+		Name:     "token",
+		Value:    v,
+		Expires:  time.Now(),
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+	}
+	req.AddCookie(&token)
+
+	ruser, err := ValidateHTTPUserToken(req, testDb, customUser{})
+	user := ruser.(customUser)
+
+	if err != nil {
+		t.Errorf("received unexpected error: %s", err.Error())
+		return
+	}
+
+	if user.Username != "kenton" {
+		t.Errorf("received invalid username")
+	}
+
+	if user.customObject != "hello" {
+		t.Errorf("received invalid custom object")
 	}
 }
 

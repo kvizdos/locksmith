@@ -14,6 +14,7 @@ import (
 
 type LocksmithUserInterface interface {
 	ValidatePassword(string) (bool, error)
+	ValidateSessionToken(string, database.DatabaseAccessor) bool
 	GeneratePasswordSession() (authentication.PasswordSession, error)
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
 

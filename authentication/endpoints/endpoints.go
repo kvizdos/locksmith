@@ -10,6 +10,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
+	"github.com/kvizdos/locksmith/users"
 )
 
 type EndpointSecurityBasicAuth struct {
@@ -42,6 +43,11 @@ func (e EndpointSecurityBasicAuth) Middleware(next http.HandlerFunc) http.Handle
 	})
 }
 
+// Returns int (status code)
+// Will only let the request continue if
+// the status is "200"
+type EndpointSecurityCustomMiddleware func(users.LocksmithUserInterface, database.DatabaseAccessor) int
+
 type EndpointSecurityOptions struct {
 	// Specify required permissions to hit the endpoint
 	// Handlers can check permissions by themselves after this point
@@ -51,6 +57,10 @@ type EndpointSecurityOptions struct {
 	// AllowAPITokens bool
 	// If enabled, the API Key Management system will validate the permissions of the token
 	BasicAuth EndpointSecurityBasicAuth
+	// After initial confirmation of a user is confirmed,
+	// you can use this function to validate endpoint-specific
+	// validations.
+	SecondaryValidation EndpointSecurityCustomMiddleware
 }
 
 func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccessor, opts ...EndpointSecurityOptions) http.Handler {
@@ -104,7 +114,13 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		r = r.WithContext(context.WithValue(r.Context(), "authUser", user))
 		r = r.WithContext(context.WithValue(r.Context(), "database", db))
 
-		// next.ServeHTTP(w, r)
+		if secureOptions.SecondaryValidation != nil {
+			statusCode := secureOptions.SecondaryValidation(user, db)
+			if statusCode != 200 {
+				w.WriteHeader(statusCode)
+				return
+			}
+		}
 
 		launchpad.LaunchpadRequestMiddleware(next).ServeHTTP(w, r)
 	})
