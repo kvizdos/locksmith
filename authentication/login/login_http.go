@@ -113,7 +113,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.LOGGER.Log(logger.LOGIN, "kvizdos", "127.0.0.1")
+	logger.LOGGER.Log(logger.LOGIN, loginReq.Username, "127.0.0.1")
 
 	cookieValue := user.GenerateCookieValueFromSession(session)
 
