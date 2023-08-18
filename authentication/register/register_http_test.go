@@ -551,3 +551,70 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 		t.Errorf("invite was not expired after usage.")
 	}
 }
+
+// Test Email-Only Support
+func TestRegistrationWithEmail(t *testing.T) {
+	testCases := []struct {
+		DbSeed           map[string]interface{}
+		Username         string
+		Password         string
+		ExpectStatusCode int
+	}{
+		{
+			// Should pass with valid email that doesn't exist
+			DbSeed:           map[string]interface{}{},
+			Username:         "kvizdos@gmail.com",
+			Password:         "password123",
+			ExpectStatusCode: 200,
+		},
+		{
+			// Should fail with a non-email passed as username
+			DbSeed:           map[string]interface{}{},
+			Username:         "kvizdos",
+			Password:         "password123",
+			ExpectStatusCode: 400,
+		},
+		{
+			// Test with a email that already exists
+			DbSeed: map[string]interface{}{
+				"rand-id": map[string]interface{}{
+					"username": "kvizdos@gmail.com",
+					"email":    "kvizdos@gmail.com",
+				},
+			},
+			Username:         "kvizdos@gmail.com",
+			Password:         "helloworld",
+			ExpectStatusCode: 409,
+		},
+	}
+
+	for _, test := range testCases {
+		testDb := database.TestDatabase{
+			Tables: map[string]map[string]interface{}{
+				"users": test.DbSeed,
+			},
+		}
+
+		handler := RegistrationHandler{
+			DefaultRoleName: "admin",
+			EmailAsUsername: true,
+		}
+
+		payload := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, test.Username, test.Password)
+
+		req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+
+		req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != test.ExpectStatusCode {
+			t.Errorf("unexpected status code: got %v, want %v", status, test.ExpectStatusCode)
+			return
+		}
+	}
+}
