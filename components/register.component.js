@@ -73,6 +73,7 @@ export class RegisterFormComponent extends LitElement {
     registrationSuccess: { type: Boolean },
     emailDisabled: { type: Boolean },
     code: { type: this.toString },
+    emailAsUsername: { type: Boolean },
   };
 
   constructor() {
@@ -85,6 +86,7 @@ export class RegisterFormComponent extends LitElement {
     this.registrationError = 0
     this.emailDisabled = false;
     this.code = ""
+    this.emailAsUsername = false
     // 0 = none
     // 1 = password confirmation error
     // 2 = username taken
@@ -134,19 +136,25 @@ export class RegisterFormComponent extends LitElement {
   register() {
     let fail = false;
 
-    this.username = this.username.trim()
-    if (this.username.length == 0) {
-      const input = this.shadowRoot.getElementById("username")
-      input.setCustomValidity("Please enter a username")
-      input.reportValidity()
-      input.parentElement.classList.add("error")
-      fail = true;
-    } else if (!this.isValidUsername(this.username)) {
-      const input = this.shadowRoot.getElementById("username")
-      input.setCustomValidity("Username can only contain alphanumerical characters.")
-      input.reportValidity()
-      input.parentElement.classList.add("error")
-      fail = true;
+    if (this.emailAsUsername) {
+      this.username = this.email
+    }
+
+    if (!this.emailAsUsername) {
+      this.username = this.username.trim()
+      if (this.username.length == 0) {
+        const input = this.shadowRoot.getElementById("username")
+        input.setCustomValidity("Please enter a username")
+        input.reportValidity()
+        input.parentElement.classList.add("error")
+        fail = true;
+      } else if (!this.isValidUsername(this.username)) {
+        const input = this.shadowRoot.getElementById("username")
+        input.setCustomValidity(this.emailAsUsername ? "Username must be a valid email address." : "Username can only contain alphanumerical characters.")
+        input.reportValidity()
+        input.parentElement.classList.add("error")
+        fail = true;
+      }
     }
 
     this.email = this.email.trim()
@@ -166,9 +174,6 @@ export class RegisterFormComponent extends LitElement {
       input.parentElement.classList.add("error")
       fail = true;
     }
-
-    this.password = this.password.trim()
-    this.confirmedPassword = this.confirmedPassword.trim()
 
     if (this.password != this.confirmedPassword) {
       this.registrationError = 1;
@@ -249,10 +254,12 @@ export class RegisterFormComponent extends LitElement {
 
   render() {
     return html`<div id="root">
+    ${!this.emailAsUsername ? html`
       <div class="input${this.registrationError == 2 ? " error" : ''}">
         <label for="username">Username</label>
         <input id="username" type="text" placeholder="Username" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
       </div>
+      ` : ""}
       <div class="input${this.registrationError == 2 ? " error" : ''}">
         <label for="email">Email</label>
         <input id="email" type="email" placeholder="Email" autocorrect="off" autocapitalize="off" value="${this.email}" @input="${this.updateEmail}" ?disabled=${this.emailDisabled} />

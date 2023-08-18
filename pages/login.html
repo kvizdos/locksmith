@@ -73,7 +73,8 @@
     </header>
     <main id="subsection">
         <p>{{.Title}}</p>
-        <login-form backgroundColor="{{.Styling.SubmitColor}}"></login-form>
+        <login-form {{ if .EmailAsUsername}}emailAsUsername{{end}}
+            backgroundColor="{{.Styling.SubmitColor}}"></login-form>
     </main>
 </body>
 

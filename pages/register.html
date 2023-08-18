@@ -72,10 +72,11 @@
     <main id="subsection">
         <p>{{.Title}}</p>
         {{if .HasInvite}}
-        <register-form backgroundColor="{{.Styling.SubmitColor}}" email="{{.Invitation.Email}}" emailDisabled
-            code="{{.Invitation.Code}}"></register-form>
+        <register-form {{ if .EmailAsUsername}}emailAsUsername{{end}} backgroundColor="{{.Styling.SubmitColor}}"
+            email="{{.Invitation.Email}}" emailDisabled code="{{.Invitation.Code}}"></register-form>
         {{else}}
-        <register-form backgroundColor="{{.Styling.SubmitColor}}"></register-form>
+        <register-form {{ if .EmailAsUsername}}emailAsUsername{{end}}
+            backgroundColor="{{.Styling.SubmitColor}}"></register-form>
         {{end}}
     </main>
 </body>

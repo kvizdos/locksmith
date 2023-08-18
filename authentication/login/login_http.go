@@ -126,6 +126,7 @@ type LoginPageHandler struct {
 	// Only allow users with an invite code to register
 	DisablePublicRegistration bool
 	Styling                   pages.LocksmithPageStyling
+	EmailAsUsername           bool
 }
 
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -138,13 +139,15 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type PageData struct {
-		Title   string
-		Styling pages.LocksmithPageStyling
+		Title           string
+		Styling         pages.LocksmithPageStyling
+		EmailAsUsername bool
 	}
 
 	data := PageData{
-		Title:   lr.AppName,
-		Styling: lr.Styling,
+		Title:           lr.AppName,
+		Styling:         lr.Styling,
+		EmailAsUsername: lr.EmailAsUsername,
 	}
 
 	if data.Styling.SubmitColor == "" {

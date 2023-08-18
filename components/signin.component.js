@@ -190,6 +190,7 @@ export class LoginFormComponent extends LitElement {
     username: { type: String },
     password: { type: String },
     loginError: { type: Number },
+    emailAsUsername: { type: Boolean },
   };
 
   constructor() {
@@ -199,6 +200,7 @@ export class LoginFormComponent extends LitElement {
     this.username = ""
     this.password = ""
     this.loginError = 0
+    this.emailAsUsername = false
     // 0 = none
     // 1 = invalid username
     // 2 = invalid password
@@ -231,8 +233,6 @@ export class LoginFormComponent extends LitElement {
       input.parentElement.classList.add("error")
       fail = true;
     }
-
-    this.password = this.password.trim()
 
     if (this.password.length == 0) {
       const input = this.shadowRoot.getElementById("password")
@@ -288,8 +288,8 @@ export class LoginFormComponent extends LitElement {
   render() {
     return html`<div id="root">
       <div class="input">
-        <label for="username">Username</label>
-        <input id="username" type="text" placeholder="Username" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
+        <label for="username">${this.emailAsUsername ? "Email" : "Username"}</label>
+        <input id="username" type="text" placeholder="${this.emailAsUsername ? "Email" : "Username"}" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
       </div>
       ${this.stage == 0 ? html`
       <div class="input">

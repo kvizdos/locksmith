@@ -13,7 +13,6 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
-	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/routes"
 )
 
@@ -62,12 +61,10 @@ func main() {
 		return
 	}
 
-	logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, "127.0.0.1", "newusername")
-	logger.LogFormatToXML(logger.REGISTRATION_SUCCESS)
-
 	mux := http.NewServeMux()
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
-		AppName: "Locksmith Demo UI",
+		AppName:            "Locksmith Demo UI",
+		UseEmailAsUsername: false,
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
 			IsEarlyDevelopmentEnvironment: false,
