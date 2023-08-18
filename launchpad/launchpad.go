@@ -11,6 +11,10 @@ import (
 	"github.com/kvizdos/locksmith/database"
 )
 
+const (
+	IS_ENABLED bool = true
+)
+
 // type responseCaptureWriter struct {
 // 	http.ResponseWriter
 // 	ContentType string

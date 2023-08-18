@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -27,11 +28,13 @@ type LoginHandler struct{}
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
+		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
 	if r.Body == nil {
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -48,11 +51,13 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &loginReq)
 
 	if err != nil {
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if !loginReq.HasRequiredFields() {
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -64,6 +69,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if !usernameExists {
+		logger.LOGGER.Log(logger.LOGIN_INVALID_USERNAME, logger.GetIPFromRequest(*r), loginReq.Username)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -75,12 +81,12 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	passwordValidated, err := user.ValidatePassword(loginReq.Password)
 
 	if err != nil {
-		fmt.Println("Error validating user password:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if !passwordValidated {
+		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -106,6 +112,8 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	logger.LOGGER.Log(logger.LOGIN, "kvizdos", "127.0.0.1")
 
 	cookieValue := user.GenerateCookieValueFromSession(session)
 

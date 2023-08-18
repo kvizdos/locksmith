@@ -154,6 +154,7 @@ func CompileLocksmithPassword(password string, saltString ...string) (PasswordIn
 	encodedToHex := hex.EncodeToString(key)
 	encodedSaltToHex := hex.EncodeToString(salt)
 
+	key = nil
 	return PasswordInfo{
 		Password: encodedToHex,
 		Salt:     encodedSaltToHex,

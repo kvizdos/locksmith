@@ -13,6 +13,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
+	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/routes"
 )
 
@@ -30,9 +31,8 @@ type TestAppHandler struct{}
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c, _ := r.Cookie("token")
 	parsed, _ := authentication.ParseToken(c.Value)
-	fmt.Println("In here")
 	// w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, "<html><p>Hello World: %s - %s</p></html>", parsed.Username, parsed.Token)
+	fmt.Fprintf(w, "<html><script src=\"/components/persona-switcher.component.js\" type=\"module\"></script><p>Hello World: %s - %s</p></html>", parsed.Username, parsed.Token)
 }
 
 func main() {
@@ -61,6 +61,9 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, "127.0.0.1", "newusername")
+	logger.LogFormatToXML(logger.REGISTRATION_SUCCESS)
 
 	mux := http.NewServeMux()
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{

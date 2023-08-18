@@ -1,7 +1,8 @@
 # todo:
 ## sorted:
-- [ ] Fix persona switcher
-    - The issue with the last solution was that headers / other stuff wasn't carrying over..
+- [ ] Audit Logging system
+    - Push logins / authentication failures / etc to a specific file.
+    - By default, push to /var/log/locksmith.log
 - [ ] Make URL redirects dynamic
     - e.g. modify redirect for successful auth, let API endpoints be changed for components
     - Maybe set this on `LoginHandler{}` and `RegistrationHandler{}`?
@@ -81,7 +82,6 @@
     - If you're connected to Tailscale, authorize with that and leave permissions as-is (attach tailscale hostname/IP to a username w/ permissions)
 - [ ] Become an OAuth provider (allow external apps to authenticate with this service)
 - [ ] Prometheus Support (exports basic metrics: # users, # login attempts, # failed logins, etc)
-- [ ] Audit Logging system (easily create audit logs, allow apps to push to said audit log)
 - [ ] API Token Management
     - Create tokens
     - Delete tokens
@@ -96,6 +96,9 @@
     - Would relie on a Tenant Interface to allow for customizable tenant info (e.g. logos, branding colors, etc)
 
 ## done:
+- [x] Fix persona switcher
+    - The issue with the last solution was that headers / other stuff wasn't carrying over..
+    - Replaced with a Component that gets called from a script tag to auto-render the persona switcher.
 - [x] Let registration endpoint take a Custom User, and a custom function to get the custom params
 - [x] Launchpad supports bootstrapping custom user data
 - [x] SecureEndpointMiddleware supports custom users getting passed into context

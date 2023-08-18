@@ -15,6 +15,7 @@ import (
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
@@ -59,6 +60,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if r.Body == nil {
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -75,6 +77,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	err = json.Unmarshal(body, &registrationReq)
 
 	if err != nil {
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -85,6 +88,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if !registrationReq.HasRequiredFields() {
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -112,6 +116,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	var invite invitations.Invitation
 	if len(registrationReq.Code) > 0 {
 		if len(registrationReq.Code) != 96 {
+			logger.LOGGER.Log(logger.INVITE_CODE_MALFORMED, logger.GetIPFromRequest(*r), registrationReq.Code)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -119,11 +124,13 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		invite, err = invitations.GetInviteFromCode(db, registrationReq.Code)
 
 		if err != nil {
+			logger.LOGGER.Log(logger.INVITE_CODE_FAKE, logger.GetIPFromRequest(*r), registrationReq.Code)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if invite.Email != registrationReq.Email {
+			logger.LOGGER.Log(logger.INVITE_CODE_INCORRECT_EMAIL, logger.GetIPFromRequest(*r), registrationReq.Code)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -179,9 +186,11 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if len(registrationReq.Code) > 0 {
+		logger.LOGGER.Log(logger.INVITE_CODE_USED, logger.GetIPFromRequest(*r), registrationReq.Username, registrationReq.Code)
 		invite.Expire(db)
+	} else {
+		logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, logger.GetIPFromRequest(*r), registrationReq.Username)
 	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
