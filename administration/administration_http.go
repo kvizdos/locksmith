@@ -28,10 +28,24 @@ func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http
 		h.UserInterface = users.LocksmithUser{}
 	}
 
+	queryValues := r.URL.Query()
+	roles, roleExists := queryValues["role"]
+
+	parsedRoles := []string{}
+
+	if roleExists {
+		for _, role := range roles {
+			parsedRoles = append(parsedRoles, role)
+		}
+	}
+
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
 	lsu := reflect.Zero(reflect.TypeOf(h.UserInterface)).Interface().(users.LocksmithUserInterface)
-	users, err := ListUsers(db, lsu)
+	users, err := ListUsers(db, ListUsersOptions{
+		CustomInterface: lsu,
+		GetRoles:        parsedRoles,
+	})
 
 	if err != nil {
 		fmt.Println("failed to serve listing:", err.Error())

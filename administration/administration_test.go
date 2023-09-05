@@ -15,7 +15,7 @@ func TestListUsersNoUsers(t *testing.T) {
 		},
 	}
 
-	users, err := ListUsers(testDb)
+	users, err := ListUsers(testDb, ListUsersOptions{})
 
 	if err != nil {
 		t.Errorf("unexpected listing error: %s", err)
@@ -46,7 +46,7 @@ func TestListUsersOneUser(t *testing.T) {
 		},
 	}
 
-	usersArr, err := ListUsers(testDb)
+	usersArr, err := ListUsers(testDb, ListUsersOptions{})
 
 	if err != nil {
 		t.Errorf("unexpected listing error: %s", err)
@@ -85,7 +85,7 @@ func TestListUsersMultipleUsers(t *testing.T) {
 		},
 	}
 
-	usersArr, err := ListUsers(testDb)
+	usersArr, err := ListUsers(testDb, ListUsersOptions{})
 
 	if err != nil {
 		t.Errorf("unexpected listing error: %s", err)
@@ -96,6 +96,82 @@ func TestListUsersMultipleUsers(t *testing.T) {
 	if len(usersArr) != expecting {
 		t.Errorf("did not receive correct number of users, expected %d, got %d", expecting, len(usersArr))
 		return
+	}
+}
+
+func TestListUsersByRole(t *testing.T) {
+	testPassword, _ := authentication.CompileLocksmithPassword("securepassword123")
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"email":    "email@email.com",
+					"password": testPassword,
+					"sessions": []interface{}{},
+					"role":     "user",
+				},
+				"a2bHHs4L-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "a2bHHs4L-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+					"email":    "email@email.com",
+					"password": testPassword,
+					"sessions": []interface{}{},
+					"role":     "user",
+				},
+				"BASafaaA-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "b2bHHs4L-22a7-493f-b228-028842e09a05",
+					"username": "james",
+					"email":    "email@email.com",
+					"password": testPassword,
+					"sessions": []interface{}{},
+					"role":     "admin",
+				},
+			},
+		},
+	}
+
+	usersArr, err := ListUsers(testDb, ListUsersOptions{
+		GetRoles: []string{"user"},
+	})
+
+	if err != nil {
+		t.Errorf("unexpected listing error: %s", err)
+		return
+	}
+
+	expecting := 2
+	if len(usersArr) != expecting {
+		t.Errorf("did not receive correct number of users, expected %d, got %d", expecting, len(usersArr))
+	}
+
+	usersArr, err = ListUsers(testDb, ListUsersOptions{
+		GetRoles: []string{"admin"},
+	})
+
+	if err != nil {
+		t.Errorf("unexpected listing error: %s", err)
+		return
+	}
+
+	expecting = 1
+	if len(usersArr) != expecting {
+		t.Errorf("did not receive correct number of users, expected %d, got %d", expecting, len(usersArr))
+	}
+
+	usersArr, err = ListUsers(testDb, ListUsersOptions{
+		GetRoles: []string{"user", "admin"},
+	})
+
+	if err != nil {
+		t.Errorf("unexpected listing error: %s", err)
+		return
+	}
+
+	expecting = 3
+	if len(usersArr) != expecting {
+		t.Errorf("did not receive correct number of users, expected %d, got %d", expecting, len(usersArr))
 	}
 }
 
@@ -168,7 +244,9 @@ func TestListUsersOneUserCustomStruct(t *testing.T) {
 
 	publicUser := customUser{}
 
-	usersArr, err := ListUsers(testDb, publicUser)
+	usersArr, err := ListUsers(testDb, ListUsersOptions{
+		CustomInterface: publicUser,
+	})
 
 	if err != nil {
 		t.Errorf("unexpected listing error: %s", err)

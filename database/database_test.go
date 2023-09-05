@@ -375,6 +375,93 @@ func TestFindGetsAllWithEmptyQuery(t *testing.T) {
 	}
 }
 
+func TestFindWithOrOnlyOne(t *testing.T) {
+	testDb := TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"role":     "abc",
+				},
+				"abcdze12-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "a8531661-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+					"role":     "bca",
+				},
+				"bbcdze12-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "b8531661-22a7-493f-b228-028842e09a05",
+					"username": "james",
+					"role":     "bca",
+				},
+			},
+		},
+	}
+
+	users, found := testDb.Find("users", map[string]interface{}{
+		"$or": []map[string]interface{}{
+			{
+				"role": "abc",
+			},
+		},
+	})
+
+	if !found {
+		t.Error("should have found the objects")
+		return
+	}
+
+	expecting := 1
+	if len(users) != expecting {
+		t.Errorf("received incorrect number of results, expected %d got %d", expecting, len(users))
+	}
+}
+
+func TestFindWithOrMany(t *testing.T) {
+	testDb := TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"role":     "abc",
+				},
+				"abcdze12-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "a8531661-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+					"role":     "bca",
+				},
+				"bbcdze12-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "b8531661-22a7-493f-b228-028842e09a05",
+					"username": "james",
+					"role":     "bca",
+				},
+			},
+		},
+	}
+
+	users, found := testDb.Find("users", map[string]interface{}{
+		"$or": []map[string]interface{}{
+			{
+				"role": "abc",
+			},
+			{
+				"role": "bca",
+			},
+		},
+	})
+
+	if !found {
+		t.Error("should have found the objects")
+		return
+	}
+
+	expecting := 3
+	if len(users) != expecting {
+		t.Errorf("received incorrect number of results, expected %d got %d", expecting, len(users))
+	}
+}
+
 func TestFindReturnsZeroForEmptyTable(t *testing.T) {
 	testDb := TestDatabase{
 		Tables: map[string]map[string]interface{}{

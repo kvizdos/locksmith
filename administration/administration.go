@@ -17,16 +17,39 @@ func DeleteUser(db database.DatabaseAccessor, username string) (bool, error) {
 	return deleted, nil
 }
 
-func ListUsers(db database.DatabaseAccessor, withStruct ...users.LocksmithUserInterface) ([]users.PublicLocksmithUserInterface, error) {
+type ListUsersOptions struct {
+	// Query by roles
+	GetRoles []string
+	// Allow for custom roles
+	CustomInterface users.LocksmithUserInterface
+}
+
+func ListUsers(db database.DatabaseAccessor, opts ListUsersOptions) ([]users.PublicLocksmithUserInterface, error) {
 	var useStruct users.LocksmithUserInterface
 
-	if len(withStruct) == 0 {
+	if opts.CustomInterface == nil {
 		useStruct = users.LocksmithUser{}
 	} else {
-		useStruct = withStruct[0]
+		useStruct = opts.CustomInterface
 	}
 
-	allUsers, found := db.Find("users", map[string]interface{}{})
+	query := map[string]interface{}{}
+
+	if len(opts.GetRoles) > 1 {
+		query["$or"] = []map[string]interface{}{}
+
+		for _, role := range opts.GetRoles {
+			query["$or"] = append(query["$or"].([]map[string]interface{}), map[string]interface{}{
+				"role": role,
+			})
+		}
+	} else if len(opts.GetRoles) == 1 {
+		query = map[string]interface{}{
+			"role": opts.GetRoles[0],
+		}
+	}
+
+	allUsers, found := db.Find("users", query)
 
 	if !found {
 		return []users.PublicLocksmithUserInterface{}, nil

@@ -137,8 +137,8 @@ func (db TestDatabase) Find(table string, query map[string]interface{}) ([]inter
 		if orQueries, ok := query["$or"]; ok {
 			if orQueriesList, ok := orQueries.([]map[string]interface{}); ok {
 				for _, orQuery := range orQueriesList {
-					if result, ok := db.FindOne(table, orQuery); ok {
-						results = append(results, result)
+					if result, ok := db.Find(table, orQuery); ok {
+						results = append(results, result...)
 					}
 				}
 

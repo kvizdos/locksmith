@@ -116,6 +116,170 @@ func TestListUsersReceivesValidJSON(t *testing.T) {
 	}
 }
 
+func TestListUsersSpecificRole(t *testing.T) {
+	var usersList []users.PublicLocksmithUser
+
+	var sessions []interface{}
+	tempSessions := []authentication.PasswordSession{
+		{
+			Token:     "abc",
+			ExpiresAt: 123,
+		},
+	}
+
+	for _, sess := range tempSessions {
+		sessions = append(sessions, sess)
+	}
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"email":    "email@email.com",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"role":     "user",
+					"sessions": sessions,
+				},
+
+				"a8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+					"email":    "email@email.com",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"role":     "admin",
+					"sessions": sessions,
+				},
+			},
+		},
+	}
+
+	handler := AdministrationListUsersHandler{}
+
+	req, err := http.NewRequest("GET", "/locksmith/api/list?role=user", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusOK)
+	}
+
+	err = json.Unmarshal(rr.Body.Bytes(), &usersList)
+
+	if err != nil {
+		t.Errorf("failed to decode JSON response")
+		return
+	}
+
+	if len(usersList) != 1 {
+		t.Errorf("received unexpected number of users, expected 1 got %d", len(usersList))
+		return
+	}
+
+	if usersList[0].Role != "user" {
+		t.Errorf("error reading correct role, expected user got %s", usersList[0].Role)
+	}
+}
+
+func TestListUsersMultipleRoles(t *testing.T) {
+	var usersList []users.PublicLocksmithUser
+
+	var sessions []interface{}
+	tempSessions := []authentication.PasswordSession{
+		{
+			Token:     "abc",
+			ExpiresAt: 123,
+		},
+	}
+
+	for _, sess := range tempSessions {
+		sessions = append(sessions, sess)
+	}
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+					"email":    "email@email.com",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"role":     "user",
+					"sessions": sessions,
+				},
+
+				"a8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+					"email":    "email@email.com",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"role":     "admin",
+					"sessions": sessions,
+				},
+
+				"b8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "z8531661-22a7-493f-b228-028842e09a05",
+					"username": "james",
+					"email":    "email@email.com",
+					"password": authentication.PasswordInfo{
+						Password: "testpassword",
+						Salt:     "testsalt",
+					},
+					"role":     "other",
+					"sessions": sessions,
+				},
+			},
+		},
+	}
+
+	handler := AdministrationListUsersHandler{}
+
+	req, err := http.NewRequest("GET", "/locksmith/api/list?role=user&role=admin", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code got %v, want %v", status, http.StatusOK)
+	}
+
+	err = json.Unmarshal(rr.Body.Bytes(), &usersList)
+
+	if err != nil {
+		t.Errorf("failed to decode JSON response")
+		return
+	}
+
+	if len(usersList) != 2 {
+		t.Errorf("received unexpected number of users, expected 1 got %d", len(usersList))
+		return
+	}
+}
+
 func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 	var usersList []publicCustomUser
 
