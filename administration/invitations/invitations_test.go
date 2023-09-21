@@ -16,7 +16,7 @@ func TestInviteUserInvalidRole(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "email@email.com", "fakerole", "random-uid")
+	_, _, err := InviteUser(testDb, "email@email.com", "fakerole", "random-uid")
 
 	if err.Error() != "invalid role" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -30,7 +30,7 @@ func TestInviteUserInvalidEmail(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "malformed.email@", "user", "random-uid")
+	_, _, err := InviteUser(testDb, "malformed.email@", "user", "random-uid")
 
 	if err.Error() != "invalid email address" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -53,7 +53,7 @@ func TestInviteUserEmailExistsAsRegisteredUser(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "email@email.com", "user", "random-uid")
+	_, _, err := InviteUser(testDb, "email@email.com", "user", "random-uid")
 
 	if err.Error() != "email already registered" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -82,7 +82,7 @@ func TestInviteUserEmailExistsAsInvite(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "new@email.com", "user", "random-uid")
+	_, _, err := InviteUser(testDb, "new@email.com", "user", "random-uid")
 
 	if err.Error() != "email already invited" {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -111,7 +111,7 @@ func TestInviteUserSuccess(t *testing.T) {
 		},
 	}
 
-	_, err := InviteUser(testDb, "new@email.com", "user", "random-uid")
+	_, _, err := InviteUser(testDb, "new@email.com", "user", "random-uid")
 
 	if err != nil {
 		t.Errorf("received unexpected error message: %s", err.Error())
@@ -169,6 +169,7 @@ func TestGetInviteCodeValidToken(t *testing.T) {
 					"inviter": "a-uuid",
 					"sentAt":  time.Now().Unix(),
 					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
 				},
 			},
 			"users": {},
@@ -184,5 +185,9 @@ func TestGetInviteCodeValidToken(t *testing.T) {
 
 	if invite.Email != "kvizdos@email.com" {
 		t.Errorf("could not find correct email")
+	}
+
+	if invite.AttachUserID != "abc123" {
+		t.Errorf("recevied incorrect attach user id: %s", invite.AttachUserID)
 	}
 }

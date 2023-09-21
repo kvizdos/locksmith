@@ -6,17 +6,19 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
 )
 
 type Invitation struct {
-	Code      string `json:"code"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	InvitedBy string `json:"inviter"`
-	SentAt    int64  `json:"sentAt"` // time that invite was sent
+	Code         string `json:"code"`
+	Email        string `json:"email"`
+	Role         string `json:"role"`
+	AttachUserID string `json:"userid"` // Attach THIS user ID once they register
+	InvitedBy    string `json:"inviter"`
+	SentAt       int64  `json:"sentAt"` // time that invite was sent
 }
 
 func (i Invitation) Expire(db database.DatabaseAccessor) {
@@ -32,6 +34,7 @@ func (i Invitation) ToMap() map[string]interface{} {
 		"sentAt":  i.SentAt,
 		"role":    i.Role,
 		"inviter": i.InvitedBy,
+		"userid":  i.AttachUserID,
 	}
 }
 
@@ -40,20 +43,21 @@ func (i Invitation) ToMap() map[string]interface{} {
 // a string and an error, where the string is the "invite code" used
 // to register an account.
 // InvitedBy is the UID of the user who invited this email.
-func InviteUser(db database.DatabaseAccessor, email string, role string, invitedBy string) (string, error) {
+// Returns [inviteCode, attachUserID, error]
+func InviteUser(db database.DatabaseAccessor, email string, role string, invitedBy string) (string, string, error) {
 	if !roles.RoleExists(role) {
-		return "", fmt.Errorf("invalid role")
+		return "", "", fmt.Errorf("invalid role")
 	}
 
 	if invitedBy == "" {
-		return "", fmt.Errorf("invitedBy is required")
+		return "", "", fmt.Errorf("invitedBy is required")
 	}
 
 	emailPattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
 	isValidemail, _ := regexp.MatchString(emailPattern, email)
 
 	if !isValidemail {
-		return "", fmt.Errorf("invalid email address")
+		return "", "", fmt.Errorf("invalid email address")
 	}
 
 	_, alreadyRegistered := db.FindOne("users", map[string]interface{}{
@@ -61,7 +65,7 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 	})
 
 	if alreadyRegistered {
-		return "", fmt.Errorf("email already registered")
+		return "", "", fmt.Errorf("email already registered")
 	}
 
 	_, alreadyInvited := db.FindOne("invites", map[string]interface{}{
@@ -69,7 +73,7 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 	})
 
 	if alreadyInvited {
-		return "", fmt.Errorf("email already invited")
+		return "", "", fmt.Errorf("email already invited")
 	}
 
 	inviteCode, err := authentication.GenerateRandomString(96)
@@ -79,24 +83,27 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 	hashedCode := hasher.Sum(nil)
 
 	if err != nil {
-		return "", fmt.Errorf("error generating secure invite code: %s", err.Error())
+		return "", "", fmt.Errorf("error generating secure invite code: %s", err.Error())
 	}
 
+	attachUserID := uuid.New().String()
+
 	newInvite := Invitation{
-		Code:      fmt.Sprintf("%x", hashedCode),
-		Email:     email,
-		SentAt:    time.Now().Unix(),
-		InvitedBy: invitedBy,
-		Role:      role,
+		Code:         fmt.Sprintf("%x", hashedCode),
+		Email:        email,
+		SentAt:       time.Now().Unix(),
+		InvitedBy:    invitedBy,
+		Role:         role,
+		AttachUserID: attachUserID,
 	}
 
 	_, err = db.InsertOne("invites", newInvite.ToMap())
 
 	if err != nil {
-		return "", fmt.Errorf("unable to insert invite into database: %s", err.Error())
+		return "", "", fmt.Errorf("unable to insert invite into database: %s", err.Error())
 	}
 
-	return inviteCode, nil
+	return inviteCode, attachUserID, nil
 }
 
 func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, error) {
@@ -119,11 +126,12 @@ func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, e
 	inv := rawInvite.(map[string]interface{})
 
 	invite := Invitation{
-		Code:      inv["code"].(string),
-		Email:     inv["email"].(string),
-		Role:      inv["role"].(string),
-		InvitedBy: inv["inviter"].(string),
-		SentAt:    inv["sentAt"].(int64),
+		Code:         inv["code"].(string),
+		Email:        inv["email"].(string),
+		Role:         inv["role"].(string),
+		InvitedBy:    inv["inviter"].(string),
+		SentAt:       inv["sentAt"].(int64),
+		AttachUserID: inv["userid"].(string),
 	}
 
 	return invite, nil

@@ -3,7 +3,7 @@ package invitations
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/database"
@@ -48,7 +48,7 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		// handle the error
 		fmt.Println("Error reading request body:", err)
@@ -69,7 +69,7 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 		return
 	}
 
-	inviteCode, err := InviteUser(db, invite.Email, invite.Role, user.ID)
+	inviteCode, _, err := InviteUser(db, invite.Email, invite.Role, user.ID)
 
 	if err != nil {
 		switch err.Error() {

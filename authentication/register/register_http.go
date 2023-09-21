@@ -3,7 +3,7 @@ package register
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -66,7 +66,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		// handle the error
 		fmt.Println("Error reading request body:", err)
@@ -124,6 +124,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
 	useRole := rr.DefaultRoleName
+	useID := uuid.New().String()
 
 	var invite invitations.Invitation
 	if len(registrationReq.Code) > 0 {
@@ -148,6 +149,8 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 
 		useRole = invite.Role
+		fmt.Println("Attaching", invite.AttachUserID, "from invite.")
+		useID = invite.AttachUserID
 	}
 
 	usernameAndEmailCheck, _ := db.Find("users", map[string]interface{}{
@@ -176,7 +179,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	var lsu users.LocksmithUserInterface
 	lsu = users.LocksmithUser{
-		ID:               uuid.New().String(),
+		ID:               useID,
 		Username:         registrationReq.Username,
 		Email:            registrationReq.Email,
 		PasswordInfo:     password,

@@ -499,6 +499,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 					"role":    "admin",
 					"inviter": "a-uuid",
 					"sentAt":  time.Now().Unix(),
+					"userid":  "this-is-the-user-id",
 				},
 			},
 			"users": {
