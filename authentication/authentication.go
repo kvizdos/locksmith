@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -123,7 +124,8 @@ func ValidatePassword(locksmithPassword PasswordInfo, inputPassword string) (boo
 		return false, fmt.Errorf("failed to generate hashed version of password")
 	}
 
-	if generatedPassword.Password != locksmithPassword.Password {
+	// Help prevent time attacks
+	if subtle.ConstantTimeCompare([]byte(generatedPassword.Password), []byte(locksmithPassword.Password)) == 0 {
 		return false, nil
 	}
 

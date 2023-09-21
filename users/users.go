@@ -2,6 +2,7 @@ package users
 
 import (
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -251,7 +252,8 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 		// Maybe renew the token here if its getting soon to expiring..
 		if !session.IsExpired() {
 			nonexpiredTokens = append(nonexpiredTokens, session)
-			if session.Token == hashedToken {
+			// Helps prevent timing attacks
+			if subtle.ConstantTimeCompare([]byte(session.Token), []byte(hashedToken)) == 1 {
 				found = true
 			}
 		}
