@@ -90,6 +90,7 @@ func (db MongoDatabase) Find(table string, query map[string]interface{}) ([]inte
 	res, err := col.Find(context.Background(), query)
 
 	if err != nil {
+		fmt.Println(err)
 		return []interface{}{}, false
 	}
 
@@ -104,6 +105,52 @@ func (db MongoDatabase) Find(table string, query map[string]interface{}) ([]inte
 	}
 
 	return finalResults, true
+}
+
+func (db MongoDatabase) CreateTextIndex(table string, keys []string) error {
+	// Convert []string to bson.D
+	var keysPrim bson.D
+	for _, fieldName := range keys {
+		keysPrim = append(keysPrim, bson.E{Key: fieldName, Value: "text"})
+	}
+
+	model := mongo.IndexModel{Keys: keysPrim}
+	_, err := db.database.Collection(table).Indexes().CreateOne(context.TODO(), model)
+	if err != nil {
+		panic(err)
+	}
+
+	return err
+}
+
+func (db MongoDatabase) Count(table string, filter map[string]interface{}) (int64, error) {
+	return db.database.Collection(table).CountDocuments(context.TODO(), filter)
+}
+
+func (db MongoDatabase) FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool) {
+	// Set the maximum and sort by ID
+	opts := options.Find().SetLimit(maxPages).SetSort(bson.D{{"_id", 1}})
+
+	if len(lastID) > 0 {
+		objID, err := primitive.ObjectIDFromHex(lastID)
+
+		if err != nil {
+			return []map[string]interface{}{}, false
+		}
+
+		query["_id"] = map[string]interface{}{"$gt": objID}
+	}
+
+	res, err := db.database.Collection(table).Find(context.TODO(), query, opts)
+
+	if err != nil {
+		return []map[string]interface{}{}, false
+	}
+
+	var results []map[string]interface{}
+	res.All(context.Background(), &results)
+
+	return results, true
 }
 
 func convertArraysToSlices(data interface{}) {

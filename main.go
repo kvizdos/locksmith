@@ -102,9 +102,13 @@ func main() {
 
 	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
 
+	res, _ := db.FindPaginated("users", map[string]interface{}{}, 1, "")
+	fmt.Println("RES", res)
+
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", mux)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 }

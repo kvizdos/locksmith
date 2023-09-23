@@ -18,7 +18,9 @@ type DatabaseAccessor interface {
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
+	FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool)
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
+	CreateTextIndex(table string, keys []string) error
 	Drop(table string) error
 }
 
@@ -26,9 +28,18 @@ type TestDatabase struct {
 	Tables map[string]map[string]interface{}
 }
 
+func (db TestDatabase) CreateTextIndex(table string, keys []string) error {
+	return nil
+}
+
 func (db TestDatabase) Drop(table string) error {
 	db.Tables[table] = map[string]interface{}{}
 	return nil
+}
+
+func (db TestDatabase) FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool) {
+	// TODO: Probably stub this
+	return []map[string]interface{}{}, false
 }
 
 func (db TestDatabase) InsertOne(table string, body map[string]interface{}) (interface{}, error) {
