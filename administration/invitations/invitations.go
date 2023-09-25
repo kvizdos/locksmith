@@ -106,6 +106,77 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 	return inviteCode, attachUserID, nil
 }
 
+// If a user needs reinviting, use this function.
+// It will return:
+// (newInviteCode, error)
+func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID string, newEmail ...string) (string, error) {
+	if authUserID == "" {
+		return "", fmt.Errorf("authUserID required")
+	}
+
+	// If a new email is present,
+	// confirm it hasn't been taken
+	// already by a registered user
+	// or invite.
+	if len(newEmail) > 0 {
+		_, alreadyRegistered := db.FindOne("users", map[string]interface{}{
+			"email": newEmail[0],
+		})
+
+		if alreadyRegistered {
+			return "", fmt.Errorf("email already registered")
+		}
+
+		_, alreadyInvited := db.FindOne("invites", map[string]interface{}{
+			"email": newEmail[0],
+		})
+
+		if alreadyInvited {
+			return "", fmt.Errorf("email already invited")
+		}
+	}
+
+	_, inviteFound := db.FindOne("invites", map[string]interface{}{
+		"userid": forUserID,
+	})
+
+	if !inviteFound {
+		return "", fmt.Errorf("could not find invite")
+	}
+
+	inviteCode, err := authentication.GenerateRandomString(96)
+
+	hasher := sha256.New()
+	hasher.Write([]byte(inviteCode))
+	hashedCode := hasher.Sum(nil)
+
+	if err != nil {
+		return "", fmt.Errorf("error generating secure invite code: %s", err.Error())
+	}
+
+	updateBody := map[string]interface{}{
+		"code":    fmt.Sprintf("%x", hashedCode),
+		"sentAt":  time.Now().UTC().Unix(),
+		"inviter": authUserID,
+	}
+
+	if len(newEmail) > 0 {
+		updateBody["email"] = newEmail[0]
+	}
+
+	_, err = db.UpdateOne("invites", map[string]interface{}{
+		"userid": forUserID,
+	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		database.SET: updateBody,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("received error while updating invite: %s", err)
+	}
+
+	return fmt.Sprintf("%x", hashedCode), nil
+}
+
 func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, error) {
 	if len(code) != 96 {
 		return Invitation{}, fmt.Errorf("invalid token length")

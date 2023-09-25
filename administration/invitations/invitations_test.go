@@ -191,3 +191,253 @@ func TestGetInviteCodeValidToken(t *testing.T) {
 		t.Errorf("recevied incorrect attach user id: %s", invite.AttachUserID)
 	}
 }
+
+func TestReinviteUserNoTokenFound(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"email":   "kvizdos@email.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
+				},
+			},
+			"users": {},
+		},
+	}
+
+	_, err := ReinviteUser(testDb, "invalid-user-id", "auth-user-id")
+
+	if err == nil {
+		t.Errorf("expected to receive an error message!")
+		return
+	}
+
+	if err.Error() != "could not find invite" {
+		t.Errorf("got wrong error mesage: %s", err)
+		return
+	}
+}
+
+func TestReinviteUserNoEmailChangeSuccess(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"email":   "kvizdos@email.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  int64(0),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
+				},
+			},
+			"users": {},
+		},
+	}
+
+	code, err := ReinviteUser(testDb, "abc123", "b-uuid")
+
+	if err != nil {
+		t.Errorf("should not have received an error message: %s", err)
+		return
+	}
+
+	rawInvite, found := testDb.FindOne("invites", map[string]interface{}{
+		"userid": "abc123",
+	})
+
+	if !found {
+		fmt.Errorf("could not find the invite in the database")
+		return
+	}
+
+	invite := rawInvite.(map[string]interface{})
+
+	if invite["code"].(string) != code {
+		t.Errorf("received incorrect code: %s", invite["code"].(string))
+	}
+
+	if invite["inviter"].(string) != "b-uuid" {
+		t.Errorf("inviter did not change: %s", invite["inviter"].(string))
+	}
+
+	if invite["sentAt"].(int64) == 0 {
+		t.Error("sentAt time did not change")
+	}
+
+	if invite["email"].(string) != "kvizdos@email.com" {
+		t.Error("email is incorrect: %", invite["email"].(string))
+	}
+
+	if invite["role"].(string) != "user" {
+		t.Error("role is incorrect: %", invite["role"].(string))
+	}
+}
+
+func TestReinviteWithEmailChangeEmailAlreadyRegistered(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"email":   "kvizdos@email.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
+				},
+			},
+			"users": {
+				"id": map[string]interface{}{
+					"email": "an-email@example.com",
+				},
+			},
+		},
+	}
+
+	_, err := ReinviteUser(testDb, "abc123", "auth-user-id", "an-email@example.com")
+
+	if err == nil {
+		t.Errorf("expected to receive an error message!")
+		return
+	}
+
+	if err.Error() != "email already registered" {
+		t.Errorf("got wrong error mesage: %s", err)
+		return
+	}
+}
+
+func TestReinviteWithEmailChangeEmailAlreadyInvited(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"email":   "kvizdos@email.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
+				},
+				"id2": map[string]interface{}{
+					"email":   "kvizdos2@gmail.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
+				},
+			},
+			"users": {
+				"id": map[string]interface{}{
+					"email": "an-email@example.com",
+				},
+			},
+		},
+	}
+
+	_, err := ReinviteUser(testDb, "abc123", "auth-user-id", "kvizdos2@gmail.com")
+
+	if err == nil {
+		t.Errorf("expected to receive an error message!")
+		return
+	}
+
+	if err.Error() != "email already invited" {
+		t.Errorf("got wrong error mesage: %s", err)
+		return
+	}
+}
+
+func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
+	hasher := sha256.New()
+	hasher.Write([]byte("jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"))
+	hashedCode := hasher.Sum(nil)
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"id": map[string]interface{}{
+					"email":   "kvizdos@email.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "abc123",
+				},
+				"id2": map[string]interface{}{
+					"email":   "kvizdos2@gmail.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    fmt.Sprintf("%x", hashedCode),
+					"userid":  "xyz123",
+				},
+			},
+			"users": {
+				"id": map[string]interface{}{
+					"email": "an-email@example.com",
+				},
+			},
+		},
+	}
+
+	code, err := ReinviteUser(testDb, "abc123", "b-uuid", "new-email@example.com")
+
+	if err != nil {
+		t.Errorf("should not have received an error message: %s", err)
+		return
+	}
+
+	rawInvite, found := testDb.FindOne("invites", map[string]interface{}{
+		"userid": "abc123",
+	})
+
+	if !found {
+		fmt.Errorf("could not find the invite in the database")
+		return
+	}
+
+	invite := rawInvite.(map[string]interface{})
+
+	if invite["code"].(string) != code {
+		t.Errorf("received incorrect code: %s (expected %s)", invite["code"].(string), code)
+	}
+
+	if invite["inviter"].(string) != "b-uuid" {
+		t.Errorf("inviter did not change: %s", invite["inviter"].(string))
+	}
+
+	if invite["sentAt"].(int64) == 0 {
+		t.Error("sentAt time did not change")
+	}
+
+	if invite["email"].(string) != "new-email@example.com" {
+		t.Errorf("email is incorrect: %s", invite["email"].(string))
+	}
+
+	if invite["role"].(string) != "user" {
+		t.Error("role is incorrect: %", invite["role"].(string))
+	}
+}
