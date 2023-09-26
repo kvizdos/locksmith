@@ -174,7 +174,7 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 		return "", fmt.Errorf("received error while updating invite: %s", err)
 	}
 
-	return fmt.Sprintf("%x", hashedCode), nil
+	return inviteCode, nil
 }
 
 func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, error) {

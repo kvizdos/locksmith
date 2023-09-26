@@ -22,6 +22,7 @@ type DatabaseAccessor interface {
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
 	CreateTextIndex(table string, keys []string) error
 	Drop(table string) error
+	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
 }
 
 type TestDatabase struct {
@@ -30,6 +31,10 @@ type TestDatabase struct {
 
 func (db TestDatabase) CreateTextIndex(table string, keys []string) error {
 	return nil
+}
+
+func (db TestDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
+	return []map[string]interface{}{}, nil
 }
 
 func (db TestDatabase) Drop(table string) error {

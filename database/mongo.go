@@ -51,6 +51,28 @@ func (db MongoDatabase) Drop(table string) error {
 	return nil
 }
 
+func (db MongoDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
+	col := db.database.Collection(table)
+
+	res, err := col.Aggregate(context.TODO(), pipeline)
+
+	if err != nil {
+		return []map[string]interface{}{}, err
+	}
+
+	var results []map[string]interface{}
+	res.All(context.Background(), &results)
+
+	finalResults := make([]map[string]interface{}, len(results))
+
+	for i, result := range results {
+		convertArraysToSlices(result)
+		finalResults[i] = result
+	}
+
+	return finalResults, nil
+}
+
 func (db MongoDatabase) DeleteOne(table string, query map[string]interface{}) (bool, error) {
 	col := db.database.Collection(table)
 
