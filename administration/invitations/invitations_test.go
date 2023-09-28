@@ -265,7 +265,11 @@ func TestReinviteUserNoEmailChangeSuccess(t *testing.T) {
 
 	invite := rawInvite.(map[string]interface{})
 
-	if invite["code"].(string) != code {
+	hasher = sha256.New()
+	hasher.Write([]byte(code))
+	hahedReceivedCode := hasher.Sum(nil)
+
+	if invite["code"].(string) != fmt.Sprintf("%x", hahedReceivedCode) {
 		t.Errorf("received incorrect code: %s", invite["code"].(string))
 	}
 
@@ -420,8 +424,11 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 	}
 
 	invite := rawInvite.(map[string]interface{})
+	hasher = sha256.New()
+	hasher.Write([]byte(code))
+	hahedReceivedCode := hasher.Sum(nil)
 
-	if invite["code"].(string) != code {
+	if invite["code"].(string) != fmt.Sprintf("%x", hahedReceivedCode) {
 		t.Errorf("received incorrect code: %s (expected %s)", invite["code"].(string), code)
 	}
 

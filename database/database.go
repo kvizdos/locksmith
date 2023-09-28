@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -13,6 +14,12 @@ const (
 	PUSH DatabaseUpdateActions = "push"
 )
 
+type HealthCheckInterface interface {
+	SetMongoDown()
+	SetMongoUp()
+	IsMongoUp() bool
+}
+
 type DatabaseAccessor interface {
 	InsertOne(table string, body map[string]interface{}) (interface{}, error)
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
@@ -23,10 +30,15 @@ type DatabaseAccessor interface {
 	CreateTextIndex(table string, keys []string) error
 	Drop(table string) error
 	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
+	MonitorConnection(heartbeat time.Duration, health HealthCheckInterface)
 }
 
 type TestDatabase struct {
 	Tables map[string]map[string]interface{}
+}
+
+func (db TestDatabase) MonitorConnection(heartbeat time.Duration, health HealthCheckInterface) {
+	// do nothing, nothing to monitor
 }
 
 func (db TestDatabase) CreateTextIndex(table string, keys []string) error {

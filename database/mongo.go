@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -33,10 +34,29 @@ func (db *MongoDatabase) Initialize(uri string, database string) error {
 
 	data := client.Database(database)
 
-	fmt.Println("connected")
-
 	db.database = data
 	return nil
+}
+func (db MongoDatabase) MonitorConnection(heartbeat time.Duration, health HealthCheckInterface) {
+	ticker := time.NewTicker(heartbeat) // Adjust the interval as needed.
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			ctx, timeout := context.WithTimeout(context.Background(), heartbeat)
+			defer timeout()
+
+			err := db.database.Client().Ping(ctx, readpref.Primary())
+			if err != nil {
+				fmt.Printf("MongoDB failed to ping health: %v\n", err)
+				health.SetMongoDown()
+			} else if !health.IsMongoUp() {
+				health.SetMongoUp()
+			}
+		default:
+		}
+	}
 }
 
 func (db MongoDatabase) Drop(table string) error {
