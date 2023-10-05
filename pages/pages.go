@@ -6,6 +6,7 @@ type LocksmithPageStyling struct {
 	StartGradient string
 	EndGradient   string
 	SubmitColor   string
+	LogoURL       string
 }
 
 //go:embed admin.html

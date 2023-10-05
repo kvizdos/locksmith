@@ -13,6 +13,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
+	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/routes"
 )
 
@@ -65,11 +66,14 @@ func main() {
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Locksmith Demo UI",
 		UseEmailAsUsername: false,
+		Styling: pages.LocksmithPageStyling{
+			LogoURL: "https://example.com/logo.webp",
+		},
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
 			IsEarlyDevelopmentEnvironment: false,
 			Caption:                       "Locksmith Launchpad helps demo your service. It allow stakeholders to easily swap between users and feel the product from every POV- without worrying about passwords.",
-			AccessToken:                   "super-secret-password123",
+			AccessToken:                   "changeme",
 			BootstrapDatabase: func(da database.DatabaseAccessor) {
 				fmt.Println("Nothing to bootstrap.")
 			},
