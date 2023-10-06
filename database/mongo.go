@@ -54,7 +54,6 @@ func (db MongoDatabase) MonitorConnection(heartbeat time.Duration, health Health
 			} else if !health.IsMongoUp() {
 				health.SetMongoUp()
 			}
-		default:
 		}
 	}
 }
