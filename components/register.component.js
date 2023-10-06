@@ -74,6 +74,7 @@ export class RegisterFormComponent extends LitElement {
     emailDisabled: { type: Boolean },
     code: { type: this.toString },
     emailAsUsername: { type: Boolean },
+    registering: { type: Boolean },
   };
 
   constructor() {
@@ -91,6 +92,7 @@ export class RegisterFormComponent extends LitElement {
     // 1 = password confirmation error
     // 2 = username taken
     this.registrationSuccess = false;
+    this.registering = false;
   }
 
   updateUsername(e) {
@@ -135,6 +137,10 @@ export class RegisterFormComponent extends LitElement {
 
   register() {
     let fail = false;
+    if (this.regitering == true) {
+      return
+    }
+    this.registering = true;
 
     if (this.emailAsUsername) {
       this.username = this.email
@@ -177,6 +183,7 @@ export class RegisterFormComponent extends LitElement {
 
     if (this.password != this.confirmedPassword) {
       this.registrationError = 1;
+      this.registering = false;
       return
     }
 
@@ -201,6 +208,7 @@ export class RegisterFormComponent extends LitElement {
     }
 
     if (fail) {
+      this.registering = false;
       return
     }
 
@@ -213,6 +221,7 @@ export class RegisterFormComponent extends LitElement {
     fetch('/api/register', options)
       .then(response => this.handleAPIResponse(response))
       .catch(err => {
+        this.registering = false;
         console.error(err)
       });
   }
@@ -227,15 +236,19 @@ export class RegisterFormComponent extends LitElement {
         }, 1000)
         break;
       case 400:
+        this.registering = false;
         alert("Email does not match invitation email. Please reload and try again.")
         break;
       case 404:
+        this.registering = false;
         alert("Public registration is disabled.")
         break;
       case 409:
+        this.registering = false;
         this.registrationError = 2;
         break;
       case 500:
+        this.registering = false;
         alert("Something went wrong, please try again later.")
         break;
     }
@@ -273,7 +286,7 @@ export class RegisterFormComponent extends LitElement {
           <input id="confPassword" type="password" placeholder="Confirm Password" autocorrect="off" autocapitalize="off" value="${this.confirmedPassword}" @input="${this.updateConfirmedPassword}" />
       </div>
 
-      <button style="--color: ${this.backgroundColor};" @click="${this.register}">Register</button>
+      <button style="--color: ${this.backgroundColor};" @click="${this.register}">${this.registering ? "Registering..." : "Register"}</button>
 
       <p id="error">${this.getRegistrationErrorMessage()}</p>
       ${this.registrationSuccess ? html`<p id="success">User registered, redirecting to login page..</p>` : ""}

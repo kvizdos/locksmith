@@ -54,6 +54,7 @@ export class SignInComponent extends LitElement {
   static properties = {
     backgroundColor: { type: String },
     stage: { type: Number },
+    signInText: { type: String },
   };
 
   getDeviceType() {
@@ -81,6 +82,7 @@ export class SignInComponent extends LitElement {
     this.device = this.getDeviceType()
     this.backgroundColor = "#565b66"
     this.stage = 0
+    this.signInText = "Sign In"
   }
 
   setStage(stage) {
@@ -101,7 +103,6 @@ export class SignInComponent extends LitElement {
       bubbles: true,
       detail: this.stage
     }));
-    console.log("Clicked!", stage)
   }
 
   continue() {
@@ -125,7 +126,7 @@ export class SignInComponent extends LitElement {
             <img src="https://passkeys.dev/images/fido-passkey-white.svg" id="passkeyicon" />
           </div>
           <div class="section${this.stage == 2 ? " active" : ""}" id="password">
-            <p id="passkey">Sign in</p>
+            <p id="passkey">${this.signInText}</p>
           </div>
         </div>
         ${this.stage == 1 ? html`<p id="fallback" @click="${this.fallbackPassword}" style="--color: ${this.backgroundColor};">Continue with Password</p>` : ""}
@@ -191,6 +192,7 @@ export class LoginFormComponent extends LitElement {
     password: { type: String },
     loginError: { type: Number },
     emailAsUsername: { type: Boolean },
+    signingIn: { type: Boolean },
   };
 
   constructor() {
@@ -201,6 +203,7 @@ export class LoginFormComponent extends LitElement {
     this.password = ""
     this.loginError = 0
     this.emailAsUsername = false
+    this.signingIn = false
     // 0 = none
     // 1 = invalid username
     // 2 = invalid password
@@ -225,6 +228,10 @@ export class LoginFormComponent extends LitElement {
 
   signin() {
     let fail = false;
+    if (this.signingIn == true) {
+      return
+    }
+    this.signingIn = true;
     this.username = this.username.trim()
     if (this.username.length == 0) {
       const input = this.shadowRoot.getElementById("username")
@@ -245,6 +252,7 @@ export class LoginFormComponent extends LitElement {
     }
 
     if (fail) {
+      this.signingIn = false;
       return
     }
 
@@ -266,11 +274,14 @@ export class LoginFormComponent extends LitElement {
         break;
       case 404:
         this.loginError = 1;
+        this.signingIn = false;
         break;
       case 401:
         this.loginError = 2;
+        this.signingIn = false;
         break;
       case 500:
+        this.signingIn = false;
         alert("Something went wrong, please try again later.")
         break;
     }
@@ -297,7 +308,7 @@ export class LoginFormComponent extends LitElement {
           <input id="password" type="password" placeholder="Password" autocorrect="off" autocapitalize="off" value="${this.password}" @input="${this.updatePassword}" />
         </div>
         ` : ""}
-      <sign-in backgroundColor="${this.backgroundColor}" stage="2" @next-stage=${this.stageChange} @click=${this.signin}></sign-in>
+      <sign-in backgroundColor="${this.backgroundColor}" stage="2" @next-stage=${this.stageChange} .signInText=${this.signingIn ? "Signing In" : "Sign In"} @click=${this.signin}></sign-in>
 
       <p id="error">${this.getLoginErrorMessage()}</p>
 
