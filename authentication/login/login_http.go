@@ -3,7 +3,7 @@ package login
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"text/template"
@@ -39,7 +39,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		// handle the error
 		fmt.Println("Error reading request body:", err)

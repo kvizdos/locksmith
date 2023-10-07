@@ -1,5 +1,16 @@
 # todo:
 ## sorted:
+- [ ] Magic Links
+    - [ ] Create unique codes that can be attached to URLs to automatically authenticate the user.
+        - [x] Create the codes
+        - [ ] Connect to SecureEndpointMiddleware
+    - [ ] Old codes are automatically expired when:
+        - [x] A code is Validated
+        - [ ] A user logs in
+    - [x] Make these Codes locked to a specific list of permissions, anything else would prompt the user to the login page (IF they haven't logged in already)
+    - [x] Codes return the User Role that is actively attached
+    - [x] Sign these codes w/ ECDSA
+    - [x] Each code needs an expiration date set
 - [ ] Audit Logging system
     - Push logins / authentication failures / etc to a specific file.
     - By default, push to /var/log/locksmith.log

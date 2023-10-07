@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
 )
@@ -29,6 +30,15 @@ type LocksmithUserInterface interface {
 	ToPublic() (PublicLocksmithUserInterface, error)
 
 	GetRole() (roles.Role, error)
+
+	// Magic Auth stuff
+	GetMagics() []magic.MagicAuthentication
+	// CreateMagicAuth returns the Code as a string
+	// CreateMagicAuth(magic.MagicAuthenticationVariables) string
+	// // Expire a MagicAuth manually, pass the code as a string
+	// UseMagicAuth(string) error
+	// // Validates a Magic Auth string
+	// ValidateMagicAuth(magic.MagicAuthentication) (bool, error)
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -95,7 +105,12 @@ type LocksmithUser struct {
 	PasswordInfo     authentication.PasswordInfo     `json:"-" bson:"password"`
 	WebAuthnSessions []webauthn.SessionData          `json:"-" bson:"websessions"`
 	PasswordSessions authentication.PasswordSessions `json:"-" bson:"sessions"`
+	Magics           magic.MagicAuthentications      `json:"-" bson:"magic"`
 	Role             string                          `json:"role" bson:"role"`
+}
+
+func (u LocksmithUser) GetMagics() []magic.MagicAuthentication {
+	return u.Magics
 }
 
 func (u LocksmithUser) GetRole() (roles.Role, error) {
@@ -136,6 +151,7 @@ func (u LocksmithUser) ToMap() map[string]interface{} {
 	out["websessions"] = map[string]interface{}{} // TODO
 	out["sessions"] = u.PasswordSessions.ToMap()
 	out["role"] = u.Role
+	out["magic"] = u.Magics.ToMap()
 
 	return out
 }
@@ -172,6 +188,17 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 	case map[string]interface{}:
 		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]interface{}))
 	}
+
+	var magics []magic.MagicAuthentication
+	if magicValue, ok := user["magic"]; ok {
+		switch magicValue.(type) {
+		case []magic.MagicAuthentication:
+			magics = magicValue.([]magic.MagicAuthentication)
+		case []interface{}:
+			magics = magic.MagicsFromMap(magicValue.([]map[string]interface{}))
+		}
+	}
+
 	*writeTo = LocksmithUser{
 		ID:               user["id"].(string),
 		Username:         user["username"].(string),
@@ -179,6 +206,7 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		Role:             user["role"].(string),
 		PasswordInfo:     passinfo,
 		PasswordSessions: sessions,
+		Magics:           magics,
 	}
 }
 
