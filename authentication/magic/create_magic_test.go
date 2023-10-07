@@ -12,7 +12,7 @@ import (
 func TestMain(m *testing.M) {
 	sp, _ := signing.CreateSigningPackage()
 
-	MagicSigningPackage = sp
+	MagicSigningPackage = &sp
 	m.Run()
 }
 

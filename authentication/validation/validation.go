@@ -35,5 +35,7 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor, use
 		return lsu, false, nil
 	}
 
+	go user.CleanupOldMagicTokens(db)
+
 	return user, true, nil
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/signing"
 )
 
-var MagicSigningPackage signing.SigningPackage
+var MagicSigningPackage *signing.SigningPackage
 
 type MagicAuthenticationVariables struct {
 	ForUserID          string

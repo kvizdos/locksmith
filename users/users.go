@@ -16,7 +16,7 @@ import (
 
 type LocksmithUserInterface interface {
 	ValidatePassword(string) (bool, error)
-	ValidateSessionToken(string, database.DatabaseAccessor) bool
+	ValidateSessionToken(token string, db database.DatabaseAccessor) bool
 	GeneratePasswordSession() (authentication.PasswordSession, error)
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
 
@@ -32,13 +32,7 @@ type LocksmithUserInterface interface {
 	GetRole() (roles.Role, error)
 
 	// Magic Auth stuff
-	GetMagics() []magic.MagicAuthentication
-	// CreateMagicAuth returns the Code as a string
-	// CreateMagicAuth(magic.MagicAuthenticationVariables) string
-	// // Expire a MagicAuth manually, pass the code as a string
-	// UseMagicAuth(string) error
-	// // Validates a Magic Auth string
-	// ValidateMagicAuth(magic.MagicAuthentication) (bool, error)
+	CleanupOldMagicTokens(database.DatabaseAccessor)
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -194,7 +188,7 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		switch magicValue.(type) {
 		case []magic.MagicAuthentication:
 			magics = magicValue.([]magic.MagicAuthentication)
-		case []interface{}:
+		case []map[string]interface{}:
 			magics = magic.MagicsFromMap(magicValue.([]map[string]interface{}))
 		}
 	}
@@ -306,6 +300,25 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 	}
 
 	return found
+}
+
+func (u LocksmithUser) CleanupOldMagicTokens(db database.DatabaseAccessor) {
+	if magic.MagicSigningPackage == nil {
+		return
+	}
+	activeMagics := make(chan magic.MagicAuthentications)
+	go magic.FilterActive(activeMagics, u.Magics)
+	keep := <-activeMagics
+
+	if len(keep) != len(u.Magics) {
+		db.UpdateOne("users", map[string]interface{}{
+			"id": u.ID,
+		}, map[database.DatabaseUpdateActions]map[string]interface{}{
+			database.SET: {
+				"magic": keep.ToMap(),
+			},
+		})
+	}
 }
 
 func (u LocksmithUser) WebAuthnID() []byte {

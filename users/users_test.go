@@ -2,8 +2,12 @@ package users
 
 import (
 	"testing"
+	"time"
 
 	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/magic"
+	"github.com/kvizdos/locksmith/authentication/signing"
+	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
 )
 
@@ -19,9 +23,64 @@ func TestMain(m *testing.M) {
 		},
 	}
 
+	sp, _ := signing.CreateSigningPackage()
+	magic.MagicSigningPackage = &sp
 	m.Run()
 
 	roles.AVAILABLE_ROLES = map[string][]string{}
+}
+
+func TestCleanupMagicsFromUser(t *testing.T) {
+	magicOld, _, _ := magic.CreateMagicAuthentication(magic.MagicAuthenticationVariables{
+		ForUserID:          "c8531661-22a7-493f-b228-028842e09a05",
+		AllowedPermissions: []string{"perm"},
+		TTL:                -1 * time.Hour,
+	})
+	magicKeep, _, _ := magic.CreateMagicAuthentication(magic.MagicAuthenticationVariables{
+		ForUserID:          "c8531661-22a7-493f-b228-028842e09a05",
+		AllowedPermissions: []string{"perm"},
+		TTL:                1 * time.Hour,
+	})
+	lsu := map[string]interface{}{
+		"id":       "c8531661-22a7-493f-b228-028842e09a05",
+		"username": "kenton",
+		"email":    "email@email.com",
+		"password": map[string]interface{}{
+			"password": "passwordhere",
+			"salt":     "salthere",
+		},
+		"role": "user",
+		"magic": magic.MagicAuthentications{
+			magicOld,
+			magicKeep,
+		}.ToMap(),
+	}
+
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": lsu,
+			},
+		},
+	}
+
+	var user LocksmithUserInterface
+	LocksmithUser{}.ReadFromMap(&user, lsu)
+
+	converted := user.(LocksmithUser)
+	converted.CleanupOldMagicTokens(testDb)
+
+	rawUser, _ := testDb.FindOne("users", map[string]interface{}{
+		"id": "c8531661-22a7-493f-b228-028842e09a05",
+	})
+	u := rawUser.(map[string]interface{})
+
+	magics := magic.MagicsFromMap(u["magic"].([]map[string]interface{}))
+
+	if len(magics) != 1 {
+		t.Errorf("got incorrect number of magics: %d", len(magics))
+		return
+	}
 }
 
 func TestLoadLocksmithUserFromMap(t *testing.T) {
