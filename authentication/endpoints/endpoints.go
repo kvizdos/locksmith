@@ -107,8 +107,16 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				Expires:  time.Unix(0, 0),
 				HttpOnly: true,
 			}
+			mc := &http.Cookie{
+				Name:     "magic",
+				Value:    "",
+				Path:     "/",
+				Expires:  time.Unix(0, 0),
+				HttpOnly: true,
+			}
 
 			http.SetCookie(w, c)
+			http.SetCookie(w, mc)
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}

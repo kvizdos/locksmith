@@ -15,6 +15,7 @@ import (
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
+	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/routes"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -94,6 +95,9 @@ func main() {
 					Email:       "user@user.com",
 					Role:        "user",
 					Redirect:    "/app",
+					Custom: map[string]interface{}{
+						"id": "41084e13-a40a-42e7-aac6-19cba36b1d68",
+					},
 				},
 				"lp-user-2": {
 					DisplayName: "Another General User",
@@ -105,8 +109,25 @@ func main() {
 		},
 	})
 
-	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
+	roles.AddPermissionsToRole("user", []string{"can.see.user.view"})
 
+	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
+	mux.Handle("/user-login", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+		MinimalPermissions: []string{
+			"can.see.user.view",
+		},
+	}))
+	mux.Handle("/magic", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+		MinimalPermissions: []string{
+			"can.see.magic.view",
+		},
+	}))
+
+	/*
+		Replace this with your OWN key
+		pkg, err := signing.CreateSigningPackage()
+		marshaledPK, err := pkg.MarshalPrivate() // use this output as the "DecodePrivateKey" variable
+	*/
 	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
 	magic.MagicSigningPackage = &sp
 	macID, err := users.LocksmithUser{
@@ -114,13 +135,12 @@ func main() {
 	}.CreateMagicAuthenticationCode(db, magic.MagicAuthenticationVariables{
 		ForUserID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
 		AllowedPermissions: []string{
-			"test.1",
-			"test.2",
+			"can.see.magic.view",
 		},
-		TTL: time.Minute,
+		TTL: 5 * time.Minute,
 	})
 
-	fmt.Println(macID, err)
+	fmt.Println("User Magic Key:", macID, err)
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", mux)
 	if err != nil {
