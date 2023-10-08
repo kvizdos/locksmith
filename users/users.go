@@ -33,6 +33,9 @@ type LocksmithUserInterface interface {
 
 	// Magic Auth stuff
 	CleanupOldMagicTokens(database.DatabaseAccessor)
+	SetMagicPermissions([]string) LocksmithUserInterface
+	CreateMagicAuthenticationCode(database.DatabaseAccessor, magic.MagicAuthenticationVariables) (string, error)
+	GetMagicPermissions() []string
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -101,6 +104,7 @@ type LocksmithUser struct {
 	PasswordSessions authentication.PasswordSessions `json:"-" bson:"sessions"`
 	Magics           magic.MagicAuthentications      `json:"-" bson:"magic"`
 	Role             string                          `json:"role" bson:"role"`
+	MagicPermissions []string                        `json:"-" bson:"-"`
 }
 
 func (u LocksmithUser) GetMagics() []magic.MagicAuthentication {
@@ -112,6 +116,10 @@ func (u LocksmithUser) GetRole() (roles.Role, error) {
 
 	if err != nil {
 		return roles.Role{}, err
+	}
+
+	if len(u.MagicPermissions) > 0 {
+		role.Permissions = u.MagicPermissions
 	}
 
 	return role, nil
@@ -188,8 +196,8 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		switch magicValue.(type) {
 		case []magic.MagicAuthentication:
 			magics = magicValue.([]magic.MagicAuthentication)
-		case []map[string]interface{}:
-			magics = magic.MagicsFromMap(magicValue.([]map[string]interface{}))
+		case []interface{}:
+			magics = magic.MagicsFromMap(magicValue.([]interface{}))
 		}
 	}
 
@@ -300,6 +308,33 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 	}
 
 	return found
+}
+
+func (u LocksmithUser) SetMagicPermissions(permissions []string) LocksmithUserInterface {
+	u.MagicPermissions = permissions
+	return u
+}
+
+func (u LocksmithUser) CreateMagicAuthenticationCode(db database.DatabaseAccessor, vars magic.MagicAuthenticationVariables) (string, error) {
+	mac, identifier, err := magic.CreateMagicAuthentication(vars)
+
+	if err != nil {
+		return "", err
+	}
+
+	db.UpdateOne("users", map[string]interface{}{
+		"id": u.ID,
+	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		database.PUSH: {
+			"magic": mac.ToMap(),
+		},
+	})
+
+	return identifier, nil
+}
+
+func (u LocksmithUser) GetMagicPermissions() []string {
+	return u.MagicPermissions
 }
 
 func (u LocksmithUser) CleanupOldMagicTokens(db database.DatabaseAccessor) {

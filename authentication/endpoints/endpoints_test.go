@@ -17,7 +17,9 @@ import (
 type testHandler struct{}
 
 func (lh testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("OK!"))
+	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
+	role, _ := authUser.GetRole()
+	w.Write([]byte(fmt.Sprintf("%s %d", role.Name, len(role.Permissions))))
 }
 
 func InjectTokenToDatabase(db database.DatabaseAccessor) string {
@@ -73,6 +75,9 @@ func TestSecureEndpointHTTPMiddlewareInvalidToken(t *testing.T) {
 }
 
 func TestSecureEndpointHTTPMiddlewareInvalidPermissions(t *testing.T) {
+	roles.AVAILABLE_ROLES = map[string][]string{
+		"user": {},
+	}
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"users": {

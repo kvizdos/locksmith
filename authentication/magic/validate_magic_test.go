@@ -16,7 +16,7 @@ func TestValidateMagicInvalidBase64(t *testing.T) {
 
 	macIdentifer := "dGVzdC11aWQ6Y-----!-[]TlpQ2lKWjhGelZjZHVIU1c4ZTlaUE1LUmNhNVlRd1h6Ulkydy1zVTBCR3d4MkFNeURma3kxT3V6YnkyRHJLZFJpeVJ5d2dlRTJFYVBxOHBBQ1k3ZThnRkdxVmVvQi1KcWFuS3hoM0dKMFhZd2QyUjZUOVMyMVRuR3FNQXJDU0g6UFdTU1RqTzhSNXNraGVJdUs1NUJpYTVWMUNjZ240MHBZdndVZHNmWk5zdkMxOVhBTWxYcitodVk4TFpMTWR0MkxIWDJ1VU5ITG90N2RpNE5zeGlYVkE9Pz=="
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -33,7 +33,7 @@ func TestValidateMagicIncorrectNumberOfParts(t *testing.T) {
 
 	macIdentifer, _ := MagicSigningPackage.Sign("a:b:c")
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -56,7 +56,7 @@ func TestValidateMagicInvalidTokenLength(t *testing.T) {
 	rawMac := fmt.Sprintf("%s:%s", info, sig)
 	macIdentifer := base64.StdEncoding.EncodeToString([]byte(rawMac))
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -81,7 +81,7 @@ func TestValidateMagicInvalidUserIDLength(t *testing.T) {
 	rawMac := fmt.Sprintf("%s:%s", info, sig)
 	macIdentifer := base64.StdEncoding.EncodeToString([]byte(rawMac))
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -101,7 +101,7 @@ func TestValidateMagicAlreadyExpired(t *testing.T) {
 		AllowedPermissions: []string{"xyz", "abc"},
 		TTL:                -1 * time.Hour,
 	})
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -126,7 +126,7 @@ func TestValidateMagicInvalidSignature(t *testing.T) {
 	rawMac := fmt.Sprintf("%s:%s", info, sig)
 	macIdentifer := base64.StdEncoding.EncodeToString([]byte(rawMac))
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -164,7 +164,7 @@ func TestValidateMagicValidButUserWasDeleted(t *testing.T) {
 		},
 	}
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -202,7 +202,7 @@ func TestValidateMagicValidButUserHas0ActiveMagics(t *testing.T) {
 		},
 	}
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -247,7 +247,7 @@ func TestValidateMagicValidButDoesNotExistInDatabase(t *testing.T) {
 		},
 	}
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err == nil {
 		t.Error("expected to find an error!")
@@ -293,7 +293,7 @@ func TestValidateMagicValidSuccess(t *testing.T) {
 		},
 	}
 
-	foundMac, err := Validate(testDb, macIdentifer)
+	foundMac, _, err := Validate(testDb, macIdentifer)
 
 	if err != nil {
 		t.Errorf("got a weird error: %s", err)
@@ -343,7 +343,7 @@ func TestValidateMagicOldCodesAreExpired(t *testing.T) {
 		},
 	}
 
-	_, err := Validate(testDb, macIdentifer)
+	_, _, err := Validate(testDb, macIdentifer)
 
 	if err != nil {
 		t.Errorf("got a weird error: %s", err)
@@ -361,7 +361,7 @@ func TestValidateMagicOldCodesAreExpired(t *testing.T) {
 	})
 	user := rawUser.(map[string]interface{})
 
-	magics := MagicsFromMap(user["magic"].([]map[string]interface{}))
+	magics := MagicsFromMap(user["magic"].([]interface{}))
 
 	if len(magics) != 1 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))

@@ -75,7 +75,7 @@ func TestCleanupMagicsFromUser(t *testing.T) {
 	})
 	u := rawUser.(map[string]interface{})
 
-	magics := magic.MagicsFromMap(u["magic"].([]map[string]interface{}))
+	magics := magic.MagicsFromMap(u["magic"].([]interface{}))
 
 	if len(magics) != 1 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))

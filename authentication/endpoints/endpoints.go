@@ -89,8 +89,15 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			userInterface = users.LocksmithUser{}
 		}
 
+		magicQuery := r.URL.Query().Get("magic")
+		if magicQuery == "" {
+			magicCookie, err := r.Cookie("magic")
+			if err == nil {
+				magicQuery = magicCookie.Value
+			}
+		}
 		// Inject the database into the request
-		user, err := validation.ValidateHTTPUserToken(r, db, userInterface)
+		user, err := validation.ValidateHTTPUserToken(r, db, magicQuery, userInterface)
 
 		if err != nil {
 			c := &http.Cookie{
@@ -104,6 +111,11 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			http.SetCookie(w, c)
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
+		}
+
+		if r.URL.Query().Get("magic") != "" {
+			cookie := http.Cookie{Name: "magic", Value: r.URL.Query().Get("magic"), HttpOnly: true, Secure: true, Path: "/"}
+			http.SetCookie(w, &cookie)
 		}
 
 		if len(secureOptions.MinimalPermissions) > 0 {

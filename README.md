@@ -1,21 +1,22 @@
 # Locksmith
 
-Locksmith is a robust authentication project designed to simplify user authentication in web applications. It provides secure registration and login features, enforcing strong username requirements. By saving authentication tokens as cookies, Locksmith offers a seamless login experience while maintaining data security.
+Locksmith stands as a comprehensive authentication solution designed specifically for web applications. Beyond secure registration and strict username criteria, it boasts features such as Magic Tokens with Time-To-Live (TTL) for temporary access, a dynamic admin panel for user management, multifactor authentication options, and a user lockout system to combat brute force attacks. By securely storing authentication tokens as cookies, Locksmith hopes to provide users a seamless login experience without compromising on data security.
 
 Key Features:
 
-- User-friendly, drop-in web interface for registration and logins (or, bring your own and just use the Locksmith Authentication endpoints)
-- Securely stores authentication tokens as cookies
-- Token & role validation middleware to restrict access to protected endpoints
-- Admin panel for user management, including viewing and removal of users
-- User roles, customizable roles, and administrative privileges
-- User invitation system for streamlined onboarding
-- Customizable password policies to protect your users
-- User Lockout system to reduce brute force attacks
-- Multifactor authentication for TOTP and WebAuthn (including PassKeys)
-- Built-in password reset flows and endpoints (bring your own UI, or use ours!)
+- Intuitive Web Interface: Easily integrate a pre-built web interface for registration and logins. Alternatively, utilize only the Locksmith Authentication endpoints with your custom UI.
+- Token Storage: Authentication tokens are securely stored as cookies for enhanced security.
+- Magic Tokens with Scoped Permissions: Grant users access to specific areas without requiring login using Magic Access Codes (MACs). Each token has a Time-To-Live (TTL) ensuring limited access duration. Ideal for password reset links or any notification-based URLs, allowing users to seamlessly interact with the app while maintaining limited permissions.
+- Middleware for Security: Implement token and role validation middleware to safeguard protected endpoints effectively and with ease.
+- Admin User Management: A comprehensive, pre-built admin panel that allows for viewing and removal of users with ease (or BYO and use our endpoints!).
+- Role-based Access: Define user roles, create custom roles, and assign administrative privileges as required.
+- User Invitation System: Simplify the onboarding process with a streamlined user invitation mechanism.
+- Robust Password Policies: Set customizable password policies to ensure user data remains protected.
+- Brute Force Mitigation: A user lockout system to deter and reduce potential brute force attacks.
+- Multifactor Authentication: Incorporate multifactor authentication using TOTP, WebAuthn, and PassKeys for added security.
+- Password Reset Capabilities: Integrated password reset flows and endpoints. Choose between our UI or integrate your own for a seamless experience.
 
-With Locksmith, you can easily implement a reliable authentication system that ensures user account security and provides a smooth login experience.
+Locksmith delivers a robust authentication system, balancing top-tier user account security with a seamless login experience.
 
 ## Get Started
 

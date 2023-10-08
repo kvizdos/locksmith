@@ -19,6 +19,7 @@ type MagicAuthentication struct {
 	AllowedPermissions []string // what the user can DO
 	ExpiresAt          int64    // when the token expires
 	InheritRole        string   // filled in at validation time
+	Username           string   // filled in at validation time
 }
 
 func (m MagicAuthentication) ToMap() map[string]interface{} {
@@ -31,8 +32,8 @@ func (m MagicAuthentication) ToMap() map[string]interface{} {
 
 type MagicAuthentications []MagicAuthentication
 
-func (m MagicAuthentications) ToMap() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(m))
+func (m MagicAuthentications) ToMap() []interface{} {
+	out := make([]interface{}, len(m))
 
 	for i, magic := range m {
 		out[i] = magic.ToMap()

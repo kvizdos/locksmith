@@ -41,12 +41,17 @@ func TestExpireOldAutomatically(t *testing.T) {
 	rawUser, _ := testDb.FindOne("users", map[string]interface{}{
 		"id": userID,
 	})
+
 	user := rawUser.(map[string]interface{})
 
-	magics := MagicsFromMap(user["magic"].([]map[string]interface{}))
-
+	magics := MagicsFromMap(user["magic"].([]interface{}))
 	if len(magics) != 1 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))
+		return
+	}
+
+	if len(magics[0].AllowedPermissions) != 1 {
+		t.Errorf("got incorrect number of magic permissions: %d", len(magics[0].AllowedPermissions))
 		return
 	}
 
@@ -90,7 +95,7 @@ func TestExpireOldWithManual(t *testing.T) {
 	})
 	user := rawUser.(map[string]interface{})
 
-	magics := MagicsFromMap(user["magic"].([]map[string]interface{}))
+	magics := MagicsFromMap(user["magic"].([]interface{}))
 
 	if len(magics) != 0 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))

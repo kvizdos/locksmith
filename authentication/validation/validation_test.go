@@ -65,7 +65,7 @@ func TestValidateInvalidUsername(t *testing.T) {
 		},
 	}
 
-	_, _, err := ValidateToken(testToken, testDb)
+	_, _, err := ValidateToken(testToken, testDb, "")
 
 	if err == nil {
 		t.Errorf("expected error")
@@ -101,7 +101,7 @@ func TestValidateInvalidToken(t *testing.T) {
 	// Push a session..
 	pushSession(testDb)
 
-	_, validated, err := ValidateToken(testToken, testDb)
+	_, validated, err := ValidateToken(testToken, testDb, "")
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -136,7 +136,7 @@ func TestValidateValidToken(t *testing.T) {
 	// Push a session..
 	pushSession(testDb)
 
-	_, validated, err := ValidateToken(testToken, testDb)
+	_, validated, err := ValidateToken(testToken, testDb, "")
 
 	if err != nil {
 		t.Errorf(err.Error())

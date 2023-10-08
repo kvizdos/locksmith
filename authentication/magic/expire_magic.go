@@ -1,6 +1,8 @@
 package magic
 
-import "github.com/kvizdos/locksmith/database"
+import (
+	"github.com/kvizdos/locksmith/database"
+)
 
 func ExpireOld(db database.DatabaseAccessor, lookupUserID string, manuallyExpireTokenID ...string) {
 	rawUser, found := db.FindOne("users", map[string]interface{}{
@@ -13,7 +15,7 @@ func ExpireOld(db database.DatabaseAccessor, lookupUserID string, manuallyExpire
 
 	user := rawUser.(map[string]interface{})
 
-	magics := MagicsFromMap(user["magic"].([]map[string]interface{}))
+	magics := MagicsFromMap(user["magic"].([]interface{}))
 
 	active := make(chan MagicAuthentications)
 	go FilterActive(active, magics, manuallyExpireTokenID...)

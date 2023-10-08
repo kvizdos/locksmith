@@ -9,12 +9,14 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/magic"
+	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/routes"
+	"github.com/kvizdos/locksmith/users"
 )
 
 // import
@@ -29,10 +31,9 @@ func init() {
 type TestAppHandler struct{}
 
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c, _ := r.Cookie("token")
-	parsed, _ := authentication.ParseToken(c.Value)
-	// w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, "<html><script src=\"/components/persona-switcher.component.js\" type=\"module\"></script><p>Hello World: %s - %s</p></html>", parsed.Username, parsed.Token)
+	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
+	role, _ := authUser.GetRole()
+	w.Write([]byte(fmt.Sprintf("%s %s %d", authUser.GetUsername(), role.Name, len(role.Permissions))))
 }
 
 func main() {
@@ -75,7 +76,7 @@ func main() {
 			Caption:                       "Locksmith Launchpad helps demo your service. It allow stakeholders to easily swap between users and feel the product from every POV- without worrying about passwords.",
 			AccessToken:                   "changeme",
 			BootstrapDatabase: func(da database.DatabaseAccessor) {
-				fmt.Println("Nothing to bootstrap.")
+				db.Drop("users")
 			},
 			RefreshButtonText: "Refresh Environment",
 			Users: map[string]launchpad.LocksmithLaunchpadUserOptions{
@@ -106,9 +107,20 @@ func main() {
 
 	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
 
-	res, _ := db.FindPaginated("users", map[string]interface{}{}, 1, "")
-	fmt.Println("RES", res)
+	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
+	magic.MagicSigningPackage = &sp
+	macID, err := users.LocksmithUser{
+		ID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
+	}.CreateMagicAuthenticationCode(db, magic.MagicAuthenticationVariables{
+		ForUserID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
+		AllowedPermissions: []string{
+			"test.1",
+			"test.2",
+		},
+		TTL: time.Minute,
+	})
 
+	fmt.Println(macID, err)
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", mux)
 	if err != nil {

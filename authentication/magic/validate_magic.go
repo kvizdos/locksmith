@@ -11,17 +11,17 @@ import (
 	"github.com/kvizdos/locksmith/database"
 )
 
-func Validate(db database.DatabaseAccessor, tokenIdentifer string) (MagicAuthentication, error) {
+func Validate(db database.DatabaseAccessor, tokenIdentifer string) (MagicAuthentication, map[string]interface{}, error) {
 	identifier, err := base64.StdEncoding.DecodeString(tokenIdentifer)
 
 	if err != nil {
-		return MagicAuthentication{}, fmt.Errorf("bad identifier")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("bad identifier")
 	}
 
 	identifierParts := strings.Split(string(identifier), ":")
 
 	if len(identifierParts) != 4 {
-		return MagicAuthentication{}, fmt.Errorf("incorrect number of parts")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("incorrect number of parts")
 	}
 
 	userID := identifierParts[0]
@@ -30,24 +30,24 @@ func Validate(db database.DatabaseAccessor, tokenIdentifer string) (MagicAuthent
 	signature := identifierParts[3]
 
 	if len(token) != 128 {
-		return MagicAuthentication{}, fmt.Errorf("incorrect token length")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("incorrect token length")
 	}
 
 	if len(userID) != 36 {
-		return MagicAuthentication{}, fmt.Errorf("incorrect uid length")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("incorrect uid length")
 	}
 
 	expiresAt, err := strconv.ParseInt(expiresAtStr, 10, 64)
 	if err != nil {
-		return MagicAuthentication{}, fmt.Errorf("invalid expiresAt")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("invalid expiresAt")
 	}
 
 	if expiresAt <= time.Now().UTC().Unix() {
-		return MagicAuthentication{}, fmt.Errorf("expired")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("expired")
 	}
 
 	if !MagicSigningPackage.Validate(fmt.Sprintf("%s:%s:%s", userID, token, expiresAtStr), signature) {
-		return MagicAuthentication{}, fmt.Errorf("invalid signature")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("invalid signature")
 	}
 
 	rawUser, found := db.FindOne("users", map[string]interface{}{
@@ -55,13 +55,13 @@ func Validate(db database.DatabaseAccessor, tokenIdentifer string) (MagicAuthent
 	})
 
 	if !found {
-		return MagicAuthentication{}, fmt.Errorf("uid not found")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("uid not found")
 	}
 
-	magics := MagicsFromMap(rawUser.(map[string]interface{})["magic"].([]map[string]interface{}))
+	magics := MagicsFromMap(rawUser.(map[string]interface{})["magic"].([]interface{}))
 
 	if len(magics) == 0 {
-		return MagicAuthentication{}, fmt.Errorf("no magics found")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("no magics found")
 	}
 
 	hasher := sha256.New()
@@ -79,12 +79,13 @@ func Validate(db database.DatabaseAccessor, tokenIdentifer string) (MagicAuthent
 	}
 
 	if !didFindMagic {
-		return MagicAuthentication{}, fmt.Errorf("invalidated")
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("invalidated")
 	}
 
 	foundMagic.InheritRole = rawUser.(map[string]interface{})["role"].(string)
+	foundMagic.Username = rawUser.(map[string]interface{})["username"].(string)
 
 	go ExpireOld(db, userID)
 
-	return foundMagic, nil
+	return foundMagic, rawUser.(map[string]interface{}), nil
 }
