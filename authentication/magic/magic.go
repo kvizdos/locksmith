@@ -6,7 +6,18 @@ import (
 	"github.com/kvizdos/locksmith/authentication/signing"
 )
 
-var MagicSigningPackage *signing.SigningPackage
+/*
+The "magic.go" file serves as the entrypoint for the Magic Tokens functionality within Locksmith.
+Its primary purpose is to manage Magic Access Codes (MACs) that grant users temporary, scoped access to specific app areas.
+Key Use Cases:
+- Providing users with seamless access for password resets or notification-based URLs.
+- Ensuring secure yet convenient access for users, especially for actions requiring limited permissions.
+- Implementing Time-To-Live (TTL) for tokens, adding a layer of security by ensuring time-bound accessibility.
+
+Note: It's crucial to understand the security implications of the Magic Tokens feature and ensure its proper configuration and deployment.
+*/
+
+var MagicSigningPackage signing.SigningPackageInterface
 
 type MagicAuthenticationVariables struct {
 	ForUserID          string

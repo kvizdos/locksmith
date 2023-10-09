@@ -64,6 +64,11 @@ type EndpointSecurityOptions struct {
 	// you can use this function to validate endpoint-specific
 	// validations.
 	SecondaryValidation EndpointSecurityCustomMiddleware
+	// PrioritizeMagic determines the precedence of authentication methods within the SecureEndpointMiddleware.
+	// By default, a logged-in user's session (via the `token` cookie) is prioritized over the Magic Authentication Code (`magic` cookie).
+	// Setting this to `true` gives preference to the `magic` cookie, even if a valid `token` cookie exists.
+	// Please note that this action will revoke any permissions not explicitly specified in the `magic` cookie.
+	PrioritizeMagic bool
 }
 
 func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccessor, opts ...EndpointSecurityOptions) http.Handler {
@@ -97,7 +102,10 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			}
 		}
 		// Inject the database into the request
-		user, err := validation.ValidateHTTPUserToken(r, db, magicQuery, userInterface)
+		user, err := validation.ValidateHTTPUserToken(r, db, validation.MagicValidation{
+			Token:      magicQuery,
+			Prioritize: secureOptions.PrioritizeMagic,
+		}, userInterface)
 
 		if err != nil {
 			c := &http.Cookie{

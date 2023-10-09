@@ -34,8 +34,10 @@ type LocksmithUserInterface interface {
 	// Magic Auth stuff
 	CleanupOldMagicTokens(database.DatabaseAccessor)
 	SetMagicPermissions([]string) LocksmithUserInterface
+	SetMagic() LocksmithUser // Denotes the user as a "magic only" user
 	CreateMagicAuthenticationCode(database.DatabaseAccessor, magic.MagicAuthenticationVariables) (string, error)
 	GetMagicPermissions() []string
+	IsMagic() bool
 
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
@@ -105,6 +107,8 @@ type LocksmithUser struct {
 	Magics           magic.MagicAuthentications      `json:"-" bson:"magic"`
 	Role             string                          `json:"role" bson:"role"`
 	MagicPermissions []string                        `json:"-" bson:"-"`
+	ImMagic          bool                            `json:"-" bson:"-"`
+	ImRegular        bool                            `json:"-" bson:"-"`
 }
 
 func (u LocksmithUser) GetMagics() []magic.MagicAuthentication {
@@ -289,6 +293,10 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 		}
 	}
 
+	updateMap := map[database.DatabaseUpdateActions]map[string]interface{}{
+		database.SET: {},
+	}
+
 	if len(nonexpiredTokens) != len(u.PasswordSessions) {
 		// Create a new slice of type []interface{}
 		interfaces := make([]interface{}, len(nonexpiredTokens))
@@ -298,13 +306,13 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 			interfaces[i] = session
 		}
 
+		updateMap[database.SET]["sessions"] = interfaces
+	}
+
+	if len(updateMap[database.SET]) > 0 {
 		db.UpdateOne("users", map[string]interface{}{
-			"username": u.Username,
-		}, map[database.DatabaseUpdateActions]map[string]interface{}{
-			database.SET: {
-				"sessions": interfaces,
-			},
-		})
+			"id": u.ID,
+		}, updateMap)
 	}
 
 	return found
@@ -313,6 +321,15 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 func (u LocksmithUser) SetMagicPermissions(permissions []string) LocksmithUserInterface {
 	u.MagicPermissions = permissions
 	return u
+}
+
+func (u LocksmithUser) SetMagic() LocksmithUser {
+	u.ImMagic = true
+	return u
+}
+
+func (u LocksmithUser) IsMagic() bool {
+	return u.ImMagic && !u.ImRegular
 }
 
 func (u LocksmithUser) CreateMagicAuthenticationCode(db database.DatabaseAccessor, vars magic.MagicAuthenticationVariables) (string, error) {

@@ -9,7 +9,12 @@ import (
 	"github.com/kvizdos/locksmith/users"
 )
 
-func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor, magicToken string, userType ...users.LocksmithUserInterface) (users.LocksmithUserInterface, error) {
+type MagicValidation struct {
+	Token      string
+	Prioritize bool
+}
+
+func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor, magic MagicValidation, userType ...users.LocksmithUserInterface) (users.LocksmithUserInterface, error) {
 	// Validate token
 	token, err := r.Cookie("token")
 
@@ -22,7 +27,7 @@ func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor, magicT
 	}
 
 	var parsedToken authentication.Token
-	if magicToken == "" || (err == nil) {
+	if magic.Token == "" || (err == nil && !magic.Prioritize) {
 		if err != nil {
 			return userInterface, fmt.Errorf("no cookie present")
 		}
@@ -34,7 +39,7 @@ func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor, magicT
 		}
 	}
 
-	user, validated, err := ValidateToken(parsedToken, db, magicToken, userInterface)
+	user, validated, err := ValidateToken(parsedToken, db, magic.Token, userInterface)
 
 	if err != nil {
 		return userInterface, fmt.Errorf("token could not be validated")

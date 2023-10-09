@@ -53,6 +53,9 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor, mag
 		}
 	} else {
 		user = user.SetMagicPermissions(mac.AllowedPermissions)
+		if token.Token == "" {
+			user = user.SetMagic()
+		}
 	}
 
 	go user.CleanupOldMagicTokens(db)

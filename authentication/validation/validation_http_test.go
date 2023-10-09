@@ -53,7 +53,7 @@ func TestValidateHTTPNoCookiePresent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err == nil {
 		fmt.Printf("expected to receive an error")
@@ -84,7 +84,7 @@ func TestValidationHTTPMalformedTokenNotBase64Encoded(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err == nil {
 		t.Error("expected error")
@@ -121,7 +121,7 @@ func TestValidationHTTPalformedTokenBase64EncodedInvalidTokenLength(t *testing.T
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err.Error() != "token could not be parsed" {
 		t.Errorf("Received incorrect error: %s", err.Error())
@@ -154,7 +154,7 @@ func TestValidationMiddlewareInvalidTokenUserDoesNotExist(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err.Error() != "token could not be validated" {
 		t.Errorf("Received incorrect error: %s", err.Error())
@@ -194,7 +194,7 @@ func TestValidationMiddlewareInvalidTokenBadUsername(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err.Error() != "token could not be validated" {
 		t.Errorf("Received incorrect error: %s", err.Error())
@@ -247,7 +247,7 @@ func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err.Error() != "token did not validate" {
 		t.Errorf("Received incorrect error: %s", err.Error())
@@ -298,7 +298,7 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	ruser, err := ValidateHTTPUserToken(req, testDb, "")
+	ruser, err := ValidateHTTPUserToken(req, testDb, MagicValidation{})
 	user := ruser.(users.LocksmithUser)
 
 	if err != nil {
@@ -381,7 +381,7 @@ func TestValidationMiddlewareValidTokenCustomUser(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	ruser, err := ValidateHTTPUserToken(req, testDb, "", customUser{})
+	ruser, err := ValidateHTTPUserToken(req, testDb, MagicValidation{}, customUser{})
 	user := ruser.(customUser)
 
 	if err != nil {
@@ -452,7 +452,7 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err.Error() != "token did not validate" {
 		t.Errorf("Received incorrect error: %s", err.Error())
@@ -516,7 +516,7 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 	}
 	req.AddCookie(&token)
 
-	_, err = ValidateHTTPUserToken(req, testDb, "")
+	_, err = ValidateHTTPUserToken(req, testDb, MagicValidation{})
 
 	if err != nil {
 		t.Errorf("Received error: %s", err.Error())

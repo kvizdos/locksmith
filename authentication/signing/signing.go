@@ -9,6 +9,12 @@ import (
 	"math/big"
 )
 
+type SigningPackageInterface interface {
+	Sign(string) (string, error)
+	Validate(string, string) bool
+	MarshalPrivate() (string, error)
+}
+
 type SigningPackage struct {
 	Public  *ecdsa.PublicKey
 	Private *ecdsa.PrivateKey

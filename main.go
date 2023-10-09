@@ -34,7 +34,7 @@ type TestAppHandler struct{}
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
 	role, _ := authUser.GetRole()
-	w.Write([]byte(fmt.Sprintf("%s %s %d", authUser.GetUsername(), role.Name, len(role.Permissions))))
+	w.Write([]byte(fmt.Sprintf("%t - %s %s %d", authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions))))
 }
 
 func main() {
@@ -96,6 +96,9 @@ func main() {
 					Role:        "user",
 					Redirect:    "/app",
 					Custom: map[string]interface{}{
+						// If you need a static ID for testing / interacting
+						// with other places, it's useful
+						// to set that here.
 						"id": "41084e13-a40a-42e7-aac6-19cba36b1d68",
 					},
 				},
@@ -109,15 +112,44 @@ func main() {
 		},
 	})
 
-	roles.AddPermissionsToRole("user", []string{"can.see.user.view"})
+	roles.AddPermissionsToRole("user", []string{
+		"can.see.user.view",
+		"can.see.both.view",
+	})
 
+	// Everyone can see this page, including magic-only!
+	// You only need to be "authenticated" to see this page.
+	// Use permissionless-endpoints with caution.
 	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
-	mux.Handle("/user-login", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+
+	// Only the Logged-In users can see this page
+	// Magic-only users cannot see this.
+	mux.Handle("/user", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
 		MinimalPermissions: []string{
 			"can.see.user.view",
 		},
 	}))
-	mux.Handle("/magic", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+
+	mux.Handle("/both", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+		MinimalPermissions: []string{
+			"can.see.both.view",
+		},
+	}))
+
+	// Logged in w/ Magic users can see this
+	mux.Handle("/magic-prioritized", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+		// Priority to Magic, so Magic permissions will override
+		// default role permissions.
+		PrioritizeMagic: true,
+		MinimalPermissions: []string{
+			"can.see.magic.view",
+		},
+	}))
+
+	// If the user is also logged-in, they cannot see this page!
+	mux.Handle("/magic-only", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+		// No priority set, however only the Magic tokens have this permission
+		// Because priority is on the token, logged-in users will not see this page.
 		MinimalPermissions: []string{
 			"can.see.magic.view",
 		},
@@ -136,8 +168,10 @@ func main() {
 		ForUserID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
 		AllowedPermissions: []string{
 			"can.see.magic.view",
+			"can.see.magic.view.prioritized",
+			"can.see.both.view",
 		},
-		TTL: 5 * time.Minute,
+		TTL: 15 * time.Minute,
 	})
 
 	fmt.Println("User Magic Key:", macID, err)
