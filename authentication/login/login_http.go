@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"text/template"
 	"time"
 
@@ -65,7 +66,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
 	dbUser, usernameExists := db.FindOne("users", map[string]interface{}{
-		"username": loginReq.Username,
+		"username": strings.ToLower(loginReq.Username),
 	})
 
 	if !usernameExists {
