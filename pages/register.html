@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+    {{if ne .Styling.ManifestURL ""}}
+    <link rel="manifest" href="{{.Styling.ManifestURL}}" />{{end}}
 
     <style>
         html {
@@ -63,6 +65,10 @@
             font-weight: bold;
         }
 
+        img {
+            width: 8rem;
+        }
+
     </style>
 </head>
 
@@ -70,6 +76,8 @@
     <header style="--startGradient: {{.Styling.StartGradient}}; --endGradient: {{.Styling.EndGradient}};">
     </header>
     <main id="subsection">
+        {{if ne .Styling.LogoURL ""}}<img src="{{.Styling.LogoURL}}">{{end}}
+
         <p>{{.Title}}</p>
         {{if .HasInvite}}
         <register-form {{ if .EmailAsUsername}}emailAsUsername{{end}} backgroundColor="{{.Styling.SubmitColor}}"
