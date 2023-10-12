@@ -68,6 +68,7 @@ func main() {
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Locksmith Demo UI",
 		UseEmailAsUsername: false,
+		OnboardPath:        "/onboard",
 		Styling: pages.LocksmithPageStyling{
 			LogoURL: "https://example.com/logo.webp",
 		},

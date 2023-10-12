@@ -216,6 +216,7 @@ type RegistrationPageHandler struct {
 	DisablePublicRegistration bool
 	Styling                   pages.LocksmithPageStyling
 	EmailAsUsername           bool
+	HasOnboarding             bool
 }
 
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
@@ -233,11 +234,13 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http
 		Title           string
 		Styling         pages.LocksmithPageStyling
 		EmailAsUsername bool
+		HasOnboarding   bool
 	}
 	inv := TemplateData{
 		Title:           rr.AppName,
 		Styling:         rr.Styling,
 		EmailAsUsername: rr.EmailAsUsername,
+		HasOnboarding:   rr.HasOnboarding,
 	}
 
 	if inv.Styling.SubmitColor == "" {

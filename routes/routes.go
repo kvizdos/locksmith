@@ -24,6 +24,7 @@ type LocksmithRoutesOptions struct {
 	DisablePublicRegistration bool
 	DisableLocksmithPage      bool
 	UseEmailAsUsername        bool
+	OnboardPath               string
 	CustomUserRegistration    register.RegisterCustomUserFunc
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
@@ -69,12 +70,14 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			AppName:         options.AppName,
 			Styling:         options.Styling,
 			EmailAsUsername: options.UseEmailAsUsername,
+			OnboardingPath:  options.OnboardPath,
 		})
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
 			AppName:                   options.AppName,
 			DisablePublicRegistration: options.DisablePublicRegistration,
 			Styling:                   options.Styling,
 			EmailAsUsername:           options.UseEmailAsUsername,
+			HasOnboarding:             len(options.OnboardPath) > 0,
 		}, db))
 	}
 

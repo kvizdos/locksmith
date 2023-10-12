@@ -80,8 +80,8 @@
     <main id="subsection">
         {{if ne .Styling.LogoURL ""}}<img src="{{.Styling.LogoURL}}">{{end}}
         <p>{{.Title}}</p>
-        <login-form {{ if .EmailAsUsername}}emailAsUsername{{end}}
-            backgroundColor="{{.Styling.SubmitColor}}"></login-form>
+        <login-form {{ if .EmailAsUsername}}emailAsUsername{{end}} backgroundColor="{{.Styling.SubmitColor}}"
+            onboardingPath="{{.OnboardingPath}}"></login-form>
     </main>
 </body>
 

@@ -183,6 +183,11 @@ export class LoginFormComponent extends LitElement {
     sign-in {
       margin-top: 0.5rem;
     }
+
+    #onboard {
+      max-width: 32ch;
+      margin: 0;
+    }
     `;
 
   static properties = {
@@ -193,6 +198,7 @@ export class LoginFormComponent extends LitElement {
     loginError: { type: Number },
     emailAsUsername: { type: Boolean },
     signingIn: { type: Boolean },
+    onboardingPath: { type: String },
   };
 
   constructor() {
@@ -204,9 +210,12 @@ export class LoginFormComponent extends LitElement {
     this.loginError = 0
     this.emailAsUsername = false
     this.signingIn = false
+    this.onboardingPath = ""
     // 0 = none
     // 1 = invalid username
     // 2 = invalid password
+    //
+
   }
 
   updateUsername(e) {
@@ -267,10 +276,14 @@ export class LoginFormComponent extends LitElement {
       .catch(err => console.error(err));
   }
 
+  doOnboard() {
+    return window.location.search == "?onboard=true"
+  }
+
   handleAPIResponse(response) {
     switch (response.status) {
       case 200:
-        window.location.href = "/app"
+        window.location.href = !this.doOnboard() ? "/app" : this.onboardingPath
         break;
       case 404:
         this.loginError = 1;
@@ -298,6 +311,7 @@ export class LoginFormComponent extends LitElement {
 
   render() {
     return html`<div id="root">
+      ${this.doOnboard() ? html`<p id="onboard">Thank you for registering! Please sign in to continue with the onboarding process.` : ""}
       <div class="input">
         <label for="username">${this.emailAsUsername ? "Email" : "Username"}</label>
         <input id="username" type="text" placeholder="${this.emailAsUsername ? "Email" : "Username"}" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />

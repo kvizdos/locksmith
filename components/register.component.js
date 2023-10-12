@@ -75,6 +75,7 @@ export class RegisterFormComponent extends LitElement {
     code: { type: this.toString },
     emailAsUsername: { type: Boolean },
     registering: { type: Boolean },
+    hasOnboarding: { type: String },
   };
 
   constructor() {
@@ -88,6 +89,7 @@ export class RegisterFormComponent extends LitElement {
     this.emailDisabled = false;
     this.code = ""
     this.emailAsUsername = false
+    this.hasOnboarding = ""
     // 0 = none
     // 1 = password confirmation error
     // 2 = username taken
@@ -232,7 +234,7 @@ export class RegisterFormComponent extends LitElement {
         console.log(response)
         this.registrationSuccess = true;
         setTimeout(() => {
-          window.location.href = "/login"
+          window.location.href = `/login${this.hasOnboarding == "true" ? "?onboard=true" : ""}`
         }, 1000)
         break;
       case 400:

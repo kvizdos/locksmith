@@ -128,6 +128,7 @@ type LoginPageHandler struct {
 	DisablePublicRegistration bool
 	Styling                   pages.LocksmithPageStyling
 	EmailAsUsername           bool
+	OnboardingPath            string
 }
 
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -143,12 +144,14 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Title           string
 		Styling         pages.LocksmithPageStyling
 		EmailAsUsername bool
+		OnboardingPath  string
 	}
 
 	data := PageData{
 		Title:           lr.AppName,
 		Styling:         lr.Styling,
 		EmailAsUsername: lr.EmailAsUsername,
+		OnboardingPath:  lr.OnboardingPath,
 	}
 
 	if data.Styling.SubmitColor == "" {

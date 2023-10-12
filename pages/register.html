@@ -81,10 +81,11 @@
         <p>{{.Title}}</p>
         {{if .HasInvite}}
         <register-form {{ if .EmailAsUsername}}emailAsUsername{{end}} backgroundColor="{{.Styling.SubmitColor}}"
-            email="{{.Invitation.Email}}" emailDisabled code="{{.Invitation.Code}}"></register-form>
+            email="{{.Invitation.Email}}" hasOnboarding={{.HasOnboarding}} emailDisabled
+            code="{{.Invitation.Code}}"></register-form>
         {{else}}
-        <register-form {{ if .EmailAsUsername}}emailAsUsername{{end}}
-            backgroundColor="{{.Styling.SubmitColor}}"></register-form>
+        <register-form {{ if .EmailAsUsername}}emailAsUsername{{end}} backgroundColor="{{.Styling.SubmitColor}}"
+            hasOnboarding={{.HasOnboarding}}></register-form>
         {{end}}
     </main>
 </body>
