@@ -10,6 +10,9 @@ import (
 //go:embed register.component.js
 var RegistrationComponentJS []byte
 
+//go:embed reset-password.component.js
+var ResetPasswordComponentJS []byte
+
 //go:embed signin.component.js
 var SigninComponentJS []byte
 
@@ -33,6 +36,8 @@ func ServeComponents(w http.ResponseWriter, r *http.Request) {
 		serveJSComponent(w, UserListComponentJS)
 	case "user-tab.component.js":
 		serveJSComponent(w, UserTabComponentJS)
+	case "reset-password.component.js":
+		serveJSComponent(w, ResetPasswordComponentJS)
 	case "persona-switcher.component.js":
 		if launchpad.IS_ENABLED {
 			serveJSComponent(w, PersonaSwitcherJS)

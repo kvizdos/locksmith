@@ -37,6 +37,10 @@ func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("%t - %s %s %d", authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions))))
 }
 
+func printResetToken(token string, user users.LocksmithUserInterface) {
+	fmt.Println(user.GetID(), token)
+}
+
 func main() {
 	// testPassword, _ := authentication.CompileLocksmithPassword("pass")
 
@@ -67,10 +71,13 @@ func main() {
 	mux := http.NewServeMux()
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Locksmith Demo UI",
-		UseEmailAsUsername: false,
+		UseEmailAsUsername: true,
 		OnboardPath:        "/onboard",
 		Styling: pages.LocksmithPageStyling{
 			LogoURL: "https://example.com/logo.webp",
+		},
+		ResetPasswordOptions: routes.ResetPasswordOptions{
+			SendResetToken: printResetToken,
 		},
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
@@ -105,7 +112,7 @@ func main() {
 				},
 				"lp-user-2": {
 					DisplayName: "Another General User",
-					Email:       "user@user.com",
+					Email:       "user2@user.com",
 					Role:        "user",
 					Redirect:    "/app",
 				},
@@ -163,19 +170,19 @@ func main() {
 	*/
 	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
 	magic.MagicSigningPackage = &sp
-	macID, err := users.LocksmithUser{
-		ID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
-	}.CreateMagicAuthenticationCode(db, magic.MagicAuthenticationVariables{
-		ForUserID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
-		AllowedPermissions: []string{
-			"can.see.magic.view",
-			"can.see.magic.view.prioritized",
-			"can.see.both.view",
-		},
-		TTL: 15 * time.Minute,
-	})
+	// macID, err := users.LocksmithUser{
+	// 	ID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
+	// }.CreateMagicAuthenticationCode(db, magic.MagicAuthenticationVariables{
+	// 	ForUserID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
+	// 	AllowedPermissions: []string{
+	// 		"can.see.magic.view",
+	// 		"can.see.magic.view.prioritized",
+	// 		"can.see.both.view",
+	// 	},
+	// 	TTL: 15 * time.Minute,
+	// })
 
-	fmt.Println("User Magic Key:", macID, err)
+	// fmt.Println("User Magic Key:", macID, err)
 	log.Print("Listening on :3000...")
 	err = http.ListenAndServe(":3000", mux)
 	if err != nil {

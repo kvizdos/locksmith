@@ -188,6 +188,13 @@ export class LoginFormComponent extends LitElement {
       max-width: 32ch;
       margin: 0;
     }
+
+    a {
+      margin: 0;
+      text-align: center;
+      color: var(--color);
+      text-decoration: none;
+    }
     `;
 
   static properties = {
@@ -323,6 +330,7 @@ export class LoginFormComponent extends LitElement {
         </div>
         ` : ""}
       <sign-in backgroundColor="${this.backgroundColor}" stage="2" @next-stage=${this.stageChange} .signInText=${this.signingIn ? "Signing In" : "Sign In"} @click=${this.signin}></sign-in>
+      <a style="--color: ${this.backgroundColor};" href="/reset-password">Forgot Password</a>
 
       <p id="error">${this.getLoginErrorMessage()}</p>
 

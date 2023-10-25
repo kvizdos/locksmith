@@ -18,3 +18,6 @@ var LoginPageHTML []byte
 
 //go:embed register.html
 var RegisterPageHTML []byte
+
+//go:embed reset-password-public.html
+var ResetPasswordPageHTML []byte

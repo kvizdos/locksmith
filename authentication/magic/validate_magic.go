@@ -58,6 +58,10 @@ func Validate(db database.DatabaseAccessor, tokenIdentifer string) (MagicAuthent
 		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("uid not found")
 	}
 
+	if rawUser.(map[string]interface{})["magic"] == nil {
+		return MagicAuthentication{}, map[string]interface{}{}, fmt.Errorf("no magics found")
+	}
+
 	magics := MagicsFromMap(rawUser.(map[string]interface{})["magic"].([]interface{}))
 
 	if len(magics) == 0 {

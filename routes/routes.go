@@ -8,11 +8,13 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/register"
+	"github.com/kvizdos/locksmith/authentication/reset"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/httpHelpers"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
+	"github.com/kvizdos/locksmith/users"
 )
 
 type LocksmithRoutesOptions struct {
@@ -28,6 +30,11 @@ type LocksmithRoutesOptions struct {
 	CustomUserRegistration    register.RegisterCustomUserFunc
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
+	ResetPasswordOptions      ResetPasswordOptions
+}
+
+type ResetPasswordOptions struct {
+	SendResetToken func(token string, user users.LocksmithUserInterface)
 }
 
 func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor, options LocksmithRoutesOptions) {
@@ -63,6 +70,13 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			})
 			mux.Handle("/api/users/invite", inviteUserAPIHandler)
 		}
+
+		// This endpoint requires a bit of dynamic Secure Endpointness,
+		// so all of that is handled within it.
+		mux.Handle("/api/reset-password", reset.ResetRouterAPIHandler{
+			Database:       db,
+			SendResetToken: options.ResetPasswordOptions.SendResetToken,
+		})
 	}
 
 	if !options.DisableUI {
@@ -79,6 +93,22 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			EmailAsUsername:           options.UseEmailAsUsername,
 			HasOnboarding:             len(options.OnboardPath) > 0,
 		}, db))
+		mux.Handle("/reset-password", httpHelpers.InjectDatabaseIntoContext(reset.ResetPasswordPageHandler{
+			AppName:         options.AppName,
+			Styling:         options.Styling,
+			EmailAsUsername: options.UseEmailAsUsername,
+			ShowResetStage:  false,
+		}, db))
+
+		mux.Handle("/reset-password/reset", endpoints.SecureEndpointHTTPMiddleware(reset.ResetPasswordPageHandler{
+			AppName:         options.AppName,
+			Styling:         options.Styling,
+			EmailAsUsername: options.UseEmailAsUsername,
+			ShowResetStage:  true,
+		}, db, endpoints.EndpointSecurityOptions{
+			MinimalPermissions: []string{"magic.reset.password"},
+			PrioritizeMagic:    true,
+		}))
 	}
 
 	if !options.DisableLocksmithPage {
