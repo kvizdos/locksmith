@@ -28,6 +28,7 @@ type DatabaseAccessor interface {
 	FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool)
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
 	CreateTextIndex(table string, keys []string) error
+	CreateRegularIndex(table string, keys map[string]Direction, unique bool) error
 	Drop(table string) error
 	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
 	MonitorConnection(heartbeat time.Duration, health HealthCheckInterface)
@@ -42,6 +43,10 @@ func (db TestDatabase) MonitorConnection(heartbeat time.Duration, health HealthC
 }
 
 func (db TestDatabase) CreateTextIndex(table string, keys []string) error {
+	return nil
+}
+
+func (db TestDatabase) CreateRegularIndex(table string, keys map[string]Direction, unique bool) error {
 	return nil
 }
 

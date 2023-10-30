@@ -12,6 +12,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// Direction type to specify the index direction
+type Direction int
+
+const (
+	Ascending  Direction = 1  // Ascending order
+	Descending Direction = -1 // Descending order
+)
+
 type MongoDatabase struct {
 	Ctx      context.Context
 	Cancel   context.CancelFunc
@@ -31,6 +39,8 @@ func (db *MongoDatabase) Initialize(uri string, database string) error {
 	if err != nil {
 		return fmt.Errorf("failed to ping mongodb")
 	}
+
+	fmt.Println("Connected to", uri, database)
 
 	data := client.Database(database)
 
@@ -162,6 +172,26 @@ func (db MongoDatabase) CreateTextIndex(table string, keys []string) error {
 	}
 
 	return err
+}
+
+func (db MongoDatabase) CreateRegularIndex(table string, keys map[string]Direction, unique bool) error {
+	// Convert map[string]Direction to bson.D
+	var keysPrim bson.D
+	for fieldName, direction := range keys {
+		keysPrim = append(keysPrim, bson.E{Key: fieldName, Value: direction})
+	}
+
+	model := mongo.IndexModel{
+		Keys:    keysPrim,
+		Options: options.Index().SetUnique(unique),
+	}
+	_, err := db.database.Collection(table).Indexes().CreateOne(context.TODO(), model)
+	if err != nil {
+		fmt.Println("Error creating index:", err)
+		return err
+	}
+
+	return nil
 }
 
 func (db MongoDatabase) Count(table string, filter map[string]interface{}) (int64, error) {
