@@ -27,6 +27,7 @@ type LocksmithRoutesOptions struct {
 	DisableLocksmithPage      bool
 	UseEmailAsUsername        bool
 	OnboardPath               string
+	InviteUsedRedirect        string
 	CustomUserRegistration    register.RegisterCustomUserFunc
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
@@ -92,6 +93,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			Styling:                   options.Styling,
 			EmailAsUsername:           options.UseEmailAsUsername,
 			HasOnboarding:             len(options.OnboardPath) > 0,
+			InviteUsedRedirect:        options.InviteUsedRedirect,
 		}, db))
 		mux.Handle("/reset-password", httpHelpers.InjectDatabaseIntoContext(reset.ResetPasswordPageHandler{
 			AppName:         options.AppName,

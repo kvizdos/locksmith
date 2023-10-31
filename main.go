@@ -73,6 +73,7 @@ func main() {
 		AppName:            "Locksmith Demo UI",
 		UseEmailAsUsername: true,
 		OnboardPath:        "/onboard",
+		InviteUsedRedirect: "/app",
 		Styling: pages.LocksmithPageStyling{
 			LogoURL: "https://example.com/logo.webp",
 		},

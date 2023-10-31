@@ -217,6 +217,7 @@ type RegistrationPageHandler struct {
 	Styling                   pages.LocksmithPageStyling
 	EmailAsUsername           bool
 	HasOnboarding             bool
+	InviteUsedRedirect        string
 }
 
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
@@ -289,8 +290,7 @@ func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		invite, err := invitations.GetInviteFromCode(db, inviteCode)
 
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("invalid invitation code."))
+			http.Redirect(w, r, rr.InviteUsedRedirect, http.StatusTemporaryRedirect)
 			return
 		}
 
