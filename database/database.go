@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type DatabaseUpdateActions string
@@ -31,11 +32,16 @@ type DatabaseAccessor interface {
 	CreateRegularIndex(table string, keys map[string]Direction, unique bool) error
 	Drop(table string) error
 	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
+	GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error)
 	MonitorConnection(heartbeat time.Duration, health HealthCheckInterface)
 }
 
 type TestDatabase struct {
 	Tables map[string]map[string]interface{}
+}
+
+func (db TestDatabase) GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error) {
+	return time.Now(), nil
 }
 
 func (db TestDatabase) MonitorConnection(heartbeat time.Duration, health HealthCheckInterface) {

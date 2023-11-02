@@ -68,6 +68,12 @@ func (db MongoDatabase) MonitorConnection(heartbeat time.Duration, health Health
 	}
 }
 
+func (db MongoDatabase) GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error) {
+	timestamp := dbID.Timestamp()
+
+	return timestamp, nil
+}
+
 func (db MongoDatabase) Drop(table string) error {
 	col := db.database.Collection(table)
 
