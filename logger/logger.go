@@ -73,7 +73,7 @@ type Logger struct {
 }
 
 func (l *Logger) Log(useFormat LogFormats, params ...interface{}) {
-	selectedLog := logs[useFormat]
+	selectedLog := Logs[useFormat]
 	if len(params) != len(selectedLog.RegexOrder) {
 		panic(fmt.Sprintf("too incorrect number of arguments passed to %+v - %+v\n", useFormat, params))
 	}

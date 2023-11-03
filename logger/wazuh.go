@@ -6,7 +6,7 @@ import (
 )
 
 func LogFormatToXML(lf LogFormats) string {
-	format := logs[lf]
+	format := Logs[lf]
 
 	format.WazuhName = "locksmith"
 	format.Parent = "locksmith"

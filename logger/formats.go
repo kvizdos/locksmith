@@ -1,6 +1,6 @@
 package logger
 
-var logs = map[LogFormats]LogFormat{
+var Logs = map[LogFormats]LogFormat{
 	INVALID_METHOD: {
 		Regex:      "'(\\d+.\\d+.\\d+.\\d+)' used an incorrect method on '(\\w+)' expected '(\\w+)' got '(\\w+)'",
 		RegexOrder: []string{"srcip", "path", "extra_data", "extra_data"},
