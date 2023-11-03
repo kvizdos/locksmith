@@ -31,6 +31,11 @@ var logs = map[LogFormats]LogFormat{
 		RegexOrder: []string{"srcip", "extra_data"},
 		FmtPattern: "'%s' used an invalid invite code '%s'",
 	},
+	INVITE_CODE_FAKE_VIEW: {
+		Regex:      "'(\\d+.\\d+.\\d+.\\d+)' used a fake or expired invite code to try and view regitration '(\\w+)'",
+		RegexOrder: []string{"srcip", "extra_data"},
+		FmtPattern: "'%s' used a fake or expired invite code to try and view registration '%s'",
+	},
 	INVITE_CODE_FAKE: {
 		Regex:      "'(\\d+.\\d+.\\d+.\\d+)' used a fake invite code '(\\w+)'",
 		RegexOrder: []string{"srcip", "extra_data"},
@@ -61,6 +66,7 @@ const (
 	LOGIN_INVALID_USERNAME      LogFormats = "login_invalid_username"
 	INVALID_METHOD              LogFormats = "invalid_method"
 	BAD_REQUEST                 LogFormats = "bad_request"
+	INVITE_CODE_FAKE_VIEW       LogFormats = "malformed_invite_code_view"
 	INVITE_CODE_MALFORMED       LogFormats = "malformed_invite_code"
 	INVITE_CODE_FAKE            LogFormats = "fake_invite_code"
 	INVITE_CODE_INCORRECT_EMAIL LogFormats = "incorect_email_invite_code"

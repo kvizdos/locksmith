@@ -290,6 +290,7 @@ func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		invite, err := invitations.GetInviteFromCode(db, inviteCode)
 
 		if err != nil {
+			logger.LOGGER.Log(logger.INVITE_CODE_FAKE_VIEW, logger.GetIPFromRequest(*r), inviteCode)
 			http.Redirect(w, r, rr.InviteUsedRedirect, http.StatusTemporaryRedirect)
 			return
 		}
