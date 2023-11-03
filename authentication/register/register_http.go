@@ -295,6 +295,8 @@ func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
+		logger.LOGGER.Log(logger.INVITE_CODE_LOADED, logger.GetIPFromRequest(*r), inviteCode, invite.AttachUserID)
+
 		invite.Code = inviteCode
 
 		rr.servePublicHTML(w, r, invite)
