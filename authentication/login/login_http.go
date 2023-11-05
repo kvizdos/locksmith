@@ -33,7 +33,15 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		// Make it more of a pain to detect this login_xsrf cookie
 		// if you aren't careful paying attention.
-		cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login"}
+		cookieXSRF := http.Cookie{
+			Name:     "login_xsrf",
+			Value:    "",
+			Expires:  time.Unix(0, 0),
+			HttpOnly: true,
+			Secure:   true,
+			Path:     "/api/login",
+			SameSite: http.SameSiteStrictMode,
+		}
 		http.SetCookie(w, &cookieXSRF)
 
 		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
@@ -154,7 +162,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cookieValue := user.GenerateCookieValueFromSession(session)
 
 	// Expire Login XSRF cookie
-	cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login"}
+	cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login", SameSite: http.SameSiteStrictMode}
 	// Attach Session Cookie
 	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
 	http.SetCookie(w, &cookie)

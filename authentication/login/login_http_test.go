@@ -75,6 +75,98 @@ func TestLoginHandlerMissingBodyParams(t *testing.T) {
 	}
 }
 
+func TestLoginHandlerXSRFSIDMismatch(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {},
+		},
+	}
+
+	handler := LoginHandler{}
+
+	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
+
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "password123", "xsrf": "%s"}`, xsrfToken)
+
+	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.AddCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    "different-id",
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	req.AddCookie(&http.Cookie{
+		Name:     "login_xsrf",
+		Value:    xsrfToken,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestLoginHandlerXSRFBadValue(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {},
+		},
+	}
+
+	handler := LoginHandler{}
+
+	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
+
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "password123", "xsrf": "%s"}`, xsrfToken)
+
+	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.AddCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    "different-id",
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	req.AddCookie(&http.Cookie{
+		Name:     "login_xsrf",
+		Value:    "random-xsrf",
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
+	}
+}
+
 func TestLoginHandlerInvalidUsername(t *testing.T) {
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
