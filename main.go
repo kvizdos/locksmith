@@ -16,6 +16,7 @@ import (
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
+	"github.com/kvizdos/locksmith/ratelimits"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/routes"
 	"github.com/kvizdos/locksmith/users"
@@ -35,7 +36,8 @@ type TestAppHandler struct{}
 func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
 	role, _ := authUser.GetRole()
-	w.Write([]byte(fmt.Sprintf("%t - %s %s %d", authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions))))
+	sid, _ := r.Context().Value("sid").(string)
+	w.Write([]byte(fmt.Sprintf("%t - %s %s %d - Your SID is %s", authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions), sid)))
 }
 
 func printResetToken(token string, user users.LocksmithUserInterface) {
@@ -130,7 +132,9 @@ func main() {
 	// Everyone can see this page, including magic-only!
 	// You only need to be "authenticated" to see this page.
 	// Use permissionless-endpoints with caution.
-	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db))
+	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
+		RateLimit: ratelimits.NewRateLimiter(15, 15).WithSecondsLimits(5, 5),
+	}))
 
 	// Only the Logged-In users can see this page
 	// Magic-only users cannot see this.

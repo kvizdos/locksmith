@@ -6,19 +6,21 @@ Key Features:
 
 - [x] Intuitive Web Interface: Easily integrate a pre-built web interface for registration and logins. Alternatively, utilize only the Locksmith Authentication endpoints with your custom UI.
 - [x] Token Storage: Authentication tokens are securely stored as cookies for enhanced security.
-- [ ] General Stateless XSRF Tokens: When using a Secure Endpoint with an endpoint that is not a GET/HEAD request, XSRF tokens are used as another form of validation.
-- [ ] Login-Specific Stateless XSRF: When a user visits the Login page, they receive a XSRF token specific to logging in which gets tied to their Session ID.
-- [ ] Browser Fingerprinting for "Remember Me" authentication
-- [ ] Automatic Token Refreshes that utilizes the Fingerprints to validate users are who they say they are.
+- [ ] Seamless Integration of Stateless XSRF Protection: Enhance the security of non-GET/HEAD requests across your web services by leveraging stateless XSRF tokens for an additional layer of validation.
+- [x] Dedicated Login Page XSRF Security: Boost your login security with XSRF tokens that are uniquely generated for each login session, tying together the user's anonymous session ID and a preset expiration time for heightened protection.
+- [ ] Advanced "Remember Me" Authentication: Utilize sophisticated browser fingerprinting techniques to offer users a convenient "Remember Me" feature, ensuring persistent authentication while maintaining security
+- [ ] Automated Secure Token Renewal: Implement auto-refreshing of authentication tokens that rely on browser fingerprinting to continuously affirm that users are who they claim to be.
 - [x] Magic Tokens with Scoped Permissions: Grant users access to specific areas without requiring login using Magic Access Codes (MACs). Each token has a Time-To-Live (TTL) ensuring limited access duration. Ideal for password reset links or any notification-based URLs, allowing users to seamlessly interact with the app while maintaining limited permissions.
 - [x] Middleware for Security: Implement token and role validation middleware to safeguard protected endpoints effectively and with ease.
 - [x] Admin User Management: A comprehensive, pre-built admin panel that allows for viewing and removal of users with ease (or BYO and use our endpoints!).
 - [x] Role-based Access: Define user roles, create custom roles, and assign administrative privileges as required.
 - [x] User Invitation System: Simplify the onboarding process with a streamlined user invitation mechanism.
-- [ ] Robust Password Policies: Set customizable password policies to ensure user data remains protected.
-- [ ] Brute Force Mitigation: A user lockout system to deter and reduce potential brute force attacks.
-- [ ] Multifactor Authentication: Incorporate multifactor authentication using TOTP, WebAuthn, and PassKeys for added security.
+- [ ] Customizable Password Strength Requirements: Establish and enforce your own password complexity guidelines to ensure the security and integrity of user accounts.
+- [ ] Effective Brute Force Defense Mechanism: Deploy a robust user lockout protocol to effectively thwart and mitigate the impact of brute force attacks on your platform.
+- [ ] Enhanced Multi-Factor Authentication Options: Augment your security measures with multifactor authentication methods, including TOTP, WebAuthn, and PassKeys, to safeguard user identities.
 - [x] Password Reset Capabilities: Integrated password reset flows and endpoints. Choose between our UI or integrate your own for a seamless experience.
+- [ ] Enhanced Rate Limiting Mechanisms: Implement robust defenses against overuse and automated traffic with our dynamic rate limiting system. For unauthenticated requests, such as those on the login page, rate limits are enforced per IP to prevent abuse. Authenticated users benefit from individualized rate limiting based on user ID, ensuring fair resource allocation and service stability. Customize the level of control with per-endpoint granularity or apply global thresholds for consistent policy enforcement. With in-memory processing for immediate effect and upcoming Redis support for scalable management, maintain the integrity and reliability of your application with ease.
+- [ ] Robust API Key Management: Empower your platform with a secure and flexible API key system, enabling seamless integration for developers and businesses. Issue, manage, and revoke keys with ease, providing granular access control to your APIs. Each key comes with customizable permissions and scopes, ensuring that users have the precise access they need for their applications. Enjoy the confidence that comes with comprehensive usage monitoring and rate limiting features to safeguard your services and maintain optimal performance.
 
 Locksmith delivers a robust authentication system, balancing top-tier user account security with a seamless login experience.
 

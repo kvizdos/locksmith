@@ -4,11 +4,17 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/logger"
+	"github.com/kvizdos/locksmith/ratelimits"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -69,6 +75,8 @@ type EndpointSecurityOptions struct {
 	// Setting this to `true` gives preference to the `magic` cookie, even if a valid `token` cookie exists.
 	// Please note that this action will revoke any permissions not explicitly specified in the `magic` cookie.
 	PrioritizeMagic bool
+	// Optionally, rate limit the endpoint.
+	RateLimit *ratelimits.RateLimiter
 }
 
 func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccessor, opts ...EndpointSecurityOptions) http.Handler {
@@ -78,6 +86,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 	} else {
 		secureOptions = opts[0]
 	}
+
 	if secureOptions.BasicAuth.Enabled {
 		return secureOptions.BasicAuth.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(context.WithValue(r.Context(), "database", db))
@@ -86,6 +95,64 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		}))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Initial Rate Limiting before any database calls are made.
+		// This rate limit identifier is based on the token username + IP,
+		// or if the token doesn't exist, just the IP.
+		//
+		// Here, it uses a mix of both IP + Username to try and prevent DoS
+		// issues if someone purposefully inserts an incorrect username into
+		// their token.
+		//
+		// There is a final rate limiter at the bottom that is specific
+		// to the User ID. The purpose for that one is in case the user
+		// is mobile / switching IP addresses, they will still be rate limited.
+		if secureOptions.RateLimit != nil {
+			tokenCookie, err := r.Cookie("token")
+			identifier := ""
+			ip := logger.GetIPFromRequest(*r)
+
+			if err != nil {
+				decoded, err := base64.StdEncoding.DecodeString(tokenCookie.Value)
+				if err != nil {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				split := strings.Split(string(decoded), ":")
+				username := split[1]
+
+				identifier = fmt.Sprintf("%s:%s", username, ip)
+			} else {
+				// This is a more "catch all", though it hopefully
+				// shouldn't block any "real" users, as if they don't have
+				// a token, they cant reach this anyways.
+				identifier = ip
+			}
+
+			if !secureOptions.RateLimit.CanHandle(identifier) {
+				fmt.Println("Pre-check Rate Limited!")
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+		}
+
+		sidCookie, err := r.Cookie("sid")
+		sidValue := ""
+		if err != nil {
+			sid, err := authentication.GenerateRandomString(16)
+
+			if err != nil {
+				fmt.Println("Error generating random SID", err)
+				sid = "random"
+			}
+
+			sidValue = sid
+
+			cookie := http.Cookie{Name: "sid", Value: sid, HttpOnly: true, Secure: true, Path: "/"}
+			http.SetCookie(w, &cookie)
+		} else {
+			sidValue = sidCookie.Value
+		}
+
 		var userInterface users.LocksmithUserInterface
 
 		if secureOptions.CustomUser != nil {
@@ -152,11 +219,23 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 
 		r = r.WithContext(context.WithValue(r.Context(), "authUser", user))
 		r = r.WithContext(context.WithValue(r.Context(), "database", db))
+		r = r.WithContext(context.WithValue(r.Context(), "sid", sidValue))
 
 		if secureOptions.SecondaryValidation != nil {
 			statusCode := secureOptions.SecondaryValidation(user, db)
 			if statusCode != 200 {
 				w.WriteHeader(statusCode)
+				return
+			}
+		}
+
+		// Final Rate Limiter for the Exact User
+		// This provides a concrete answer about whether
+		// or not the user should be able to access a resource.
+		if secureOptions.RateLimit != nil {
+			if !secureOptions.RateLimit.CanHandle(user.GetID()) {
+				fmt.Println("Rate limited here!")
+				w.WriteHeader(http.StatusTooManyRequests)
 				return
 			}
 		}
