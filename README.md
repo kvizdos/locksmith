@@ -4,17 +4,21 @@ Locksmith stands as a comprehensive authentication solution designed specificall
 
 Key Features:
 
-- Intuitive Web Interface: Easily integrate a pre-built web interface for registration and logins. Alternatively, utilize only the Locksmith Authentication endpoints with your custom UI.
-- Token Storage: Authentication tokens are securely stored as cookies for enhanced security.
-- Magic Tokens with Scoped Permissions: Grant users access to specific areas without requiring login using Magic Access Codes (MACs). Each token has a Time-To-Live (TTL) ensuring limited access duration. Ideal for password reset links or any notification-based URLs, allowing users to seamlessly interact with the app while maintaining limited permissions.
-- Middleware for Security: Implement token and role validation middleware to safeguard protected endpoints effectively and with ease.
-- Admin User Management: A comprehensive, pre-built admin panel that allows for viewing and removal of users with ease (or BYO and use our endpoints!).
-- Role-based Access: Define user roles, create custom roles, and assign administrative privileges as required.
-- User Invitation System: Simplify the onboarding process with a streamlined user invitation mechanism.
-- Robust Password Policies: Set customizable password policies to ensure user data remains protected.
-- Brute Force Mitigation: A user lockout system to deter and reduce potential brute force attacks.
-- Multifactor Authentication: Incorporate multifactor authentication using TOTP, WebAuthn, and PassKeys for added security.
-- Password Reset Capabilities: Integrated password reset flows and endpoints. Choose between our UI or integrate your own for a seamless experience.
+- [x] Intuitive Web Interface: Easily integrate a pre-built web interface for registration and logins. Alternatively, utilize only the Locksmith Authentication endpoints with your custom UI.
+- [x] Token Storage: Authentication tokens are securely stored as cookies for enhanced security.
+- [ ] General Stateless XSRF Tokens: When using a Secure Endpoint with an endpoint that is not a GET/HEAD request, XSRF tokens are used as another form of validation.
+- [ ] Login-Specific Stateless XSRF: When a user visits the Login page, they receive a XSRF token specific to logging in which gets tied to their Session ID.
+- [ ] Browser Fingerprinting for "Remember Me" authentication
+- [ ] Automatic Token Refreshes that utilizes the Fingerprints to validate users are who they say they are.
+- [x] Magic Tokens with Scoped Permissions: Grant users access to specific areas without requiring login using Magic Access Codes (MACs). Each token has a Time-To-Live (TTL) ensuring limited access duration. Ideal for password reset links or any notification-based URLs, allowing users to seamlessly interact with the app while maintaining limited permissions.
+- [x] Middleware for Security: Implement token and role validation middleware to safeguard protected endpoints effectively and with ease.
+- [x] Admin User Management: A comprehensive, pre-built admin panel that allows for viewing and removal of users with ease (or BYO and use our endpoints!).
+- [x] Role-based Access: Define user roles, create custom roles, and assign administrative privileges as required.
+- [x] User Invitation System: Simplify the onboarding process with a streamlined user invitation mechanism.
+- [ ] Robust Password Policies: Set customizable password policies to ensure user data remains protected.
+- [ ] Brute Force Mitigation: A user lockout system to deter and reduce potential brute force attacks.
+- [ ] Multifactor Authentication: Incorporate multifactor authentication using TOTP, WebAuthn, and PassKeys for added security.
+- [x] Password Reset Capabilities: Integrated password reset flows and endpoints. Choose between our UI or integrate your own for a seamless experience.
 
 Locksmith delivers a robust authentication system, balancing top-tier user account security with a seamless login experience.
 

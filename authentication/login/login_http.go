@@ -10,6 +10,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/pages"
@@ -19,18 +20,31 @@ import (
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	XSRF     string `json:"xsrf"`
 }
 
 func (r loginRequest) HasRequiredFields() bool {
-	return !(r.Username == "" || r.Password == "")
+	return !(r.Username == "" || r.Password == "" || r.XSRF == "")
 }
 
 type LoginHandler struct{}
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
+		// Make it more of a pain to detect this login_xsrf cookie
+		// if you aren't careful paying attention.
+		cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login"}
+		http.SetCookie(w, &cookieXSRF)
+
 		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
-		w.WriteHeader(http.StatusNotAcceptable)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	loginXSRFCookie, err := r.Cookie("login_xsrf")
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -59,6 +73,27 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !loginReq.HasRequiredFields() {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if loginReq.XSRF != loginXSRFCookie.Value {
+		fmt.Println("Bad XSRF!")
+		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	sidCookie, err := r.Cookie("sid")
+
+	if err != nil {
+		fmt.Println("No SID present on login request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if !xsrf.Confirm(loginReq.XSRF, sidCookie.Value) {
+		fmt.Println("bad xsrf used")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -118,8 +153,12 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	cookieValue := user.GenerateCookieValueFromSession(session)
 
+	// Expire Login XSRF cookie
+	cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login"}
+	// Attach Session Cookie
 	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
 	http.SetCookie(w, &cookie)
+	http.SetCookie(w, &cookieXSRF)
 }
 
 type LoginPageHandler struct {
@@ -134,6 +173,13 @@ type LoginPageHandler struct {
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
+	loginXSRF, ok := r.Context().Value("login_xsrf").(string)
+
+	if !ok || (ok && loginXSRF == "") {
+		w.Write([]byte("Login Handler must be wrapped in LoginPageMiddleware"))
+		return
+	}
+
 	tmpl, err := template.New("login.html").Parse(string(pages.LoginPageHTML))
 
 	if err != nil {
@@ -145,6 +191,7 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Styling         pages.LocksmithPageStyling
 		EmailAsUsername bool
 		OnboardingPath  string
+		LoginXSRF       string
 	}
 
 	data := PageData{
@@ -152,6 +199,7 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Styling:         lr.Styling,
 		EmailAsUsername: lr.EmailAsUsername,
 		OnboardingPath:  lr.OnboardingPath,
+		LoginXSRF:       loginXSRF,
 	}
 
 	if data.Styling.SubmitColor == "" {

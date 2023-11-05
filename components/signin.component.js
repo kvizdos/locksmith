@@ -206,6 +206,7 @@ export class LoginFormComponent extends LitElement {
     emailAsUsername: { type: Boolean },
     signingIn: { type: Boolean },
     onboardingPath: { type: String },
+    loginxsrf: { type: String },
   };
 
   constructor() {
@@ -218,6 +219,7 @@ export class LoginFormComponent extends LitElement {
     this.emailAsUsername = false
     this.signingIn = false
     this.onboardingPath = ""
+    this.loginxsrf = ""
     // 0 = none
     // 1 = invalid username
     // 2 = invalid password
@@ -275,7 +277,7 @@ export class LoginFormComponent extends LitElement {
     const options = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: `{"username":"${this.username}","password":"${this.password}"}`
+      body: `{"username":"${this.username}","password":"${this.password}", "xsrf": "${this.loginxsrf}"}`
     };
 
     fetch('/api/login', options)

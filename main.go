@@ -12,6 +12,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/signing"
+	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
@@ -171,7 +172,9 @@ func main() {
 	*/
 	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
 	magic.MagicSigningPackage = &sp
-	// macID, err := users.LocksmithUser{
+	xsrf.XSRFSigningPackage.Anonymous = &sp
+	xsrf.XSRFSigningPackage.Authenticated = &sp
+	// _, err = users.LocksmithUser{
 	// 	ID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
 	// }.CreateMagicAuthenticationCode(db, magic.MagicAuthenticationVariables{
 	// 	ForUserID: "41084e13-a40a-42e7-aac6-19cba36b1d68",

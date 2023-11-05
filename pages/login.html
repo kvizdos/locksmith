@@ -81,7 +81,7 @@
         {{if ne .Styling.LogoURL ""}}<img src="{{.Styling.LogoURL}}">{{end}}
         <p>{{.Title}}</p>
         <login-form {{ if .EmailAsUsername}}emailAsUsername{{end}} backgroundColor="{{.Styling.SubmitColor}}"
-            onboardingPath="{{.OnboardingPath}}"></login-form>
+            onboardingPath="{{.OnboardingPath}}" loginxsrf="{{.LoginXSRF}}"></login-form>
     </main>
 </body>
 

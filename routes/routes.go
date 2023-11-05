@@ -81,11 +81,13 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	}
 
 	if !options.DisableUI {
-		mux.Handle("/login", login.LoginPageHandler{
-			AppName:         options.AppName,
-			Styling:         options.Styling,
-			EmailAsUsername: options.UseEmailAsUsername,
-			OnboardingPath:  options.OnboardPath,
+		mux.Handle("/login", login.LoginPageMiddleware{
+			Next: login.LoginPageHandler{
+				AppName:         options.AppName,
+				Styling:         options.Styling,
+				EmailAsUsername: options.UseEmailAsUsername,
+				OnboardingPath:  options.OnboardPath,
+			},
 		})
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
 			AppName:                   options.AppName,
