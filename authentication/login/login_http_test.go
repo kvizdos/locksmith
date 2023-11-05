@@ -3,6 +3,7 @@ package login
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/signing"
+	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
@@ -26,6 +29,10 @@ func TestMain(m *testing.M) {
 			"user.delete.self",
 		},
 	}
+
+	pkg, _ := signing.CreateSigningPackage()
+	xsrf.XSRFSigningPackage.Anonymous = &pkg
+	xsrf.XSRFSigningPackage.Authenticated = &pkg
 
 	m.Run()
 
@@ -77,12 +84,32 @@ func TestLoginHandlerInvalidUsername(t *testing.T) {
 
 	handler := LoginHandler{}
 
-	payload := `{"username": "kenton", "password": "password123"}`
+	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
+
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "password123", "xsrf": "%s"}`, xsrfToken)
 
 	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	req.AddCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    "blah",
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	req.AddCookie(&http.Cookie{
+		Name:     "login_xsrf",
+		Value:    xsrfToken,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 
 	rr := httptest.NewRecorder()
 
@@ -113,12 +140,31 @@ func TestLoginHandlerInvalidPassword(t *testing.T) {
 
 	handler := LoginHandler{}
 
-	payload := `{"username": "kenton", "password": "password123"}`
+	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
+
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "password123", "xsrf": "%s"}`, xsrfToken)
 
 	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.AddCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    "blah",
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	req.AddCookie(&http.Cookie{
+		Name:     "login_xsrf",
+		Value:    xsrfToken,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 
 	rr := httptest.NewRecorder()
 
@@ -148,13 +194,31 @@ func TestLoginHandlerValidPassword(t *testing.T) {
 	}
 
 	handler := LoginHandler{}
+	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
 
-	payload := `{"username": "kenton", "password": "securepassword123"}`
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "securepassword123", "xsrf": "%s"}`, xsrfToken)
 
 	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.AddCookie(&http.Cookie{
+		Name:     "sid",
+		Value:    "blah",
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	req.AddCookie(&http.Cookie{
+		Name:     "login_xsrf",
+		Value:    xsrfToken,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 
 	rr := httptest.NewRecorder()
 
