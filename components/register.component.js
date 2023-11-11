@@ -32,7 +32,7 @@ export class RegisterFormComponent extends LitElement {
       border: 2px solid var(--error);
     }
 
-    button {
+    button:not(#unsafe) {
       margin-top: 0.5rem;
       border: 0;
       color: white;
@@ -48,6 +48,15 @@ export class RegisterFormComponent extends LitElement {
       font-size: 1rem;
     }
 
+    button#unsafe {
+      color: var(--color);
+      background-color: #FFF;
+      border: 0;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+    }
+
     p#error {
       color: var(--error);
       padding: 0;
@@ -60,6 +69,29 @@ export class RegisterFormComponent extends LitElement {
       padding: 0;
       margin: 0;
       text-align: center;
+    }
+
+    #hibpWarning {
+      max-width: 18rem;
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      gap: 0.5rem;
+    }
+
+    #hibpWarning p {
+      margin: 0;
+      padding: 0;
+    }
+
+    #hibpWarning p#warning {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--error);
+    }
+
+    #hibpWarning strong {
+      color: var(--error);
     }
     `;
 
@@ -76,6 +108,10 @@ export class RegisterFormComponent extends LitElement {
     emailAsUsername: { type: Boolean },
     registering: { type: Boolean },
     hasOnboarding: { type: String },
+    hibp: { type: String },
+    showHIBPWarning: { type: Boolean },
+    bypassHIBPWarning: { type: Boolean },
+    minimumPasswordLength: { type: Number },
   };
 
   constructor() {
@@ -95,9 +131,14 @@ export class RegisterFormComponent extends LitElement {
     // 2 = username taken
     this.registrationSuccess = false;
     this.registering = false;
+    this.hibp = "" // HIBP Enforcement Level: "" = none, "loose", "strict"
+    this.showHIBPWarning = false
+    this.minimumPasswordLength = 0
+    this.bypassHIBPWarning = false
   }
 
   updateUsername(e) {
+    this.registrationError = 0
     this.username = e.srcElement.value;
     e.srcElement.parentElement.classList.remove("error")
     e.srcElement.setCustomValidity("")
@@ -110,18 +151,21 @@ export class RegisterFormComponent extends LitElement {
   }
 
   updatePassword(e) {
+    this.registrationError = 0
     this.password = e.srcElement.value;
     e.srcElement.parentElement.classList.remove("error")
     e.srcElement.setCustomValidity("")
   }
 
   updateConfirmedPassword(e) {
+    this.registrationError = 0
     this.confirmedPassword = e.srcElement.value;
     e.srcElement.parentElement.classList.remove("error")
     e.srcElement.setCustomValidity("")
   }
 
   updateEmail(e) {
+    this.registrationError = 0
     this.email = e.srcElement.value;
     e.srcElement.parentElement.classList.remove("error")
     e.srcElement.setCustomValidity("")
@@ -209,15 +253,34 @@ export class RegisterFormComponent extends LitElement {
       fail = true;
     }
 
+    if (this.minimumPasswordLength > this.password.length) {
+      const input = this.shadowRoot.getElementById("password")
+      input.setCustomValidity("Password must be at least " + this.minimumPasswordLength + " characters long.")
+      input.reportValidity()
+      input.parentElement.classList.add("error")
+      fail = true;
+    }
+
     if (fail) {
       this.registering = false;
       return
     }
 
+    const body = {
+      "username": this.username,
+      "password": this.password,
+      "email": this.email,
+      "code": this.code,
+    }
+
+    if (this.bypassHIBPWarning) {
+      body["pwnok"] = true
+    }
+
     const options = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: `{"username":"${this.username}","password":"${this.password}","email":"${this.email}","code":"${this.code}"}`
+      body: JSON.stringify(body)
     };
 
     fetch('/api/register', options)
@@ -228,24 +291,42 @@ export class RegisterFormComponent extends LitElement {
       });
   }
 
-  handleAPIResponse(response) {
+  async handleAPIResponse(response) {
     switch (response.status) {
       case 200:
-        console.log(response)
         this.registrationSuccess = true;
         setTimeout(() => {
           window.location.href = `/login${this.hasOnboarding == "true" ? "?onboard=true" : ""}`
         }, 1000)
         break;
       case 400:
+        var json = await response.json()
         this.registering = false;
-        alert("Email does not match invitation email. Please reload and try again.")
+
+        if (json["error"] !== undefined) {
+          switch (json["error"]) {
+            case "password too short": {
+              alert("Password must be at least " + this.minimumPasswordLength + " characters.")
+              break
+            }
+            default:
+              alert("Email does not match invitation email. Please reload and try again.")
+          }
+        }
         break;
       case 404:
         this.registering = false;
         alert("Public registration is disabled.")
         break;
       case 409:
+        var json = await response.json()
+        if (json["pwned"] !== undefined) {
+          if (json["pwned"] === true) {
+            this.registering = false;
+            this.showHIBPWarning = true
+            return
+          }
+        }
         this.registering = false;
         this.registrationError = 2;
         break;
@@ -269,6 +350,24 @@ export class RegisterFormComponent extends LitElement {
 
   render() {
     return html`<div id="root">
+      ${this.showHIBPWarning ? html`<section id="hibpWarning">
+        <p id="warning">${this.bypassHIBPWarning ? "Bypassing Security Warning" : "Account Security Warning"}</p>
+        ${this.bypassHIBPWarning ? html`
+          <p>You are being registered with an insecure password. You will be redirected to the login page momentarily.</p>
+          ` : html`
+        <p>The password provided has been detected in a data breach and is considered unsafe to use. <strong>This data breach did not occur on our platform.</strong> We highly recommend choosing a new password to ensure your account is secure.</p>
+        <button style="--color: ${this.backgroundColor};" @click=${() => {
+            this.confirmedPassword = ""
+            this.password = ""
+            this.showHIBPWarning = false;
+          }
+          }>Choose a new Password</button>
+        <button id="unsafe" style="--color: ${this.backgroundColor};" @click=${() => {
+            this.bypassHIBPWarning = true
+            this.register()
+          }}>Or, continue with insecure password.</button>
+        `}
+        </section>` : html`
     ${!this.emailAsUsername ? html`
       <div class="input${this.registrationError == 2 ? " error" : ''}">
         <label for="username">Username</label>
@@ -292,7 +391,8 @@ export class RegisterFormComponent extends LitElement {
 
       <p id="error">${this.getRegistrationErrorMessage()}</p>
       ${this.registrationSuccess ? html`<p id="success">User registered, redirecting to login page..</p>` : ""}
-      </div>`;
+      </div>
+      `}`;
   }
 }
 

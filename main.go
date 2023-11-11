@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
@@ -82,6 +83,13 @@ func main() {
 		},
 		ResetPasswordOptions: routes.ResetPasswordOptions{
 			SendResetToken: printResetToken,
+		},
+		MinimumPasswordLength: 8,
+		HIBPIntegrationOptions: hibp.HIBPSettings{
+			Enabled:     true,
+			AppName:     "Locksmith Demo",
+			Enforcement: hibp.LOOSE,
+			HTTPClient:  &http.Client{},
 		},
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,

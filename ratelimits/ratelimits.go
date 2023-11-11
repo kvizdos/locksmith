@@ -55,7 +55,6 @@ func (rl *RateLimiter) getMinuteLimiter(id string) *rate.Limiter {
 
 // CanHandleRequest checks if the rate limiters allow another request based on both per-second and per-minute limits.
 func (rl *RateLimiter) CanHandle(identifier string) bool {
-	fmt.Println("checking", identifier)
 	// Check the per-second limiter first
 	if rl.RequestsPerSecond > 0 {
 		if !rl.getSecondLimiter(identifier).Allow() {
@@ -66,6 +65,5 @@ func (rl *RateLimiter) CanHandle(identifier string) bool {
 	// Check the per-minute limiter
 	min := rl.getMinuteLimiter(identifier).Allow()
 
-	fmt.Println("min", min)
 	return min
 }

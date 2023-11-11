@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
@@ -70,6 +72,35 @@ func TestRegistrationHandlerInvalidRole(t *testing.T) {
 	}
 }
 
+func TestRegistrationHandlerFailedUnmarshal(t *testing.T) {
+	handler := RegistrationHandler{
+		DefaultRoleName: "admin",
+	}
+
+	// Test Missing Username
+	payload := `{"password" "password123"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "could not unmarshal" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+}
+
 func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 	handler := RegistrationHandler{
 		DefaultRoleName: "admin",
@@ -91,6 +122,13 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
 	}
 
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "missing fields" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+
 	// Test Missing Password
 	payload = `{"username": "kenton"}`
 
@@ -105,6 +143,11 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code (missing password): got %v, want %v", status, http.StatusBadRequest)
+	}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "missing fields" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
 	}
 }
 
@@ -139,6 +182,12 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusConflict {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
+	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "taken" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
 	}
 }
 
@@ -175,6 +224,12 @@ func TestRegistrationHandlerEmailTaken(t *testing.T) {
 	if status := rr.Code; status != http.StatusConflict {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
 	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "taken" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
 }
 
 func TestRegistrationHandlerEmailInvalid(t *testing.T) {
@@ -209,6 +264,12 @@ func TestRegistrationHandlerEmailInvalid(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "invalid email" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
 	}
 }
 
@@ -273,6 +334,364 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 
 	if user["email"] != "email@email.com" {
 		t.Error("did not receive correct email on registration")
+	}
+}
+
+func TestRegistrationHandlerDoesNotMeetLengthRequirement(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+	}
+
+	payload := `{"username": "kenton", "password": "1234567", "email": "email@email.com"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+		return
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "password too short" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+}
+
+func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+	}
+
+	payload := `{"username": "kenton", "password": "12345678", "email": "email@email.com"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("1: unexpected status code: got %v, want %v", status, http.StatusOK)
+		return
+	}
+
+	// Check w/ extra long password
+	handler = RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+	}
+
+	payload = `{"username": "kenton3", "password": "ahisfignfdiofjfdifdfiidofgiohdfgiohdfgoidfhgiodfngonfiogfngoidf", "email": "email3@email.com"}`
+
+	req, err = http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr = httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("2: unexpected status code: got %v, want %v - %s", status, http.StatusOK, rr.Body.String())
+		return
+	}
+}
+
+func TestRegistrationHandlerHIBPStrictPasswordExistsInBreach(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+		HIBP: hibp.HIBPSettings{
+			Enabled:     true,
+			AppName:     "Locksmith Integration Tests",
+			Enforcement: hibp.STRICT,
+		},
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusConflict {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
+		return
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "password pwned" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+
+	if !regErr.PwnStatus {
+		t.Error("should have TRUE pwn status")
+	}
+}
+
+func TestRegistrationHandlerHIBPStrictPasswordExistsInBreachCantBeBypassedWithBody(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+		HIBP: hibp.HIBPSettings{
+			Enabled:     true,
+			AppName:     "Locksmith Integration Tests",
+			Enforcement: hibp.STRICT,
+		},
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com", "pwnok": true}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusConflict {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
+		return
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "password pwned" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+
+	if !regErr.PwnStatus {
+		t.Error("should have TRUE pwn status")
+	}
+}
+
+func TestRegistrationHandlerHIBPStrictPasswordDoesNotExistsInBreach(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+		HIBP: hibp.HIBPSettings{
+			Enabled:     true,
+			AppName:     "Locksmith Integration Tests",
+			Enforcement: hibp.STRICT,
+		},
+	}
+
+	pass, _ := authentication.GenerateRandomString(128)
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "email": "email@email.com"}`, pass)
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
+		return
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+
+	if regErr.PwnStatus {
+		t.Errorf("password should not be pwned.")
+	}
+}
+
+func TestRegistrationHandlerHIBPLooseDoesExistsInBreachSoFailsWithoutBodyConfirmation(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+		HIBP: hibp.HIBPSettings{
+			Enabled:     true,
+			AppName:     "Locksmith Integration Tests",
+			Enforcement: hibp.LOOSE,
+		},
+	}
+
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "email": "email@email.com"}`, "password123")
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusConflict {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
+		return
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "password pwned" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+	if !regErr.PwnStatus {
+		t.Errorf("pwnStatus should be TRUE")
+	}
+}
+
+func TestRegistrationHandlerHIBPLooseDoesExistsInBreachPassesWithBodyConfirmation(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:          "admin",
+		MinimumLengthRequirement: 8,
+		HIBP: hibp.HIBPSettings{
+			Enabled:     true,
+			AppName:     "Locksmith Integration Tests",
+			Enforcement: hibp.LOOSE,
+		},
+	}
+
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "email": "email@email.com", "pwnok": true}`, "password123")
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
+		return
 	}
 }
 
@@ -399,6 +818,12 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
 		return
 	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "illegal username characters" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
 }
 
 // Test invite code stuff..
@@ -437,6 +862,65 @@ func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
 		return
 	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "bad invite code" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+}
+
+func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"code":    "09c47c463871acf1da8c5c6dbcc73723d35d1aa262f7cfb29bad901d9640cd03",
+					"email":   "bob@bob.com",
+					"role":    "user",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"userid":  "bobbb",
+				},
+			},
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton2",
+					"email":    "email@email.com2",
+					"sessions": []interface{}{"abc"},
+				},
+			},
+		},
+	}
+
+	handler := RegistrationHandler{
+		DefaultRoleName:           "admin",
+		DisablePublicRegistration: true,
+	}
+
+	payload := `{"username": "kenton", "password": "password123", "email": "notbob@bob.com", "code": "zyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"}`
+
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+		return
+	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "invalid code" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
 }
 
 func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
@@ -444,11 +928,12 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 		Tables: map[string]map[string]interface{}{
 			"invites": {
 				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"code":    "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
+					"code":    "09c47c463871acf1da8c5c6dbcc73723d35d1aa262f7cfb29bad901d9640cd03",
 					"email":   "bob@bob.com",
 					"role":    "user",
 					"inviter": "a-uuid",
 					"sentAt":  time.Now().Unix(),
+					"userid":  "bobbb",
 				},
 			},
 			"users": {
@@ -482,6 +967,12 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
 		return
+	}
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+
+	if regErr.Error != "invalid email" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
 	}
 }
 
@@ -560,6 +1051,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 		Username         string
 		Password         string
 		ExpectStatusCode int
+		ExpectErrorMsg   string
 	}{
 		{
 			// Should pass with valid email that doesn't exist
@@ -567,6 +1059,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 			Username:         "kvizdos@gmail.com",
 			Password:         "password123",
 			ExpectStatusCode: 200,
+			ExpectErrorMsg:   "",
 		},
 		{
 			// Should fail with a non-email passed as username
@@ -574,6 +1067,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 			Username:         "kvizdos",
 			Password:         "password123",
 			ExpectStatusCode: 400,
+			ExpectErrorMsg:   "illegal username characters",
 		},
 		{
 			// Test with a email that already exists
@@ -586,6 +1080,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 			Username:         "kvizdos@gmail.com",
 			Password:         "helloworld",
 			ExpectStatusCode: 409,
+			ExpectErrorMsg:   "taken",
 		},
 	}
 
@@ -616,6 +1111,15 @@ func TestRegistrationWithEmail(t *testing.T) {
 		if status := rr.Code; status != test.ExpectStatusCode {
 			t.Errorf("unexpected status code: got %v, want %v", status, test.ExpectStatusCode)
 			return
+		}
+
+		if test.ExpectErrorMsg != "" {
+			regErr := &registrationResponse{}
+			regErr.Unmarshal(rr.Body.Bytes())
+
+			if regErr.Error != test.ExpectErrorMsg {
+				t.Errorf("got unexpected error message: %s", regErr.Error)
+			}
 		}
 	}
 }

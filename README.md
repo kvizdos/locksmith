@@ -15,7 +15,8 @@ Key Features:
 - [x] Admin User Management: A comprehensive, pre-built admin panel that allows for viewing and removal of users with ease (or BYO and use our endpoints!).
 - [x] Role-based Access: Define user roles, create custom roles, and assign administrative privileges as required.
 - [x] User Invitation System: Simplify the onboarding process with a streamlined user invitation mechanism.
-- [ ] Customizable Password Strength Requirements: Establish and enforce your own password complexity guidelines to ensure the security and integrity of user accounts.
+- [ ] Minimum Character Length enforcement for Passwords: In accordance to NIST guidelines, password length is more important than complexity. Therefor, this package does not include out-of-the-box tooling to enforce password complexity. - [ ] HaveIBeenPwned Integration: Instead of strict password complexity requirements, HIBP's public API has been integrated to verify user passwords have not been found in historical breaches. This feature comes in two modes: a "strict" mode, which forces users to use a different password, and "loose", which will warn users and request that they change their password, but not mandate a change.
+- [ ] Continuous Password Security confirmations: HIBP + Length requirements are specified at registration, and to support changes in HIBP lists and length requirements are continously monitored upon each login.
 - [ ] Effective Brute Force Defense Mechanism: Deploy a robust user lockout protocol to effectively thwart and mitigate the impact of brute force attacks on your platform.
 - [ ] Enhanced Multi-Factor Authentication Options: Augment your security measures with multifactor authentication methods, including TOTP, WebAuthn, and PassKeys, to safeguard user identities.
 - [x] Password Reset Capabilities: Integrated password reset flows and endpoints. Choose between our UI or integrate your own for a seamless experience.

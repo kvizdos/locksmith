@@ -6,6 +6,7 @@ import (
 	"github.com/kvizdos/locksmith/administration"
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
@@ -32,6 +33,8 @@ type LocksmithRoutesOptions struct {
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
+	HIBPIntegrationOptions    hibp.HIBPSettings
+	MinimumPasswordLength     int
 }
 
 type ResetPasswordOptions struct {
@@ -51,6 +54,8 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			DisablePublicRegistration: options.DisablePublicRegistration,
 			ConfigureCustomUser:       options.CustomUserRegistration,
 			EmailAsUsername:           options.UseEmailAsUsername,
+			HIBP:                      options.HIBPIntegrationOptions,
+			MinimumLengthRequirement:  options.MinimumPasswordLength,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
@@ -96,6 +101,8 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			EmailAsUsername:           options.UseEmailAsUsername,
 			HasOnboarding:             len(options.OnboardPath) > 0,
 			InviteUsedRedirect:        options.InviteUsedRedirect,
+			HIBPIntegrationOptions:    options.HIBPIntegrationOptions,
+			MinimumLengthRequirement:  options.MinimumPasswordLength,
 		}, db))
 		mux.Handle("/reset-password", httpHelpers.InjectDatabaseIntoContext(reset.ResetPasswordPageHandler{
 			AppName:         options.AppName,

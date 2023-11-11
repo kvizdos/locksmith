@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/pages"
@@ -28,10 +29,11 @@ type registrationRequest struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
 	Code     string `json:"code"`
+	PwnOK    bool   `json:"pwnok,omitempty"`
 }
 
 func (r registrationRequest) HasRequiredFields() bool {
-	return !(r.Username == "" || r.Password == "" || r.Email == "")
+	return !(r.Username == "" || r.Password == "")
 }
 
 type RegisterCustomUserFunc func(users.LocksmithUser, database.DatabaseAccessor) users.LocksmithUserInterface
@@ -41,6 +43,22 @@ type RegistrationHandler struct {
 	DisablePublicRegistration bool
 	ConfigureCustomUser       RegisterCustomUserFunc
 	EmailAsUsername           bool
+	MinimumLengthRequirement  int
+	HIBP                      hibp.HIBPSettings
+}
+
+type registrationResponse struct {
+	Error     string `json:"error,omitempty"`
+	PwnStatus bool   `json:"pwned,omitempty"`
+}
+
+func (r registrationResponse) Marshal() []byte {
+	js, _ := json.Marshal(r)
+	return js
+}
+
+func (r *registrationResponse) Unmarshal(err []byte) {
+	json.Unmarshal(err, r)
 }
 
 func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +99,9 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(registrationResponse{
+			Error: "could not unmarshal",
+		}.Marshal())
 		return
 	}
 
@@ -96,6 +117,29 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if !registrationReq.HasRequiredFields() {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(registrationResponse{
+			Error: "missing fields",
+		}.Marshal())
+		return
+	}
+
+	// Start HIBP Check
+	hibpIsPwnedChan := make(chan bool)
+	if rr.HIBP.Enabled && !(rr.HIBP.Enforcement == hibp.LOOSE && registrationReq.PwnOK) {
+		httpClient := &http.Client{}
+		if rr.HIBP.HTTPClient != nil {
+			httpClient = rr.HIBP.HTTPClient
+		}
+
+		go hibp.CheckPassword(rr.HIBP.AppName, registrationReq.Password, hibpIsPwnedChan, httpClient)
+	}
+
+	// Confirm Password Length Requirements
+	if rr.MinimumLengthRequirement != 0 && rr.MinimumLengthRequirement > len(registrationReq.Password) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(registrationResponse{
+			Error: "password too short",
+		}.Marshal())
 		return
 	}
 
@@ -111,6 +155,9 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if !onlyContainsAlphanumericalCharacters {
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(registrationResponse{
+			Error: "illegal username characters",
+		}.Marshal())
 		return
 	}
 
@@ -119,6 +166,9 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if !isValidemail {
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(registrationResponse{
+			Error: "invalid email",
+		}.Marshal())
 		return
 	}
 
@@ -132,6 +182,9 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		if len(registrationReq.Code) != 96 {
 			logger.LOGGER.Log(logger.INVITE_CODE_MALFORMED, logger.GetIPFromRequest(*r), registrationReq.Code)
 			w.WriteHeader(http.StatusBadRequest)
+			w.Write(registrationResponse{
+				Error: "bad invite code",
+			}.Marshal())
 			return
 		}
 
@@ -140,17 +193,22 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			logger.LOGGER.Log(logger.INVITE_CODE_FAKE, logger.GetIPFromRequest(*r), registrationReq.Code)
 			w.WriteHeader(http.StatusBadRequest)
+			w.Write(registrationResponse{
+				Error: "invalid code",
+			}.Marshal())
 			return
 		}
 
 		if invite.Email != registrationReq.Email {
 			logger.LOGGER.Log(logger.INVITE_CODE_INCORRECT_EMAIL, logger.GetIPFromRequest(*r), registrationReq.Code)
 			w.WriteHeader(http.StatusBadRequest)
+			w.Write(registrationResponse{
+				Error: "invalid email",
+			}.Marshal())
 			return
 		}
 
 		useRole = invite.Role
-		fmt.Println("Attaching", invite.AttachUserID, "from invite.")
 		useID = invite.AttachUserID
 	}
 
@@ -167,6 +225,9 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if len(usernameAndEmailCheck) != 0 {
 		w.WriteHeader(http.StatusConflict)
+		w.Write(registrationResponse{
+			Error: "taken",
+		}.Marshal())
 		return
 	}
 
@@ -176,6 +237,21 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		fmt.Println("Error compiling password:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	// Confirm HIBP stuff
+	pwPwned := false
+	if rr.HIBP.Enabled && !(rr.HIBP.Enforcement == hibp.LOOSE && registrationReq.PwnOK) {
+		passwordIsPwned := <-hibpIsPwnedChan
+		if passwordIsPwned && (rr.HIBP.Enforcement == hibp.STRICT || (rr.HIBP.Enforcement == hibp.LOOSE && !registrationReq.PwnOK)) {
+			w.WriteHeader(http.StatusConflict)
+			w.Write(registrationResponse{
+				Error:     "password pwned",
+				PwnStatus: true,
+			}.Marshal())
+			return
+		}
+		pwPwned = passwordIsPwned
 	}
 
 	var lsu users.LocksmithUserInterface
@@ -208,6 +284,14 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, logger.GetIPFromRequest(*r), registrationReq.Username)
 	}
 	w.WriteHeader(http.StatusOK)
+	if rr.HIBP.Enabled && !(rr.HIBP.Enforcement == hibp.LOOSE && registrationReq.PwnOK) {
+		// If Enforcement is LOOSE,
+		// make sure to send the pwn status
+		// to the frontend!
+		w.Write(registrationResponse{
+			PwnStatus: pwPwned,
+		}.Marshal())
+	}
 }
 
 type RegistrationPageHandler struct {
@@ -218,6 +302,8 @@ type RegistrationPageHandler struct {
 	EmailAsUsername           bool
 	HasOnboarding             bool
 	InviteUsedRedirect        string
+	HIBPIntegrationOptions    hibp.HIBPSettings
+	MinimumLengthRequirement  int
 }
 
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
@@ -230,18 +316,22 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http
 	}
 
 	type TemplateData struct {
-		HasInvite       bool
-		Invitation      invitations.Invitation
-		Title           string
-		Styling         pages.LocksmithPageStyling
-		EmailAsUsername bool
-		HasOnboarding   bool
+		HasInvite             bool
+		Invitation            invitations.Invitation
+		Title                 string
+		Styling               pages.LocksmithPageStyling
+		EmailAsUsername       bool
+		HasOnboarding         bool
+		HIBPEnforcement       hibp.HIBPEnforcement
+		MinimumPasswordLength int
 	}
 	inv := TemplateData{
-		Title:           rr.AppName,
-		Styling:         rr.Styling,
-		EmailAsUsername: rr.EmailAsUsername,
-		HasOnboarding:   rr.HasOnboarding,
+		Title:                 rr.AppName,
+		Styling:               rr.Styling,
+		EmailAsUsername:       rr.EmailAsUsername,
+		HasOnboarding:         rr.HasOnboarding,
+		HIBPEnforcement:       rr.HIBPIntegrationOptions.Enforcement,
+		MinimumPasswordLength: rr.MinimumLengthRequirement,
 	}
 
 	if inv.Styling.SubmitColor == "" {
