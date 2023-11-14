@@ -59,7 +59,9 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
-		loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{}, db)
+		loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
+			HIBP: options.HIBPIntegrationOptions,
+		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 
 		listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
@@ -80,8 +82,10 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		// This endpoint requires a bit of dynamic Secure Endpointness,
 		// so all of that is handled within it.
 		mux.Handle("/api/reset-password", reset.ResetRouterAPIHandler{
-			Database:       db,
-			SendResetToken: options.ResetPasswordOptions.SendResetToken,
+			Database:              db,
+			SendResetToken:        options.ResetPasswordOptions.SendResetToken,
+			HIBP:                  options.HIBPIntegrationOptions,
+			MinimumPasswordLength: options.MinimumPasswordLength,
 		})
 	}
 
@@ -105,17 +109,21 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			MinimumLengthRequirement:  options.MinimumPasswordLength,
 		}, db))
 		mux.Handle("/reset-password", httpHelpers.InjectDatabaseIntoContext(reset.ResetPasswordPageHandler{
-			AppName:         options.AppName,
-			Styling:         options.Styling,
-			EmailAsUsername: options.UseEmailAsUsername,
-			ShowResetStage:  false,
+			AppName:               options.AppName,
+			Styling:               options.Styling,
+			EmailAsUsername:       options.UseEmailAsUsername,
+			ShowResetStage:        false,
+			HIBP:                  options.HIBPIntegrationOptions,
+			MinimumPasswordLength: options.MinimumPasswordLength,
 		}, db))
 
 		mux.Handle("/reset-password/reset", endpoints.SecureEndpointHTTPMiddleware(reset.ResetPasswordPageHandler{
-			AppName:         options.AppName,
-			Styling:         options.Styling,
-			EmailAsUsername: options.UseEmailAsUsername,
-			ShowResetStage:  true,
+			AppName:               options.AppName,
+			Styling:               options.Styling,
+			EmailAsUsername:       options.UseEmailAsUsername,
+			ShowResetStage:        true,
+			HIBP:                  options.HIBPIntegrationOptions,
+			MinimumPasswordLength: options.MinimumPasswordLength,
 		}, db, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"magic.reset.password"},
 			PrioritizeMagic:    true,

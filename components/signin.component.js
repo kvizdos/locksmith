@@ -292,6 +292,10 @@ export class LoginFormComponent extends LitElement {
   handleAPIResponse(response) {
     switch (response.status) {
       case 200:
+        if (response.redirected) {
+          window.location.href = response.url
+          return
+        };
         window.location.href = !this.doOnboard() ? "/app" : this.onboardingPath
         break;
       case 404:

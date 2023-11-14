@@ -6,14 +6,17 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
 
 type ResetRouterAPIHandler struct {
-	Database       database.DatabaseAccessor
-	SendResetToken func(token string, user users.LocksmithUserInterface)
+	Database              database.DatabaseAccessor
+	SendResetToken        func(token string, user users.LocksmithUserInterface)
+	HIBP                  hibp.HIBPSettings
+	MinimumPasswordLength int
 }
 
 /*
@@ -41,7 +44,10 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		// This page is only accessible through the
 		// Magic Access Code.
 		// Updates the actual password
-		endpoints.SecureEndpointHTTPMiddleware(ResetPasswordAPIHandler{}, h.Database, endpoints.EndpointSecurityOptions{
+		endpoints.SecureEndpointHTTPMiddleware(ResetPasswordAPIHandler{
+			HIBP:                     h.HIBP,
+			MinimumLengthRequirement: h.MinimumPasswordLength,
+		}, h.Database, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"magic.reset.password"},
 			PrioritizeMagic:    true,
 		}).ServeHTTP(w, r)

@@ -10,6 +10,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -21,13 +22,16 @@ type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	XSRF     string `json:"xsrf"`
+	PwnOK    bool   `json:"pwnok,omitempty"`
 }
 
 func (r loginRequest) HasRequiredFields() bool {
 	return !(r.Username == "" || r.Password == "" || r.XSRF == "")
 }
 
-type LoginHandler struct{}
+type LoginHandler struct {
+	HIBP hibp.HIBPSettings
+}
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -107,6 +111,16 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
+	hibpIsPwnedChan := make(chan bool)
+
+	if lh.HIBP.Enabled && !(lh.HIBP.Enforcement == hibp.LOOSE && loginReq.PwnOK) {
+		httpClient := &http.Client{}
+		if lh.HIBP.HTTPClient != nil {
+			httpClient = lh.HIBP.HTTPClient
+		}
+
+		go hibp.CheckPassword(lh.HIBP.AppName, loginReq.Password, hibpIsPwnedChan, httpClient)
+	}
 
 	dbUser, usernameExists := db.FindOne("users", map[string]interface{}{
 		"username": strings.ToLower(loginReq.Username),
@@ -133,6 +147,16 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
+	}
+
+	// before a session is made,
+	// confirm the HIBP status.
+	if lh.HIBP.Enabled && !(lh.HIBP.Enforcement == hibp.LOOSE && loginReq.PwnOK) {
+		passwordIsPwned := <-hibpIsPwnedChan
+		if passwordIsPwned && (lh.HIBP.Enforcement == hibp.STRICT || (lh.HIBP.Enforcement == hibp.LOOSE && !loginReq.PwnOK)) {
+			http.Redirect(w, r, "/reset-password?hibp=true", http.StatusTemporaryRedirect)
+			return
+		}
 	}
 
 	session, err := user.GeneratePasswordSession()

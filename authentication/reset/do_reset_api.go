@@ -90,8 +90,10 @@ func (h ResetPasswordAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	fmt.Println(h.HIBP.Enabled)
 	if h.HIBP.Enabled && !(h.HIBP.Enforcement == hibp.LOOSE && resetReq.PwnOK) {
 		passwordIsPwned := <-hibpIsPwnedChan
+		fmt.Println("Password Pwned", passwordIsPwned)
 		if passwordIsPwned && (h.HIBP.Enforcement == hibp.STRICT || (h.HIBP.Enforcement == hibp.LOOSE && !resetReq.PwnOK)) {
 			w.WriteHeader(http.StatusConflict)
 			w.Write(resetResponse{
