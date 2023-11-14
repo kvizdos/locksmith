@@ -18,10 +18,11 @@ const (
 )
 
 type HIBPSettings struct {
-	Enabled     bool
-	AppName     string
-	Enforcement HIBPEnforcement
-	HTTPClient  *http.Client
+	Enabled                  bool
+	AppName                  string
+	Enforcement              HIBPEnforcement
+	HTTPClient               *http.Client
+	PasswordSecurityInfoLink string
 }
 
 // A packge used for HIBP integration

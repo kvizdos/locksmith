@@ -93,6 +93,15 @@ export class RegisterFormComponent extends LitElement {
     #hibpWarning strong {
       color: var(--error);
     }
+
+    hr {
+      border: 1px solid rgb(225, 225, 225);
+      width: 100%;
+    }
+
+    a {
+      color: #476ade;
+    }
     `;
 
   static properties = {
@@ -112,6 +121,7 @@ export class RegisterFormComponent extends LitElement {
     showHIBPWarning: { type: Boolean },
     bypassHIBPWarning: { type: Boolean },
     minimumPasswordLength: { type: Number },
+    passwordSecurityLink: { type: String }
   };
 
   constructor() {
@@ -135,6 +145,7 @@ export class RegisterFormComponent extends LitElement {
     this.showHIBPWarning = false
     this.minimumPasswordLength = 0
     this.bypassHIBPWarning = false
+    this.passwordSecurityLink = "#"
   }
 
   updateUsername(e) {
@@ -351,22 +362,27 @@ export class RegisterFormComponent extends LitElement {
   render() {
     return html`<div id="root">
       ${this.showHIBPWarning ? html`<section id="hibpWarning">
-        <p id="warning">${this.bypassHIBPWarning ? "Bypassing Security Warning" : "Account Security Warning"}</p>
+        <p id="warning">${this.bypassHIBPWarning ? "Bypassing Security Warning" : `Account Security ${this.hibp === "loose" ? "Warning" : "Alert"}`}</p>
         ${this.bypassHIBPWarning ? html`
           <p>You are being registered with an insecure password. You will be redirected to the login page momentarily.</p>
           ` : html`
-        <p>The password provided has been detected in a data breach and is considered unsafe to use. <strong>This data breach did not occur on our platform.</strong> We highly recommend choosing a new password to ensure your account is secure.</p>
+        <p>The password you tried to use has been used before and is no longer safe because it was shared publicly online after a theft. <strong>Don't worry, this didn't happen on our website.</strong> To keep your account safe, we ${this.hibp != "strict" ? "really " : ""}need you to pick a new password. Thank you for understanding and helping us keep your information secure.</p>
         <button style="--color: ${this.backgroundColor};" @click=${() => {
             this.confirmedPassword = ""
             this.password = ""
             this.showHIBPWarning = false;
           }
           }>Choose a new Password</button>
+          ${this.hibp == "loose" ? html`
         <button id="unsafe" style="--color: ${this.backgroundColor};" @click=${() => {
-            this.bypassHIBPWarning = true
-            this.register()
-          }}>Or, continue with insecure password.</button>
+              this.bypassHIBPWarning = true
+              this.register()
+            }}>Or, continue with insecure password.</button>` : ""}
         `}
+
+          <hr>
+
+          <a href="${this.passwordSecurityLink}">Learn more about how we protect your account.</a>
         </section>` : html`
     ${!this.emailAsUsername ? html`
       <div class="input${this.registrationError == 2 ? " error" : ''}">

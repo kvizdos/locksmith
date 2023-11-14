@@ -240,7 +240,6 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Confirm HIBP stuff
-	pwPwned := false
 	if rr.HIBP.Enabled && !(rr.HIBP.Enforcement == hibp.LOOSE && registrationReq.PwnOK) {
 		passwordIsPwned := <-hibpIsPwnedChan
 		if passwordIsPwned && (rr.HIBP.Enforcement == hibp.STRICT || (rr.HIBP.Enforcement == hibp.LOOSE && !registrationReq.PwnOK)) {
@@ -251,7 +250,6 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			}.Marshal())
 			return
 		}
-		pwPwned = passwordIsPwned
 	}
 
 	var lsu users.LocksmithUserInterface
@@ -284,14 +282,6 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, logger.GetIPFromRequest(*r), registrationReq.Username)
 	}
 	w.WriteHeader(http.StatusOK)
-	if rr.HIBP.Enabled && !(rr.HIBP.Enforcement == hibp.LOOSE && registrationReq.PwnOK) {
-		// If Enforcement is LOOSE,
-		// make sure to send the pwn status
-		// to the frontend!
-		w.Write(registrationResponse{
-			PwnStatus: pwPwned,
-		}.Marshal())
-	}
 }
 
 type RegistrationPageHandler struct {
@@ -324,6 +314,7 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http
 		HasOnboarding         bool
 		HIBPEnforcement       hibp.HIBPEnforcement
 		MinimumPasswordLength int
+		PasswordSecurityLink  string
 	}
 	inv := TemplateData{
 		Title:                 rr.AppName,
@@ -332,6 +323,7 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http
 		HasOnboarding:         rr.HasOnboarding,
 		HIBPEnforcement:       rr.HIBPIntegrationOptions.Enforcement,
 		MinimumPasswordLength: rr.MinimumLengthRequirement,
+		PasswordSecurityLink:  rr.HIBPIntegrationOptions.PasswordSecurityInfoLink,
 	}
 
 	if inv.Styling.SubmitColor == "" {

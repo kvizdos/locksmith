@@ -86,10 +86,11 @@ func main() {
 		},
 		MinimumPasswordLength: 8,
 		HIBPIntegrationOptions: hibp.HIBPSettings{
-			Enabled:     true,
-			AppName:     "Locksmith Demo",
-			Enforcement: hibp.LOOSE,
-			HTTPClient:  &http.Client{},
+			Enabled:                  true,
+			AppName:                  "Locksmith Demo",
+			Enforcement:              hibp.STRICT,
+			HTTPClient:               &http.Client{},
+			PasswordSecurityInfoLink: "https://github.com/kvizdos",
 		},
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
