@@ -45,6 +45,10 @@ func printResetToken(token string, user users.LocksmithUserInterface) {
 	fmt.Println(user.GetID(), token)
 }
 
+func sendWelcomeEmailExample(u users.LocksmithUserInterface) {
+	fmt.Printf("Sending welcome email to %s\n", u.GetEmail())
+}
+
 func main() {
 	// testPassword, _ := authentication.CompileLocksmithPassword("pass")
 
@@ -86,12 +90,13 @@ func main() {
 		},
 		MinimumPasswordLength: 8,
 		HIBPIntegrationOptions: hibp.HIBPSettings{
-			Enabled:                  true,
+			Enabled:                  false, // true to enable
 			AppName:                  "Locksmith Demo",
 			Enforcement:              hibp.STRICT,
 			HTTPClient:               &http.Client{},
 			PasswordSecurityInfoLink: "https://github.com/kvizdos",
 		},
+		DispatchWelcomeEmail: sendWelcomeEmailExample,
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
 			IsEarlyDevelopmentEnvironment: false,

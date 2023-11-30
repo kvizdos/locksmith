@@ -35,6 +35,7 @@ type LocksmithRoutesOptions struct {
 	ResetPasswordOptions      ResetPasswordOptions
 	HIBPIntegrationOptions    hibp.HIBPSettings
 	MinimumPasswordLength     int
+	DispatchWelcomeEmail      func(user users.LocksmithUserInterface)
 }
 
 type ResetPasswordOptions struct {
@@ -56,6 +57,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			EmailAsUsername:           options.UseEmailAsUsername,
 			HIBP:                      options.HIBPIntegrationOptions,
 			MinimumLengthRequirement:  options.MinimumPasswordLength,
+			DispatchWelcomeEmail:      options.DispatchWelcomeEmail,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
 )
@@ -18,21 +19,23 @@ func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, optio
 		options.LaunchpadSettings.BootstrapDatabase(db)
 		launchpad.BootstrapUsers(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Users)
 
-		launchpadHandler := endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{
-			AppName:                       options.AppName,
-			Styling:                       options.Styling,
-			AccessToken:                   options.LaunchpadSettings.AccessToken,
-			AvailableUsers:                options.LaunchpadSettings.Users,
-			Subtitle:                      options.LaunchpadSettings.Caption,
-			RefreshButtonText:             options.LaunchpadSettings.RefreshButtonText,
-			IsEarlyDevelopmentEnvironment: options.LaunchpadSettings.IsEarlyDevelopmentEnvironment,
-		}, db, endpoints.EndpointSecurityOptions{
-			BasicAuth: endpoints.EndpointSecurityBasicAuth{
-				Enabled:  true,
-				Username: "launchpad",
-				Password: options.LaunchpadSettings.AccessToken,
-			},
-		})
+		launchpadHandler := login.LoginPageMiddleware{
+			Next: endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{
+				AppName:                       options.AppName,
+				Styling:                       options.Styling,
+				AccessToken:                   options.LaunchpadSettings.AccessToken,
+				AvailableUsers:                options.LaunchpadSettings.Users,
+				Subtitle:                      options.LaunchpadSettings.Caption,
+				RefreshButtonText:             options.LaunchpadSettings.RefreshButtonText,
+				IsEarlyDevelopmentEnvironment: options.LaunchpadSettings.IsEarlyDevelopmentEnvironment,
+			}, db, endpoints.EndpointSecurityOptions{
+				BasicAuth: endpoints.EndpointSecurityBasicAuth{
+					Enabled:  true,
+					Username: "launchpad",
+					Password: options.LaunchpadSettings.AccessToken,
+				},
+			}),
+		}
 
 		mux.Handle("/launchpad", launchpadHandler)
 

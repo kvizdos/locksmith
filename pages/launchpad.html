@@ -1,157 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Launchpad - {{.Title}}</title>
+        <script type="module" src="/components/signin.component.js"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0"
+        />
 
-    <title>Launchpad - {{.Title}}</title>
-    <script type="module" src="/components/signin.component.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+        <style>
+            html {
+                font-family: "Lato", sans-serif;
+            }
 
-    <style>
-        html {
-            font-family: 'Lato', sans-serif;
-        }
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                text-align: center;
+                flex-direction: column;
+                gap: 2rem;
+            }
 
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-            flex-direction: column;
-            gap: 2rem;
-        }
+            p,
+            h1 {
+                margin: 0;
+                max-width: 64ch;
+            }
 
-        p,
-        h1 {
-            margin: 0;
-            max-width: 64ch;
-        }
+            header h1 {
+                color: var(--header-color);
+                margin-bottom: 0.5rem;
+            }
 
-        header h1 {
-            color: var(--header-color);
-            margin-bottom: 0.5rem;
-        }
+            .userOption {
+                background-color: var(--background);
+                padding: 1rem;
+                color: white;
+                border-radius: 0.25rem;
+                cursor: pointer;
+            }
 
-        .userOption {
-            background-color: var(--background);
-            padding: 1rem;
-            color: white;
-            border-radius: 0.25rem;
-            cursor: pointer;
-        }
+            .userOption:hover {
+                background-color: var(--hover-background);
+            }
 
-        .userOption:hover {
-            background-color: var(--hover-background);
-        }
-
-        main {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        button {
-            background-color: white;
-            padding: 0.5rem;
-            border-radius: 0.25rem;
-            border: 2px solid red;
-            color: red;
-            cursor: pointer;
-            transition: 200ms;
-        }
-
-        button:hover {
-            transition: 200ms;
-            background-color: red;
-            color: white;
-        }
-
-        @media (min-width: 640px) {
             main {
-                grid-template-columns: 1fr 1fr 1fr;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 1rem;
             }
 
-        }
-
-    </style>
-
-    <script>
-        function Login(displayName, username, redirect) {
-            const token = "{{ .AccessToken }}"
-            const options = {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: `{"username":"${username}","password":"${token}"}`
-            };
-
-            fetch('/api/login', options)
-                .then(response => {
-                    document.cookie = `LaunchpadUser=${displayName};`
-                    window.location.href = redirect
-                })
-                .catch(err => console.error(err));
-        }
-
-        function Refresh() {
-            const options = {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: ``
-            };
-
-            const button = document.querySelector("button#refreshBtn")
-
-            if (button.innerText == "Loading..") {
-                return
+            button {
+                background-color: white;
+                padding: 0.5rem;
+                border-radius: 0.25rem;
+                border: 2px solid red;
+                color: red;
+                cursor: pointer;
+                transition: 200ms;
             }
 
-            const resetValue = `${button.innerText}`;
+            button:hover {
+                transition: 200ms;
+                background-color: red;
+                color: white;
+            }
 
-            button.innerText = "Loading.."
+            @media (min-width: 640px) {
+                main {
+                    grid-template-columns: 1fr 1fr 1fr;
+                }
+            }
+        </style>
 
-            fetch('/launchpad/refresh', options)
-                .then(response => {
-                    if (response["status"] == 200) {
-                        setTimeout(function () {
-                            alert("Environment refreshed!")
-                            button.innerText = resetValue
-                        }, 30000)
-                        return
-                    }
+        <script>
+            function Login(displayName, username, redirect) {
+                const token = "{{ .AccessToken }}";
+                const xsrf = "{{.XSRFToken}}";
+                const options = {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: `{"username":"${username}","password":"${token}","xsrf": "${xsrf}"}`,
+                };
 
-                    alert(`Something went wrong. Please send a screenshot of this page to the system administrator. Error: ${response["status"]}`)
-                })
-                .catch(err => alert(`Something went wrong. Please send a screenshot of this page to the system administrator. Error: ${err}`));
-        }
+                fetch("/api/login", options)
+                    .then((response) => {
+                        document.cookie = `LaunchpadUser=${displayName};`;
+                        window.location.href = redirect;
+                    })
+                    .catch((err) => console.error(err));
+            }
 
+            function Refresh() {
+                const options = {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: ``,
+                };
 
-    </script>
-</head>
+                const button = document.querySelector("button#refreshBtn");
 
-<body>
-    <header>
-        <h1 style="--header-color: {{.Styling.EndGradient}};">{{.Title}} Launchpad</h1>
-        <p>{{.Subtitle}}</p>
-    </header>
+                if (button.innerText == "Loading..") {
+                    return;
+                }
 
-    <main>
-        {{ range $key, $value := .AvailableUsers }}
-        <div class="userOption"
-            style="--background: {{$.Styling.StartGradient}}; --hover-background: {{$.Styling.EndGradient}};"
-            onclick="Login('{{$value.DisplayName}}', '{{$key}}', '{{$value.Redirect}}')">
-            <p>{{$value.DisplayName}}</p>
-        </div>
-        {{ end }}
-    </main>
+                const resetValue = `${button.innerText}`;
 
-    <button onclick="Refresh()" id="refreshBtn">{{.RefreshButtonText}}</button>
-</body>
+                button.innerText = "Loading..";
 
+                fetch("/launchpad/refresh", options)
+                    .then((response) => {
+                        if (response["status"] == 200) {
+                            setTimeout(function () {
+                                alert("Environment refreshed!");
+                                button.innerText = resetValue;
+                            }, 30000);
+                            return;
+                        }
+
+                        alert(
+                            `Something went wrong. Please send a screenshot of this page to the system administrator. Error: ${response["status"]}`,
+                        );
+                    })
+                    .catch((err) =>
+                        alert(
+                            `Something went wrong. Please send a screenshot of this page to the system administrator. Error: ${err}`,
+                        ),
+                    );
+            }
+        </script>
+    </head>
+
+    <body>
+        <header>
+            <h1 style="--header-color: {{.Styling.EndGradient}};">
+                {{.Title}} Launchpad
+            </h1>
+            <p>{{.Subtitle}}</p>
+        </header>
+
+        <main>
+            {{ range $key, $value := .AvailableUsers }}
+            <div
+                class="userOption"
+                style="--background: {{$.Styling.StartGradient}}; --hover-background: {{$.Styling.EndGradient}};"
+                onclick="Login('{{$value.DisplayName}}', '{{$key}}', '{{$value.Redirect}}')"
+            >
+                <p>{{$value.DisplayName}}</p>
+            </div>
+            {{ end }}
+        </main>
+
+        <button onclick="Refresh()" id="refreshBtn">
+            {{.RefreshButtonText}}
+        </button>
+    </body>
 </html>
