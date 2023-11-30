@@ -96,7 +96,7 @@ func main() {
 			HTTPClient:               &http.Client{},
 			PasswordSecurityInfoLink: "https://github.com/kvizdos",
 		},
-		DispatchWelcomeEmail: sendWelcomeEmailExample,
+		// NewRegistrationEvent: sendWelcomeEmailExample,
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
 			IsEarlyDevelopmentEnvironment: false,

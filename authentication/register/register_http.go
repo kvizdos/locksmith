@@ -45,7 +45,7 @@ type RegistrationHandler struct {
 	EmailAsUsername           bool
 	MinimumLengthRequirement  int
 	HIBP                      hibp.HIBPSettings
-	DispatchWelcomeEmail      func(users.LocksmithUserInterface)
+	NewRegistrationEvent      func(users.LocksmithUserInterface)
 }
 
 type registrationResponse struct {
@@ -283,7 +283,9 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, logger.GetIPFromRequest(*r), registrationReq.Username)
 	}
 
-	go rr.DispatchWelcomeEmail(lsu)
+	if rr.NewRegistrationEvent != nil {
+		go rr.NewRegistrationEvent(lsu)
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
