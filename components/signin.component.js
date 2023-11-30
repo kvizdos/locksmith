@@ -1,7 +1,13 @@
-import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js';
+import {
+  LitElement,
+  html,
+  css,
+} from "https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js";
+import { EphemeralTokenManager } from "./ephemeral_tokens.js";
 
 export class SignInComponent extends LitElement {
-  static styles = css`div#root {
+  static styles = css`
+    div#root {
       display: flex;
       gap: 0.65rem;
       background-color: var(--color);
@@ -39,7 +45,7 @@ export class SignInComponent extends LitElement {
     }
 
     .section:not(.active) {
-    display: none;
+      display: none;
     }
 
     p#fallback {
@@ -49,7 +55,7 @@ export class SignInComponent extends LitElement {
       margin-top: 0.5rem;
       cursor: pointer;
     }
-    `;
+  `;
 
   static properties = {
     backgroundColor: { type: String },
@@ -61,61 +67,67 @@ export class SignInComponent extends LitElement {
     var userAgent = navigator.userAgent;
 
     if (/iPhone/i.test(userAgent)) {
-      return 'iPhone';
+      return "iPhone";
     } else if (/iPad/i.test(userAgent)) {
-      return 'iPad';
+      return "iPad";
     } else if (/iPod/i.test(userAgent)) {
-      return 'iPod';
+      return "iPod";
     } else if (/Mac/i.test(userAgent)) {
-      return 'Mac';
+      return "Mac";
     } else if (/Android/i.test(userAgent)) {
-      return 'Android';
+      return "Android";
     } else if (/Windows/i.test(userAgent)) {
-      return 'Windows';
+      return "Windows";
     }
 
-    return 'Unknown Device';
+    return "Unknown Device";
   }
 
   constructor() {
     super();
-    this.device = this.getDeviceType()
-    this.backgroundColor = "#565b66"
-    this.stage = 0
-    this.signInText = "Sign In"
+    this.device = this.getDeviceType();
+    this.backgroundColor = "#565b66";
+    this.stage = 0;
+    this.signInText = "Sign In";
   }
 
   setStage(stage) {
     if (stage == 1 && !window.PublicKeyCredential) {
       this.stage = 2;
 
-      this.dispatchEvent(new CustomEvent("next-stage", {
-        bubbles: true,
-        detail: this.stage
-      }));
+      this.dispatchEvent(
+        new CustomEvent("next-stage", {
+          bubbles: true,
+          detail: this.stage,
+        }),
+      );
 
       return;
     }
 
     this.stage = stage;
 
-    this.dispatchEvent(new CustomEvent("next-stage", {
-      bubbles: true,
-      detail: this.stage
-    }));
+    this.dispatchEvent(
+      new CustomEvent("next-stage", {
+        bubbles: true,
+        detail: this.stage,
+      }),
+    );
   }
 
   continue() {
-    this.setStage(1)
+    this.setStage(1);
   }
 
   fallbackPassword() {
-    this.setStage(2)
+    this.setStage(2);
   }
 
   render() {
-    return html`
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+    return html` <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0"
+      />
       <div>
         <div id="root" style="--color: ${this.backgroundColor};">
           <div class="section${this.stage == 0 ? " active" : ""}" id="continue">
@@ -123,14 +135,24 @@ export class SignInComponent extends LitElement {
           </div>
           <div class="section${this.stage == 1 ? " active" : ""}" id="passkey">
             <p id="passkey">Sign in with ${this.device}</p>
-            <img src="https://passkeys.dev/images/fido-passkey-white.svg" id="passkeyicon" />
+            <img
+              src="https://passkeys.dev/images/fido-passkey-white.svg"
+              id="passkeyicon"
+            />
           </div>
           <div class="section${this.stage == 2 ? " active" : ""}" id="password">
             <p id="passkey">${this.signInText}</p>
           </div>
         </div>
-        ${this.stage == 1 ? html`<p id="fallback" @click="${this.fallbackPassword}" style="--color: ${this.backgroundColor};">Continue with Password</p>` : ""}
-
+        ${this.stage == 1
+          ? html`<p
+              id="fallback"
+              @click="${this.fallbackPassword}"
+              style="--color: ${this.backgroundColor};"
+            >
+              Continue with Password
+            </p>`
+          : ""}
       </div>`;
   }
 }
@@ -145,9 +167,9 @@ export class LoginFormComponent extends LitElement {
     }
 
     div.input {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
     }
 
     div.input label {
@@ -195,7 +217,7 @@ export class LoginFormComponent extends LitElement {
       color: var(--color);
       text-decoration: none;
     }
-    `;
+  `;
 
   static properties = {
     backgroundColor: { type: String },
@@ -211,92 +233,99 @@ export class LoginFormComponent extends LitElement {
 
   constructor() {
     super();
-    this.backgroundColor = "#565b66"
-    this.stage = 0
-    this.username = ""
-    this.password = ""
-    this.loginError = 0
-    this.emailAsUsername = false
-    this.signingIn = false
-    this.onboardingPath = ""
-    this.loginxsrf = ""
+    this.backgroundColor = "#565b66";
+    this.stage = 0;
+    this.username = "";
+    this.password = "";
+    this.loginError = 0;
+    this.emailAsUsername = false;
+    this.signingIn = false;
+    this.onboardingPath = "";
+    this.loginxsrf = "";
     // 0 = none
     // 1 = invalid username
     // 2 = invalid password
     //
-
   }
 
   updateUsername(e) {
     this.username = e.srcElement.value;
-    e.srcElement.parentElement.classList.remove("error")
-    e.srcElement.setCustomValidity("")
+    e.srcElement.parentElement.classList.remove("error");
+    e.srcElement.setCustomValidity("");
   }
 
   updatePassword(e) {
     this.password = e.srcElement.value;
-    e.srcElement.parentElement.classList.remove("error")
-    e.srcElement.setCustomValidity("")
+    e.srcElement.parentElement.classList.remove("error");
+    e.srcElement.setCustomValidity("");
   }
 
   stageChange({ detail: stage }) {
-    this.stage = stage
+    this.stage = stage;
   }
 
-
-  signin() {
+  async signin() {
     let fail = false;
     if (this.signingIn == true) {
-      return
+      return;
     }
     this.signingIn = true;
-    this.username = this.username.trim()
+    this.username = this.username.trim();
     if (this.username.length == 0) {
-      const input = this.shadowRoot.getElementById("username")
-      input.setCustomValidity("Please enter a username")
-      input.reportValidity()
-      input.parentElement.classList.add("error")
+      const input = this.shadowRoot.getElementById("username");
+      input.setCustomValidity("Please enter a username");
+      input.reportValidity();
+      input.parentElement.classList.add("error");
       fail = true;
     }
 
     if (this.password.length == 0) {
-      const input = this.shadowRoot.getElementById("password")
+      const input = this.shadowRoot.getElementById("password");
       if (this.username.length != 0) {
-        input.setCustomValidity("Please enter a password")
-        input.reportValidity()
+        input.setCustomValidity("Please enter a password");
+        input.reportValidity();
       }
-      input.parentElement.classList.add("error")
+      input.parentElement.classList.add("error");
       fail = true;
     }
 
     if (fail) {
       this.signingIn = false;
-      return
+      return;
     }
 
+    const fingerprint =
+      await EphemeralTokenManager.SharedInstance.GenerateFingerprint();
+
+    const body = {
+      username: this.username,
+      password: this.password,
+      xsrf: this.loginxsrf,
+      fingerprint: fingerprint,
+    };
     const options = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: `{"username":"${this.username}","password":"${this.password}", "xsrf": "${this.loginxsrf}"}`
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     };
 
-    fetch('/api/login', options)
-      .then(response => this.handleAPIResponse(response))
-      .catch(err => console.error(err));
+    fetch("/api/login", options)
+      .then((response) => this.handleAPIResponse(response))
+      .catch((err) => console.error(err));
   }
 
   doOnboard() {
-    return window.location.search == "?onboard=true"
+    return window.location.search == "?onboard=true";
   }
 
   handleAPIResponse(response) {
     switch (response.status) {
       case 200:
         if (response.redirected) {
-          window.location.href = response.url
-          return
-        };
-        window.location.href = !this.doOnboard() ? "/app" : this.onboardingPath
+          window.location.href = response.url;
+          return;
+        }
+        window.location.href = !this.doOnboard() ? "/app" : this.onboardingPath;
         break;
       case 404:
         this.loginError = 1;
@@ -308,7 +337,7 @@ export class LoginFormComponent extends LitElement {
         break;
       case 500:
         this.signingIn = false;
-        alert("Something went wrong, please try again later.")
+        alert("Something went wrong, please try again later.");
         break;
     }
   }
@@ -316,33 +345,65 @@ export class LoginFormComponent extends LitElement {
   getLoginErrorMessage() {
     switch (this.loginError) {
       case 0:
-        return ""
+        return "";
       default:
-        return "Invalid username or password."
+        return "Invalid username or password.";
     }
   }
 
   render() {
     return html`<div id="root">
-      ${this.doOnboard() ? html`<p id="onboard">Thank you for registering! Please sign in to continue with the onboarding process.` : ""}
+      ${this.doOnboard()
+        ? html`<p id="onboard">
+            Thank you for registering! Please sign in to continue with the
+            onboarding process.
+          </p>`
+        : ""}
       <div class="input">
-        <label for="username">${this.emailAsUsername ? "Email" : "Username"}</label>
-        <input id="username" type="text" placeholder="${this.emailAsUsername ? "Email" : "Username"}" autocorrect="off" autocapitalize="off" value="${this.username}" @input="${this.updateUsername}" />
+        <label for="username"
+          >${this.emailAsUsername ? "Email" : "Username"}</label
+        >
+        <input
+          id="username"
+          type="text"
+          placeholder="${this.emailAsUsername ? "Email" : "Username"}"
+          autocorrect="off"
+          autocapitalize="off"
+          value="${this.username}"
+          @input="${this.updateUsername}"
+        />
       </div>
-      ${this.stage == 0 ? html`
-      <div class="input">
-          <label for="password">Password</label>
-          <input id="password" type="password" placeholder="Password" autocorrect="off" autocapitalize="off" value="${this.password}" @input="${this.updatePassword}" />
-        </div>
-        ` : ""}
-      <sign-in backgroundColor="${this.backgroundColor}" stage="2" @next-stage=${this.stageChange} .signInText=${this.signingIn ? "Signing In" : "Sign In"} @click=${this.signin}></sign-in>
-      <a style="--color: ${this.backgroundColor};" href="/reset-password">Forgot Password</a>
+      ${this.stage == 0
+        ? html`
+            <div class="input">
+              <label for="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                placeholder="Password"
+                autocorrect="off"
+                autocapitalize="off"
+                value="${this.password}"
+                @input="${this.updatePassword}"
+              />
+            </div>
+          `
+        : ""}
+      <sign-in
+        backgroundColor="${this.backgroundColor}"
+        stage="2"
+        @next-stage=${this.stageChange}
+        .signInText=${this.signingIn ? "Signing In" : "Sign In"}
+        @click=${this.signin}
+      ></sign-in>
+      <a style="--color: ${this.backgroundColor};" href="/reset-password"
+        >Forgot Password</a
+      >
 
       <p id="error">${this.getLoginErrorMessage()}</p>
-
-      </div>`;
+    </div>`;
   }
 }
 
-customElements.define('sign-in', SignInComponent)
-customElements.define('login-form', LoginFormComponent)
+customElements.define("sign-in", SignInComponent);
+customElements.define("login-form", LoginFormComponent);

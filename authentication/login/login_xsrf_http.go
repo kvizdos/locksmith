@@ -31,7 +31,7 @@ func (h LoginPageMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		sessionIDValue = sid
 
-		cookie := http.Cookie{Name: "sid", Value: sid, HttpOnly: true, Secure: true, Path: "/"}
+		cookie := http.Cookie{Name: "sid", Value: sid, HttpOnly: false, Secure: true, Path: "/"}
 		http.SetCookie(w, &cookie)
 	} else {
 		sessionIDValue = sessionIDCookie.Value
@@ -49,9 +49,9 @@ func (h LoginPageMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate Login XSRF for SID
-	loginXSRF, _ := xsrf.GenerateXSRFForSession(sessionIDValue, 10*time.Minute)
+	loginXSRF, _ := xsrf.GenerateXSRFForSession(sessionIDValue, 30*time.Minute)
 
-	cookieAPI := http.Cookie{Name: "login_xsrf", Value: loginXSRF, HttpOnly: true, Secure: true, Path: "/api/login"}
+	cookieAPI := http.Cookie{Name: "login_xsrf", Value: loginXSRF, SameSite: http.SameSiteStrictMode, HttpOnly: true, Secure: true, Path: "/api/login"}
 	http.SetCookie(w, &cookieAPI)
 
 	r = r.WithContext(context.WithValue(r.Context(), "login_xsrf", loginXSRF))

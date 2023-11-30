@@ -25,9 +25,14 @@ var UserTabComponentJS []byte
 //go:embed persona-switcher.component.js
 var PersonaSwitcherJS []byte
 
+//go:embed ephemeral_tokens.js
+var EphemeralTokensJS []byte
+
 func ServeComponents(w http.ResponseWriter, r *http.Request) {
 	component := r.URL.Path[len("/components/"):]
 	switch component {
+	case "ephemeral_tokens.js":
+		serveJSComponent(w, EphemeralTokensJS)
 	case "register.component.js":
 		serveJSComponent(w, RegistrationComponentJS)
 	case "signin.component.js":

@@ -147,7 +147,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 
 			sidValue = sid
 
-			cookie := http.Cookie{Name: "sid", Value: sid, HttpOnly: true, Secure: true, Path: "/"}
+			cookie := http.Cookie{Name: "sid", Value: sid, HttpOnly: false, Secure: true, Path: "/"}
 			http.SetCookie(w, &cookie)
 		} else {
 			sidValue = sidCookie.Value

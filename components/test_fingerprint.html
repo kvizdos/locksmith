@@ -1,0 +1,11 @@
+<html>
+    <script type="module">
+        import { EphemeralTokenManager } from "/ephemeral_tokens.js";
+
+        const token =
+            await EphemeralTokenManager.SharedInstance.GenerateFingerprint();
+
+        document.querySelector("#output").innerText = JSON.stringify(token);
+    </script>
+    <p id="output">Waiting for results..</p>
+</html>
