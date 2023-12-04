@@ -33,7 +33,7 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	loginXSRF, ok := r.Context().Value("login_xsrf").(string)
 
 	if !ok || (ok && loginXSRF == "") {
-		w.Write([]byte("Login Handler must be wrapped in LoginPageMiddleware"))
+		w.Write([]byte("Launchpad Handler must be wrapped in LoginPageMiddleware"))
 		return
 	}
 

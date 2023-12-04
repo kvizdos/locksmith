@@ -2,6 +2,21 @@ package observability
 
 import "github.com/prometheus/client_golang/prometheus"
 
+var LoginSuccess = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "locksmith_logins",
+		Help: "No of Completed Logins",
+	},
+)
+
+var LoginFailures = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "locksmith_login_failures",
+		Help: "Count of login failures by category",
+	},
+	[]string{"category"}, // Only one label
+)
+
 var FingerprintEvaluations = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Name: "locksmith_fingerprint_evaluations",

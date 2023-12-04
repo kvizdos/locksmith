@@ -3,6 +3,8 @@ package observability
 import "github.com/prometheus/client_golang/prometheus"
 
 func RegisterLocksmithObservables(registry *prometheus.Registry) {
+	registry.MustRegister(LoginSuccess)
+	registry.MustRegister(LoginFailures)
 	registry.MustRegister(FingerprintEvaluations)
 	registry.MustRegister(FingerprintScore)
 	registry.MustRegister(FingerprintPasses)

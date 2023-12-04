@@ -335,8 +335,9 @@ export class LoginFormComponent extends LitElement {
         this.loginError = 2;
         this.signingIn = false;
         break;
-      case 500:
+      default:
         this.signingIn = false;
+        console.warn("Error logging in:", response.status);
         alert("Something went wrong, please try again later.");
         break;
     }

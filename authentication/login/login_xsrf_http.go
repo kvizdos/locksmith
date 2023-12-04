@@ -49,7 +49,7 @@ func (h LoginPageMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate Login XSRF for SID
-	loginXSRF, _ := xsrf.GenerateXSRFForSession(sessionIDValue, 30*time.Minute)
+	loginXSRF, _ := xsrf.GenerateXSRFForSession(sessionIDValue, 1*time.Hour)
 
 	cookieAPI := http.Cookie{Name: "login_xsrf", Value: loginXSRF, SameSite: http.SameSiteStrictMode, HttpOnly: true, Secure: true, Path: "/api/login"}
 	http.SetCookie(w, &cookieAPI)

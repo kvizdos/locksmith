@@ -14,6 +14,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
+	"github.com/kvizdos/locksmith/observability"
 	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -48,6 +49,8 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		http.SetCookie(w, &cookieXSRF)
 
+		observability.LoginFailures.WithLabelValues("bad_method").Inc()
+
 		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -57,11 +60,13 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		observability.LoginFailures.WithLabelValues("bad_request").Inc()
 		return
 	}
 
 	if r.Body == nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
+		observability.LoginFailures.WithLabelValues("bad_body").Inc()
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -91,6 +96,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if loginReq.XSRF != loginXSRFCookie.Value {
 		fmt.Println("Bad XSRF!")
+		observability.LoginFailures.WithLabelValues("bad_xsrf").Inc()
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -100,12 +106,14 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Println("No SID present on login request")
+		observability.LoginFailures.WithLabelValues("no_sid").Inc()
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if !xsrf.Confirm(loginReq.XSRF, sidCookie.Value) {
 		fmt.Println("bad xsrf used")
+		observability.LoginFailures.WithLabelValues("xsrf_confirmation_error").Inc()
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -128,6 +136,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !usernameExists {
 		logger.LOGGER.Log(logger.LOGIN_INVALID_USERNAME, logger.GetIPFromRequest(*r), loginReq.Username)
+		observability.LoginFailures.WithLabelValues("invalid_username").Inc()
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -145,6 +154,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !passwordValidated {
 		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
+		observability.LoginFailures.WithLabelValues("invalid_password").Inc()
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -182,6 +192,8 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.LOGGER.Log(logger.LOGIN, loginReq.Username, logger.GetIPFromRequest(*r))
+
+	observability.LoginSuccess.Inc()
 
 	cookieValue := user.GenerateCookieValueFromSession(session)
 
