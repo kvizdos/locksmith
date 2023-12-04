@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/hibp"
-	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/observability"
@@ -56,13 +55,13 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginXSRFCookie, err := r.Cookie("login_xsrf")
+	// loginXSRFCookie, err := r.Cookie("login_xsrf")
 
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		observability.LoginFailures.WithLabelValues("bad_request").Inc()
-		return
-	}
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	observability.LoginFailures.WithLabelValues("bad_request").Inc()
+	// 	return
+	// }
 
 	if r.Body == nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
@@ -94,29 +93,29 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if loginReq.XSRF != loginXSRFCookie.Value {
-		fmt.Println("Bad XSRF!")
-		observability.LoginFailures.WithLabelValues("bad_xsrf").Inc()
-		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	// if loginReq.XSRF != loginXSRFCookie.Value {
+	// 	fmt.Println("Bad XSRF!", loginReq.XSRF, loginXSRFCookie.Value)
+	// 	observability.LoginFailures.WithLabelValues("bad_xsrf").Inc()
+	// 	logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
 
-	sidCookie, err := r.Cookie("sid")
+	// sidCookie, err := r.Cookie("sid")
 
-	if err != nil {
-		fmt.Println("No SID present on login request")
-		observability.LoginFailures.WithLabelValues("no_sid").Inc()
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	// if err != nil {
+	// 	fmt.Println("No SID present on login request")
+	// 	observability.LoginFailures.WithLabelValues("no_sid").Inc()
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
 
-	if !xsrf.Confirm(loginReq.XSRF, sidCookie.Value) {
-		fmt.Println("bad xsrf used")
-		observability.LoginFailures.WithLabelValues("xsrf_confirmation_error").Inc()
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	// if !xsrf.Confirm(loginReq.XSRF, sidCookie.Value) {
+	// 	fmt.Println("bad xsrf used")
+	// 	observability.LoginFailures.WithLabelValues("xsrf_confirmation_error").Inc()
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 	hibpIsPwnedChan := make(chan bool)
