@@ -20,6 +20,8 @@ type LocksmithUserInterface interface {
 	GeneratePasswordSession() (authentication.PasswordSession, error)
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
 
+	GetLastLoginDate() time.Time
+
 	// Read from Database
 	ReadFromMap(*LocksmithUserInterface, map[string]interface{})
 	ToMap() map[string]interface{}
@@ -109,6 +111,11 @@ type LocksmithUser struct {
 	MagicPermissions []string                        `json:"-" bson:"-"`
 	ImMagic          bool                            `json:"-" bson:"-"`
 	ImRegular        bool                            `json:"-" bson:"-"`
+	LastLogin        time.Time                       `json:"-" bson:"-"`
+}
+
+func (u LocksmithUser) GetLastLoginDate() time.Time {
+	return u.LastLogin.UTC()
 }
 
 func (u LocksmithUser) GetMagics() []magic.MagicAuthentication {
@@ -159,6 +166,12 @@ func (u LocksmithUser) ToMap() map[string]interface{} {
 	out["role"] = u.Role
 	out["magic"] = u.Magics.ToMap()
 
+	if u.GetLastLoginDate().IsZero() {
+		out["last_login"] = time.Now().UTC().Unix()
+	} else {
+		out["last_login"] = u.GetLastLoginDate().Unix()
+	}
+
 	return out
 }
 
@@ -205,6 +218,14 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		}
 	}
 
+	var loginTime time.Time
+	if user["last_login"] != nil {
+		loginTime = time.Unix(user["last_login"].(int64), 0)
+	} else {
+		// If they've yet to login, set to now.
+		loginTime = time.Now().UTC()
+	}
+
 	*writeTo = LocksmithUser{
 		ID:               user["id"].(string),
 		Username:         user["username"].(string),
@@ -213,6 +234,7 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		PasswordInfo:     passinfo,
 		PasswordSessions: sessions,
 		Magics:           magics,
+		LastLogin:        loginTime,
 	}
 }
 
@@ -266,6 +288,14 @@ func (u LocksmithUser) SavePasswordSession(session authentication.PasswordSessio
 	}, map[database.DatabaseUpdateActions]map[string]interface{}{
 		database.PUSH: {
 			"sessions": session,
+		},
+	})
+
+	_, err = db.UpdateOne("users", map[string]interface{}{
+		"username": u.Username,
+	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		database.SET: {
+			"last_login": time.Now().UTC().Unix(),
 		},
 	})
 

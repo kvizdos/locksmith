@@ -14,6 +14,8 @@ func init() {
 			"user.delete.self",
 			"user.delete.other",
 			"users.list.all",
+			"users.lock",        // get lock status
+			"users.lock.manage", // set lock state
 		},
 	}
 	AddRole(adminRole)

@@ -111,7 +111,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			identifier := ""
 			ip := logger.GetIPFromRequest(*r)
 
-			if err != nil {
+			if err == nil {
 				decoded, err := base64.StdEncoding.DecodeString(tokenCookie.Value)
 				if err != nil {
 					w.WriteHeader(http.StatusUnauthorized)

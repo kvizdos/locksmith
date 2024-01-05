@@ -31,6 +31,14 @@ func (r loginRequest) HasRequiredFields() bool {
 
 type LoginHandler struct {
 	HIBP hibp.HIBPSettings
+	// Set this to be longer than your session
+	// duration. Session durations do not
+	// change the last login date, which is
+	// used for comparison.
+	// It is set for every new session made,
+	// so once refresh is enabled, it will
+	// update the last login once refreshed.
+	LockInactivityAfter time.Duration
 }
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -155,6 +163,22 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
 		observability.LoginFailures.WithLabelValues("invalid_password").Inc()
 		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Confirm user is not locked from inactivity
+	var lockAccountsAfter time.Duration
+	if lh.LockInactivityAfter == 0 {
+		// If no lock period specified,
+		// keep accounts open for 100 years.
+		lockAccountsAfter = 24 * 365 * 100 * time.Hour
+	} else {
+		lockAccountsAfter = lh.LockInactivityAfter
+	}
+	if time.Now().UTC().After(user.GetLastLoginDate().Add(lockAccountsAfter)) {
+		logger.LOGGER.Log(logger.LOGIN_LOCKED, loginReq.Username, logger.GetIPFromRequest(*r))
+		observability.LoginFailures.WithLabelValues("locked_account").Inc()
+		w.WriteHeader(http.StatusLocked)
 		return
 	}
 

@@ -26,6 +26,11 @@ var Logs = map[LogFormats]LogFormat{
 		RegexOrder: []string{"srcip", "dstuser"},
 		FmtPattern: "'%s' attempted to login to an invalid username '%s'",
 	},
+	LOGIN_LOCKED: {
+		Regex:      "'(\\d+\\.\\d+\\.\\d+\\.\\d+)' attempted to login to a locked username '(\\w+)'",
+		RegexOrder: []string{"srcip", "dstuser"},
+		FmtPattern: "'%s' attempted to login to a locked username '%s'",
+	},
 	INVITE_CODE_MALFORMED: {
 		Regex:      "'(\\d+.\\d+.\\d+.\\d+)' used an invalid invite code '(\\w+)'",
 		RegexOrder: []string{"srcip", "extra_data"},
@@ -68,6 +73,7 @@ type LogFormats string
 const (
 	LOGIN                       LogFormats = "login"
 	LOGIN_FAIL_BAD_PASSWORD     LogFormats = "login_bad_password"
+	LOGIN_LOCKED                LogFormats = "login_locked"
 	LOGIN_INVALID_USERNAME      LogFormats = "login_invalid_username"
 	INVALID_METHOD              LogFormats = "invalid_method"
 	BAD_REQUEST                 LogFormats = "bad_request"

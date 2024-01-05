@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/kvizdos/locksmith/administration"
 	"github.com/kvizdos/locksmith/administration/invitations"
@@ -34,6 +35,7 @@ type LocksmithRoutesOptions struct {
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
 	HIBPIntegrationOptions    hibp.HIBPSettings
+	InactivityLockDuration    time.Duration
 	MinimumPasswordLength     int
 	NewRegistrationEvent      func(user users.LocksmithUserInterface)
 }
@@ -50,6 +52,16 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	InitializeLaunchpad(mux, db, options)
 
 	if !options.DisableAPI {
+		var lockAccountsAfter time.Duration
+
+		if options.InactivityLockDuration == 0 {
+			// If no lock period specified,
+			// keep accounts open for 100 years.
+			lockAccountsAfter = 24 * 365 * 100 * time.Hour
+		} else {
+			lockAccountsAfter = options.InactivityLockDuration
+		}
+
 		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
 			DefaultRoleName:           "user",
 			DisablePublicRegistration: options.DisablePublicRegistration,
@@ -62,7 +74,8 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		mux.Handle("/api/register", registrationAPIHandler)
 
 		loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
-			HIBP: options.HIBPIntegrationOptions,
+			HIBP:                options.HIBPIntegrationOptions,
+			LockInactivityAfter: lockAccountsAfter,
 		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 
@@ -70,6 +83,13 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			MinimalPermissions: []string{"users.list.all"},
 		})
 		mux.Handle("/api/users/list", listUsersAdminAPIHandler)
+
+		lockStatusAPI := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationLockStatusAPI{
+			LockInactivityAfter: lockAccountsAfter,
+		}, db, endpoints.EndpointSecurityOptions{
+			MinimalPermissions: []string{"users.lock"},
+		})
+		mux.Handle("/api/users/lock-status", lockStatusAPI)
 
 		deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
 		mux.Handle("/api/users/delete", deleteUserAdminAPIHandler)

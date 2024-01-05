@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"text/template"
+	"time"
 
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/pages"
@@ -62,6 +63,108 @@ func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http
 	}
 
 	w.Write(jsond)
+}
+
+type AdministrationLockStatusAPI struct {
+	UserInterface       users.LocksmithUserInterface
+	LockInactivityAfter time.Duration
+}
+
+func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" && r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if h.UserInterface == nil {
+		h.UserInterface = users.LocksmithUser{}
+	}
+
+	var lockAccountsAfter time.Duration
+	if h.LockInactivityAfter == 0 {
+		// If no lock period specified,
+		// keep accounts open for 100 years.
+		lockAccountsAfter = 24 * 365 * 100 * time.Hour
+	} else {
+		lockAccountsAfter = h.LockInactivityAfter
+	}
+
+	authUser, _ := r.Context().Value("authUser").(users.LocksmithUser)
+	db := r.Context().Value("database").(database.DatabaseAccessor)
+	role, _ := authUser.GetRole()
+
+	requestingUserID := r.URL.Query().Get("id")
+
+	if requestingUserID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		rawUser, found := db.FindOne("users", map[string]interface{}{
+			"id": requestingUserID,
+		})
+
+		if !found {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		var tmpUser users.LocksmithUserInterface
+		users.LocksmithUser{}.ReadFromMap(&tmpUser, rawUser.(map[string]interface{}))
+		user := tmpUser.(users.LocksmithUser)
+
+		type LastLoginInfo struct {
+			Locked    bool  `json:"locked"`
+			LastLogin int64 `json:"last_login"`
+			LocksAt   int64 `json:"locks_at"`
+		}
+
+		last := LastLoginInfo{
+			Locked:    time.Now().UTC().After(user.GetLastLoginDate().Add(lockAccountsAfter)),
+			LastLogin: user.GetLastLoginDate().Unix(),
+			LocksAt:   user.GetLastLoginDate().Add(lockAccountsAfter).Unix(),
+		}
+
+		js, _ := json.Marshal(last)
+		w.Write(js)
+	} else if r.Method == http.MethodPost {
+		if !role.HasPermission("users.lock.manage") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		setTo := r.URL.Query().Get("status")
+
+		if setTo != "0" && setTo != "1" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		var setLoginTimeTo time.Time
+
+		switch setTo {
+		case "0": // unlocked
+			setLoginTimeTo = time.Now().UTC()
+		case "1": // lock
+			setLoginTimeTo = time.Now().UTC().Add((-1 * lockAccountsAfter) - (24 * 30 * time.Hour))
+		}
+
+		_, err := db.UpdateOne("users", map[string]interface{}{
+			"id": requestingUserID,
+		}, map[database.DatabaseUpdateActions]map[string]interface{}{
+			database.SET: {
+				"last_login": setLoginTimeTo.Unix(),
+				"sessions":   []interface{}{},
+			},
+		})
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 type AdministrationDeleteUsersHandler struct {
