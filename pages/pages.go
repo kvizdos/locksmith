@@ -1,6 +1,9 @@
 package pages
 
-import _ "embed"
+import (
+	_ "embed"
+	"html/template"
+)
 
 type LocksmithPageStyling struct {
 	StartGradient string
@@ -8,6 +11,7 @@ type LocksmithPageStyling struct {
 	SubmitColor   string
 	LogoURL       string
 	ManifestURL   string
+	InjectHeader  template.HTML
 }
 
 //go:embed admin.html

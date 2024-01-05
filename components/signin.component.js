@@ -217,6 +217,17 @@ export class LoginFormComponent extends LitElement {
       color: var(--color);
       text-decoration: none;
     }
+
+    #loginFailure {
+      max-width: 80ch;
+    }
+
+    #loginFailure #reason {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background-color: #f5f5f5;
+      position: relative;
+    }
   `;
 
   static properties = {
@@ -229,6 +240,8 @@ export class LoginFormComponent extends LitElement {
     signingIn: { type: Boolean },
     onboardingPath: { type: String },
     loginxsrf: { type: String },
+    hasLoginFailure: { type: Boolean },
+    loginFailureReason: { type: String },
   };
 
   constructor() {
@@ -242,6 +255,8 @@ export class LoginFormComponent extends LitElement {
     this.signingIn = false;
     this.onboardingPath = "";
     this.loginxsrf = "";
+    this.hasLoginFailure = false;
+    this.loginFailureReason = "";
     // 0 = none
     // 1 = invalid username
     // 2 = invalid password
@@ -262,6 +277,14 @@ export class LoginFormComponent extends LitElement {
 
   stageChange({ detail: stage }) {
     this.stage = stage;
+  }
+
+  timeoutPromise(ms) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        reject(new Error("Request timed out"));
+      }, ms);
+    });
   }
 
   async signin() {
@@ -294,9 +317,16 @@ export class LoginFormComponent extends LitElement {
       return;
     }
 
-    const fingerprint =
-      await EphemeralTokenManager.SharedInstance.GenerateFingerprint();
-
+    let fingerprint;
+    try {
+      fingerprint =
+        await EphemeralTokenManager.SharedInstance.GenerateFingerprint();
+    } catch (e) {
+      console.error("Failed to generate fingerprint:", e.message, e.stack);
+      this.hasLoginFailure = true;
+      this.loginFailureReason = `Failed to generate account safety fingerprint: ${e.message}, ${e.stack}`;
+      return;
+    }
     const body = {
       username: this.username,
       password: this.password,
@@ -309,9 +339,82 @@ export class LoginFormComponent extends LitElement {
       body: JSON.stringify(body),
     };
 
-    fetch("/api/login", options)
+    Promise.race([fetch("/api/login", options), this.timeoutPromise(10000)])
       .then((response) => this.handleAPIResponse(response))
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        this.hasLoginFailure = true;
+
+        if (err.message === "Request timed out") {
+          this.loginFailureReason =
+            "Login attempt failed due to a timeout. Please check your internet connection and try again.";
+          console.error("Login attempt timed out");
+        } else {
+          console.error(
+            "Failed to send login request: ",
+            err.message,
+            err.stack,
+          );
+          this.loginFailureReason = `Failed to send login request: ${err.message}, ${err.stack}`;
+        }
+      });
+  }
+
+  updated() {
+    if (
+      this.loginFailureReason != "" &&
+      this.loginFailureReason.indexOf("IP") == -1
+    ) {
+      let updateTo = this.loginFailureReason;
+      if (
+        typeof navigator !== "undefined" &&
+        "onLine" in navigator &&
+        navigator.onLine != undefined
+      ) {
+        // navigator is available and supports the onLine property
+        if (!navigator.onLine) {
+          updateTo = `${updateTo} -- NETWORK OFFLINE`;
+        }
+      } else {
+        updateTo = `${updateTo} -- Unable to Determine Online Status`;
+      }
+
+      if (
+        typeof navigator !== "undefined" &&
+        "userAgent" in navigator &&
+        navigator.userAgent != undefined
+      ) {
+        // navigator is available and supports the onLine property
+        updateTo = `${updateTo} -- UA: ${navigator.userAgent}`;
+      } else {
+        updateTo = `${updateTo} -- Unable to determine User Agent`;
+      }
+
+      if (
+        typeof navigator !== "undefined" &&
+        "cookieEnabled" in navigator &&
+        navigator.cookieEnabled != undefined
+      ) {
+        // navigator is available and supports the onLine property
+        updateTo = `${updateTo} -- Cookies Enabled: ${navigator.cookieEnabled}`;
+      } else {
+        updateTo = `${updateTo} -- Unable to determine Cookie status`;
+      }
+
+      try {
+        fetch(`https://api.ipify.org/`)
+          .then(async (r) => {
+            let ip = await r.text();
+            this.loginFailureReason = `${updateTo} -- IP: ${ip}`;
+          })
+          .catch((e) => {
+            let ip = `Failed to collect: ${e.message}`;
+            this.loginFailureReason = `${updateTo} -- IP: ${ip}`;
+          });
+      } catch (e) {
+        let ip = `Failed to collect: ${e.message}`;
+        this.loginFailureReason = `${updateTo} -- IP: ${ip}`;
+      }
+    }
   }
 
   doOnboard() {
@@ -337,7 +440,11 @@ export class LoginFormComponent extends LitElement {
         break;
       default:
         this.signingIn = false;
-        console.warn("Error logging in:", response.status);
+        console.warn(
+          "Error logging in (HTTP request passed):",
+          response.status,
+          JSON.stringify(response),
+        );
         alert("Something went wrong, please try again later.");
         break;
     }
@@ -360,48 +467,80 @@ export class LoginFormComponent extends LitElement {
             onboarding process.
           </p>`
         : ""}
-      <div class="input">
-        <label for="username"
-          >${this.emailAsUsername ? "Email" : "Username"}</label
-        >
-        <input
-          id="username"
-          type="text"
-          placeholder="${this.emailAsUsername ? "Email" : "Username"}"
-          autocorrect="off"
-          autocapitalize="off"
-          value="${this.username}"
-          @input="${this.updateUsername}"
-        />
-      </div>
-      ${this.stage == 0
+      ${!this.hasLoginFailure
         ? html`
             <div class="input">
-              <label for="password">Password</label>
+              <label for="username"
+                >${this.emailAsUsername ? "Email" : "Username"}</label
+              >
               <input
-                id="password"
-                type="password"
-                placeholder="Password"
+                id="username"
+                type="text"
+                placeholder="${this.emailAsUsername ? "Email" : "Username"}"
                 autocorrect="off"
                 autocapitalize="off"
-                value="${this.password}"
-                @input="${this.updatePassword}"
+                value="${this.username}"
+                @input="${this.updateUsername}"
               />
             </div>
-          `
-        : ""}
-      <sign-in
-        backgroundColor="${this.backgroundColor}"
-        stage="2"
-        @next-stage=${this.stageChange}
-        .signInText=${this.signingIn ? "Signing In" : "Sign In"}
-        @click=${this.signin}
-      ></sign-in>
-      <a style="--color: ${this.backgroundColor};" href="/reset-password"
-        >Forgot Password</a
-      >
+            ${this.stage == 0
+              ? html`
+                  <div class="input">
+                    <label for="password">Password</label>
+                    <input
+                      id="password"
+                      type="password"
+                      placeholder="Password"
+                      autocorrect="off"
+                      autocapitalize="off"
+                      value="${this.password}"
+                      @input="${this.updatePassword}"
+                    />
+                  </div>
+                `
+              : ""}
+            <sign-in
+              backgroundColor="${this.backgroundColor}"
+              stage="2"
+              @next-stage=${this.stageChange}
+              .signInText=${this.signingIn ? "Signing In" : "Sign In"}
+              @click=${this.signin}
+            ></sign-in>
+            <a style="--color: ${this.backgroundColor};" href="/reset-password"
+              >Forgot Password</a
+            >
 
-      <p id="error">${this.getLoginErrorMessage()}</p>
+            <p id="error">${this.getLoginErrorMessage()}</p>
+          `
+        : html` <div id="loginFailure">
+            <p>
+              We encountered a network issue during your login attempt. Although
+              this error is typically reported automatically, network conditions
+              might have prevented this. To assist us in resolving this issue
+              more efficiently, please copy and paste the following message into
+              an email to our support team, without making any changes:
+            </p>
+
+            <p id="reason">
+              Timestamp: ${+new Date()}<br />Error:
+              ${this.loginFailureReason != ""
+                ? this.loginFailureReason
+                : "Uncaught exception - 183381"}
+            </p>
+
+            <p>
+              We understand how important access to your account is. If you'd
+              like to attempt logging in again, here are a few steps that often
+              resolve common issues. <br />
+              1. Disable browser extensions (particularly ad-blockers)<br />
+              2. Attempt to login again by refreshing the page <br />
+              3. If the issue persists, please try a different browser. <br />
+              4. If the issue still persists, please try a different device.
+              <br />
+              5. If you're still facing issues, make sure to send the error to
+              support. We will be able to assist you.
+            </p>
+          </div>`}
     </div>`;
   }
 }

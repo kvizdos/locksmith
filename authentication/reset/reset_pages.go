@@ -2,8 +2,8 @@ package reset
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
-	"text/template"
 
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/pages"

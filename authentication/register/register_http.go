@@ -3,13 +3,13 @@ package register
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"

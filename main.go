@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -84,6 +85,11 @@ func main() {
 		InviteUsedRedirect: "/app",
 		Styling: pages.LocksmithPageStyling{
 			LogoURL: "https://example.com/logo.webp",
+			InjectHeader: template.HTML(
+				`<script>
+					console.log("Loaded page.")
+				</script>`,
+			),
 		},
 		ResetPasswordOptions: routes.ResetPasswordOptions{
 			SendResetToken: printResetToken,
