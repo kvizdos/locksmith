@@ -2,7 +2,7 @@ import {
   LitElement,
   html,
   css,
-} from "https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js";
+} from "https://cdn.jsdelivr.net/gh/lit/dist@3.1.0/core/lit-core.min.js";
 import { EphemeralTokenManager } from "./ephemeral_tokens.js";
 
 export class SignInComponent extends LitElement {
@@ -428,6 +428,7 @@ export class LoginFormComponent extends LitElement {
           window.location.href = response.url;
           return;
         }
+        console.log("ONboard path", this.onboardingPath);
         window.location.href = !this.doOnboard() ? "/app" : this.onboardingPath;
         break;
       case 423:

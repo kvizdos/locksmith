@@ -1,4 +1,8 @@
-import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js';
+import {
+  LitElement,
+  html,
+  css,
+} from "https://cdn.jsdelivr.net/gh/lit/dist@3.1.0/core/lit-core.min.js";
 
 export class PersonaSwitcherComponent extends LitElement {
   static styles = css`
@@ -20,14 +24,14 @@ export class PersonaSwitcherComponent extends LitElement {
       text-decoration: none;
     }
     #root {
-      background-color: #FFF;
+      background-color: #fff;
       border: 1px solid #f5f5f5;
       padding: 0.75rem 1.25rem 0.75rem 1.25rem;
       margin-bottom: 1rem;
       border-radius: 0.75rem;
-      -webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
-      -moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
-      box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+      -webkit-box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.25);
+      -moz-box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.25);
+      box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.25);
       transition: 200ms;
     }
 
@@ -35,22 +39,25 @@ export class PersonaSwitcherComponent extends LitElement {
       transition: 200ms;
       color: white;
       background-color: #476ade;
-    }`;
+    }
+  `;
 
   static properties = {};
 
   constructor() {
-    super()
+    super();
   }
 
   render() {
-    return html`<a href="/launchpad"><section id="root">
+    return html`<a href="/launchpad"
+      ><section id="root">
         <p>Switch persona</p>
-      </section></a>`;
+      </section></a
+    >`;
   }
 }
 
-customElements.define('persona-switcher', PersonaSwitcherComponent)
+customElements.define("persona-switcher", PersonaSwitcherComponent);
 
-let switcher = document.createElement("persona-switcher")
-document.body.appendChild(switcher)
+let switcher = document.createElement("persona-switcher");
+document.body.appendChild(switcher);
