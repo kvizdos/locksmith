@@ -340,7 +340,7 @@ export class LoginFormComponent extends LitElement {
     };
 
     Promise.race([fetch("/api/login", options), this.timeoutPromise(10000)])
-      .then((response) => this.handleAPIResponse(response))
+      .then((response) => this.handleAPIResponse(response, body))
       .catch((err) => {
         this.hasLoginFailure = true;
 
@@ -421,7 +421,7 @@ export class LoginFormComponent extends LitElement {
     return window.location.search == "?onboard=true";
   }
 
-  handleAPIResponse(response) {
+  handleAPIResponse(response, loggingBody) {
     switch (response.status) {
       case 200:
         if (response.redirected) {
@@ -444,13 +444,20 @@ export class LoginFormComponent extends LitElement {
         break;
       default:
         this.signingIn = false;
-        console.warn(
+        let hasPassword = loggingBody.password.length > 0;
+        let hasXSRF = loggingBody.xsrf.length > 0;
+        loggingBody.password = `xxx${hasPassword ? "x" : "f"}`;
+        loggingBody.xsrf = `xxx${hasXSRF ? "x" : "f"}`;
+        console.error(
           "Error logging in (HTTP request passed):",
           response.status,
           JSON.stringify(response),
         );
-        alert("Something went wrong, please try again later.");
-        break;
+        throw new Error(
+          `Failed to login, got unexpected response code: ${
+            response.status
+          } -- ${JSON.stringify(loggingBody)}`,
+        );
     }
   }
 
