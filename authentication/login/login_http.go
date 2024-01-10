@@ -38,7 +38,7 @@ type LoginHandler struct {
 	// It is set for every new session made,
 	// so once refresh is enabled, it will
 	// update the last login once refreshed.
-	LockInactivityAfter time.Duration
+	LockInactivityAfter map[string]time.Duration
 }
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -168,12 +168,17 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Confirm user is not locked from inactivity
 	var lockAccountsAfter time.Duration
-	if lh.LockInactivityAfter == 0 {
-		// If no lock period specified,
-		// keep accounts open for 100 years.
-		lockAccountsAfter = 24 * 365 * 100 * time.Hour
+	role, _ := user.GetRole()
+	if lockAfter, ok := lh.LockInactivityAfter[role.Name]; ok {
+		// Use programmer-defined role lock-out period
+		lockAccountsAfter = lockAfter
+	} else if defaultValue, ok := lh.LockInactivityAfter["default"]; ok {
+		// Use the default value if it is not found
+		lockAccountsAfter = defaultValue
 	} else {
-		lockAccountsAfter = lh.LockInactivityAfter
+		// If no Default is specified, use 100 years and throw a log message.
+		fmt.Println("WARNING: No default LockInactivityAfter period set. Using 100 years.")
+		lockAccountsAfter = 24 * 365 * 100 * time.Hour
 	}
 	if time.Now().UTC().After(user.GetLastLoginDate().Add(lockAccountsAfter)) {
 		logger.LOGGER.Log(logger.LOGIN_LOCKED, loginReq.Username, logger.GetIPFromRequest(*r))

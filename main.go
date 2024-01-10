@@ -79,11 +79,14 @@ func main() {
 
 	mux := http.NewServeMux()
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
-		AppName:                "Locksmith Demo UI",
-		UseEmailAsUsername:     true,
-		OnboardPath:            "/onboard",
-		InviteUsedRedirect:     "/app",
-		InactivityLockDuration: 15 * time.Minute, // If not set, defaults to 100 years.
+		AppName:            "Locksmith Demo UI",
+		UseEmailAsUsername: true,
+		OnboardPath:        "/onboard",
+		InviteUsedRedirect: "/app",
+		InactivityLockDuration: map[string]time.Duration{
+			"default": 15 * time.Minute, // If not set, defaults to 100 years.
+			"admin":   100 * time.Hour,
+		},
 		Styling: pages.LocksmithPageStyling{
 			LogoURL: "https://example.com/logo.webp",
 			InjectHeader: template.HTML(

@@ -67,7 +67,7 @@ func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http
 
 type AdministrationLockStatusAPI struct {
 	UserInterface       users.LocksmithUserInterface
-	LockInactivityAfter time.Duration
+	LockInactivityAfter map[string]time.Duration
 }
 
 func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -78,15 +78,6 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 	if h.UserInterface == nil {
 		h.UserInterface = users.LocksmithUser{}
-	}
-
-	var lockAccountsAfter time.Duration
-	if h.LockInactivityAfter == 0 {
-		// If no lock period specified,
-		// keep accounts open for 100 years.
-		lockAccountsAfter = 24 * 365 * 100 * time.Hour
-	} else {
-		lockAccountsAfter = h.LockInactivityAfter
 	}
 
 	authUser, _ := r.Context().Value("authUser").(users.LocksmithUser)
@@ -120,6 +111,21 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 			LocksAt   int64 `json:"locks_at"`
 		}
 
+		// Confirm user is not locked from inactivity
+		var lockAccountsAfter time.Duration
+		role, _ := user.GetRole()
+		if lockAfter, ok := h.LockInactivityAfter[role.Name]; ok {
+			// Use programmer-defined role lock-out period
+			lockAccountsAfter = lockAfter
+		} else if defaultValue, ok := h.LockInactivityAfter["default"]; ok {
+			// Use the default value if it is not found
+			lockAccountsAfter = defaultValue
+		} else {
+			// If no Default is specified, use 100 years and throw a log message.
+			fmt.Println("WARNING: No default LockInactivityAfter period set. Using 100 years.")
+			lockAccountsAfter = 24 * 365 * 100 * time.Hour
+		}
+
 		last := LastLoginInfo{
 			Locked:    time.Now().UTC().After(user.GetLastLoginDate().Add(lockAccountsAfter)),
 			LastLogin: user.GetLastLoginDate().Unix(),
@@ -146,7 +152,7 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 		case "0": // unlocked
 			setLoginTimeTo = time.Now().UTC()
 		case "1": // lock
-			setLoginTimeTo = time.Now().UTC().Add((-1 * lockAccountsAfter) - (24 * 30 * time.Hour))
+			setLoginTimeTo = time.Date(1970, 1, 1, 1, 1, 1, 0, time.UTC)
 		}
 
 		_, err := db.UpdateOne("users", map[string]interface{}{

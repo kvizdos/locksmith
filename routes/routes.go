@@ -35,9 +35,11 @@ type LocksmithRoutesOptions struct {
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
 	HIBPIntegrationOptions    hibp.HIBPSettings
-	InactivityLockDuration    time.Duration
-	MinimumPasswordLength     int
-	NewRegistrationEvent      func(user users.LocksmithUserInterface)
+	// map[roleName]time.Duration
+	// Use "default" as a catch-all
+	InactivityLockDuration map[string]time.Duration
+	MinimumPasswordLength  int
+	NewRegistrationEvent   func(user users.LocksmithUserInterface)
 }
 
 type ResetPasswordOptions struct {
@@ -52,12 +54,12 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	InitializeLaunchpad(mux, db, options)
 
 	if !options.DisableAPI {
-		var lockAccountsAfter time.Duration
+		var lockAccountsAfter map[string]time.Duration
 
-		if options.InactivityLockDuration == 0 {
+		if len(options.InactivityLockDuration) == 0 {
 			// If no lock period specified,
 			// keep accounts open for 100 years.
-			lockAccountsAfter = 24 * 365 * 100 * time.Hour
+			lockAccountsAfter["default"] = 24 * 365 * 100 * time.Hour
 		} else {
 			lockAccountsAfter = options.InactivityLockDuration
 		}
