@@ -455,7 +455,6 @@ export class LoginFormComponent extends LitElement {
   }
 
   getLoginErrorMessage() {
-    console.error(this.loginError);
     switch (this.loginError) {
       case 0:
         return "";
