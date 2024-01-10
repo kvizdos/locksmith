@@ -368,7 +368,7 @@ func TestLoginHandlerValidPassword(t *testing.T) {
 		return
 	}
 
-	if username != "kenton" {
+	if username != "c8531661-22a7-493f-b228-028842e09a05" {
 		t.Errorf("token username invalid, expected '%s' got '%s'", "kenton", username)
 	}
 

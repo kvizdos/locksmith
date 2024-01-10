@@ -271,7 +271,7 @@ func (u LocksmithUser) GeneratePasswordSession() (authentication.PasswordSession
 }
 
 func (u LocksmithUser) GenerateCookieValueFromSession(session authentication.PasswordSession) string {
-	token := fmt.Sprintf("%s:%s", session.Token, u.Username)
+	token := fmt.Sprintf("%s:%s", session.Token, u.GetID())
 	return base64.StdEncoding.EncodeToString([]byte(token))
 }
 

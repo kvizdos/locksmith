@@ -24,6 +24,7 @@ func (lh testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 	u := users.LocksmithUser{
+		ID:       "c8531661-22a7-493f-b228-028842e09a05",
 		Username: "kenton",
 	}
 

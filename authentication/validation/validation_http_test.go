@@ -225,6 +225,7 @@ func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 
 	// Inject Token..
 	u := users.LocksmithUser{
+		ID:       "c8531661-22a7-493f-b228-028842e09a05",
 		Username: "kenton",
 	}
 
@@ -278,6 +279,7 @@ func TestValidationMiddlewareValidToken(t *testing.T) {
 
 	// Inject Token..
 	u := users.LocksmithUser{
+		ID:       "c8531661-22a7-493f-b228-028842e09a05",
 		Username: "kenton",
 	}
 
@@ -361,6 +363,7 @@ func TestValidationMiddlewareValidTokenCustomUser(t *testing.T) {
 
 	// Inject Token..
 	u := users.LocksmithUser{
+		ID:       "c8531661-22a7-493f-b228-028842e09a05",
 		Username: "kenton",
 	}
 
@@ -432,6 +435,7 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 
 	// Inject Token..
 	u := users.LocksmithUser{
+		ID:       "c8531661-22a7-493f-b228-028842e09a05",
 		Username: "kenton",
 	}
 
@@ -496,6 +500,7 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 
 	// Inject Token..
 	u := users.LocksmithUser{
+		ID:       "c8531661-22a7-493f-b228-028842e09a05",
 		Username: "kenton",
 	}
 

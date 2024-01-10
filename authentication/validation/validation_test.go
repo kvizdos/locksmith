@@ -81,7 +81,7 @@ func TestValidateInvalidUsername(t *testing.T) {
 func TestValidateInvalidToken(t *testing.T) {
 	testToken := authentication.Token{
 		Token:    "invalid-token",
-		Username: "kenton",
+		Username: "c8531661-22a7-493f-b228-028842e09a05",
 	}
 
 	testDb := database.TestDatabase{
@@ -116,7 +116,7 @@ func TestValidateInvalidToken(t *testing.T) {
 func TestValidateValidToken(t *testing.T) {
 	testToken := authentication.Token{
 		Token:    "correct-token",
-		Username: "kenton",
+		Username: "c8531661-22a7-493f-b228-028842e09a05",
 	}
 
 	testDb := database.TestDatabase{
