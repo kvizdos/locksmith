@@ -238,7 +238,7 @@ export class LoginFormComponent extends LitElement {
     loginError: { type: Number },
     emailAsUsername: { type: Boolean },
     signingIn: { type: Boolean },
-    onboardingPath: { type: String },
+    pathToOnboard: { type: String },
     loginxsrf: { type: String },
     hasLoginFailure: { type: Boolean },
     loginFailureReason: { type: String },
@@ -253,7 +253,7 @@ export class LoginFormComponent extends LitElement {
     this.loginError = 0;
     this.emailAsUsername = false;
     this.signingIn = false;
-    this.onboardingPath = "";
+    this.pathToOnboard = "";
     this.loginxsrf = "";
     this.hasLoginFailure = false;
     this.loginFailureReason = "";
@@ -428,8 +428,7 @@ export class LoginFormComponent extends LitElement {
           window.location.href = response.url;
           return;
         }
-        console.log("ONboard path", this.onboardingPath);
-        window.location.href = !this.doOnboard() ? "/app" : this.onboardingPath;
+        window.location.href = !this.doOnboard() ? "/app" : this.pathToOnboard;
         break;
       case 423:
         this.loginError = 3;
