@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -15,8 +16,23 @@ import (
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/observability"
 	"github.com/kvizdos/locksmith/pages"
+	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
+	"github.com/kvizdos/locksmith/shared-memory/objects"
 	"github.com/kvizdos/locksmith/users"
 )
+
+type LockoutPolicy struct {
+	CaptchaAfter int
+	LockoutAfter int
+	ResetAfter   time.Duration
+	OnLockout    func(username string)
+}
+
+type LoginOptions struct {
+	// OnboardPath string
+	// InactivityLockDuration map[string]time.Duration
+	LockoutPolicy LockoutPolicy
+}
 
 type loginRequest struct {
 	Username string `json:"username"`
@@ -39,9 +55,60 @@ type LoginHandler struct {
 	// so once refresh is enabled, it will
 	// update the last login once refreshed.
 	LockInactivityAfter map[string]time.Duration
+	SharedMemory        sharedmemory.MemoryProvider
+	Options             LoginOptions
+}
+
+type LoginHTTPResponse struct {
+	Error           string `json:"error"`
+	CaptchaRequired bool   `json:"captcha"`
+}
+
+func (l LoginHTTPResponse) Marshal() []byte {
+	js, _ := json.Marshal(l)
+	return js
+}
+
+func formatDuration(milliseconds int) string {
+	totalSeconds := milliseconds / 1000
+
+	hours := totalSeconds / 3600
+	totalSeconds %= 3600
+	minutes := totalSeconds / 60
+	seconds := totalSeconds % 60
+
+	var parts []string
+	if hours > 0 {
+		parts = append(parts, fmt.Sprintf("%d hours", hours))
+	}
+	if minutes > 0 {
+		parts = append(parts, fmt.Sprintf("%d minutes", minutes))
+	}
+	if hours == 0 && minutes == 0 {
+		parts = append(parts, fmt.Sprintf("%d seconds", seconds))
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func (lh LoginHandler) generateInvalidUsernamePasswordError(attemptsRemaining int, timeTillUnlock int64) string {
+	if attemptsRemaining == 0 {
+		return fmt.Sprintf("Account locked for %s.", formatDuration(int(timeTillUnlock)))
+	}
+
+	if attemptsRemaining <= 3 {
+		return fmt.Sprintf("Invalid username or password. %d attempts remaining.", attemptsRemaining)
+	}
+
+	return "Invalid username or password."
 }
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	failedLoginResponse := LoginHTTPResponse{
+		Error:           "",
+		CaptchaRequired: false,
+	}
+
 	if r.Method != "POST" {
 		// Make it more of a pain to detect this login_xsrf cookie
 		// if you aren't careful paying attention.
@@ -57,9 +124,10 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &cookieXSRF)
 
 		observability.LoginFailures.WithLabelValues("bad_method").Inc()
-
+		failedLoginResponse.Error = "Incorrect HTTP method"
 		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -74,7 +142,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		observability.LoginFailures.WithLabelValues("bad_body").Inc()
+		failedLoginResponse.Error = "Bad request sent to server."
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -82,7 +152,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// handle the error
 		fmt.Println("Error reading request body:", err)
+		failedLoginResponse.Error = "Something went wrong. Please try again later."
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -97,7 +169,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !loginReq.HasRequiredFields() {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
+		failedLoginResponse.Error = "Missing required field. Please try again."
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -137,6 +211,63 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		go hibp.CheckPassword(lh.HIBP.AppName, loginReq.Password, hibpIsPwnedChan, httpClient)
 	}
 
+	// Before doing any database connections,
+	// check if CAPTCHA is:
+	// - [ ] required
+	// - [ ] present
+	// - [ ] needed on next login attempt
+	// Dig into User-Specific Rate Limiting
+	var captchaAttempts objects.UserLoginAttempt
+	if hasMemory, found := lh.SharedMemory.GetFromMemory(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r)); found {
+		captchaAttempts = hasMemory.(objects.UserLoginAttempt)
+	} else {
+		captchaAttempts = objects.NewUserLoginAttempt()
+	}
+	if captchaAttempts.Attempts >= lh.Options.LockoutPolicy.CaptchaAfter-1 {
+		fmt.Println("Notify captcha required for next attempt!")
+		failedLoginResponse.CaptchaRequired = true
+	}
+	lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r), captchaAttempts)
+
+	// Dig into User-Specific Rate Limiting
+	var loginAttempts objects.UserLoginAttempt
+	if hasMemory, found := lh.SharedMemory.GetFromMemory(objects.USER_LOGIN_ATTEMPTS, loginReq.Username); found {
+		loginAttempts = hasMemory.(objects.UserLoginAttempt)
+	} else {
+		loginAttempts = objects.NewUserLoginAttempt()
+	}
+
+	attemptsRemaining := int(math.Max(0, float64(lh.Options.LockoutPolicy.LockoutAfter-loginAttempts.Attempts)))
+
+	timeTillLockoutReset := lh.Options.LockoutPolicy.ResetAfter.Milliseconds() - (time.Now().UnixMilli() - loginAttempts.LastAttempt)
+
+	// Reset Counter if time has elapsed.
+	if timeTillLockoutReset <= 0 {
+		loginAttempts.Attempts = 0
+	}
+
+	if loginAttempts.Attempts > lh.Options.LockoutPolicy.LockoutAfter {
+		if loginAttempts.Attempts == lh.Options.LockoutPolicy.LockoutAfter {
+			go lh.Options.LockoutPolicy.OnLockout(loginReq.Username)
+			logger.LOGGER.Log(logger.LOGIN_LOCKOUT, loginReq.Username, logger.GetIPFromRequest(*r))
+		} else {
+			logger.LOGGER.Log(logger.LOGIN_LOCKED, loginReq.Username, logger.GetIPFromRequest(*r))
+		}
+
+		lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, loginReq.Username, loginAttempts)
+
+		observability.LoginFailures.WithLabelValues("locked_account").Inc()
+		w.WriteHeader(http.StatusLocked)
+
+		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
+		w.Write(failedLoginResponse.Marshal())
+		return
+	} else {
+		// Only update the last attempt time IF its not already locked out
+		loginAttempts.LastAttempt = time.Now().UTC().UnixMilli()
+		lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, loginReq.Username, loginAttempts)
+	}
+
 	dbUser, usernameExists := db.FindOne("users", map[string]interface{}{
 		"username": strings.ToLower(loginReq.Username),
 	})
@@ -144,7 +275,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !usernameExists {
 		logger.LOGGER.Log(logger.LOGIN_INVALID_USERNAME, logger.GetIPFromRequest(*r), loginReq.Username)
 		observability.LoginFailures.WithLabelValues("invalid_username").Inc()
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusUnauthorized)
+		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -160,9 +293,12 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !passwordValidated {
+		lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, user.GetID(), loginAttempts)
 		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
 		observability.LoginFailures.WithLabelValues("invalid_password").Inc()
+		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
 		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -184,6 +320,8 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.LOGGER.Log(logger.LOGIN_LOCKED, loginReq.Username, logger.GetIPFromRequest(*r))
 		observability.LoginFailures.WithLabelValues("locked_account").Inc()
 		w.WriteHeader(http.StatusLocked)
+		failedLoginResponse.Error = "Account Locked. Please contact support."
+		w.Write(failedLoginResponse.Marshal())
 		return
 	}
 
@@ -218,6 +356,10 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	// Reset Attempts
+	lh.SharedMemory.DeleteMemory(objects.USER_LOGIN_ATTEMPTS, loginReq.Username)
+	lh.SharedMemory.DeleteMemory(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r))
 
 	logger.LOGGER.Log(logger.LOGIN, loginReq.Username, logger.GetIPFromRequest(*r))
 

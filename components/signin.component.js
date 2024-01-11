@@ -236,6 +236,7 @@ export class LoginFormComponent extends LitElement {
     username: { type: String },
     password: { type: String },
     loginError: { type: Number },
+    loginErrorData: { type: Object },
     emailAsUsername: { type: Boolean },
     signingIn: { type: Boolean },
     pathToOnboard: { type: String },
@@ -251,6 +252,7 @@ export class LoginFormComponent extends LitElement {
     this.username = "";
     this.password = "";
     this.loginError = 0;
+    this.loginErrorData = {};
     this.emailAsUsername = false;
     this.signingIn = false;
     this.pathToOnboard = "";
@@ -421,7 +423,11 @@ export class LoginFormComponent extends LitElement {
     return window.location.search == "?onboard=true";
   }
 
-  handleAPIResponse(response, loggingBody) {
+  async handleAPIResponse(response, loggingBody) {
+    if (response.status != 200) {
+      const data = await response.json();
+      this.loginError = data["error"];
+    }
     switch (response.status) {
       case 200:
         if (response.redirected) {
@@ -431,15 +437,8 @@ export class LoginFormComponent extends LitElement {
         window.location.href = !this.doOnboard() ? "/app" : this.pathToOnboard;
         break;
       case 423:
-        this.loginError = 3;
-        this.signingIn = false;
-        break;
       case 404:
-        this.loginError = 1;
-        this.signingIn = false;
-        break;
       case 401:
-        this.loginError = 2;
         this.signingIn = false;
         break;
       default:
@@ -462,14 +461,7 @@ export class LoginFormComponent extends LitElement {
   }
 
   getLoginErrorMessage() {
-    switch (this.loginError) {
-      case 0:
-        return "";
-      case 3:
-        return "Account locked. Please contact support.";
-      default:
-        return "Invalid username or password.";
-    }
+    return this.loginError;
   }
 
   render() {
@@ -523,7 +515,9 @@ export class LoginFormComponent extends LitElement {
               >Forgot Password</a
             >
 
-            <p id="error">${this.getLoginErrorMessage()}</p>
+            ${this.loginError !== 0
+              ? html`<p id="error">${this.getLoginErrorMessage()}</p>`
+              : ""}
           `
         : html` <div id="loginFailure">
             <p>

@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
+	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
@@ -83,6 +84,16 @@ func main() {
 		UseEmailAsUsername: true,
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
+		LoginSettings: &login.LoginOptions{
+			LockoutPolicy: login.LockoutPolicy{
+				CaptchaAfter: 2,
+				LockoutAfter: 10,
+				ResetAfter:   time.Duration(24 * time.Hour),
+				OnLockout: func(username string) {
+					fmt.Println(username, "locked out")
+				},
+			},
+		},
 		InactivityLockDuration: map[string]time.Duration{
 			"default": 15 * time.Minute, // If not set, defaults to 100 years.
 			"admin":   100 * time.Hour,

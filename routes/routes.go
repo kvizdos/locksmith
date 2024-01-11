@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/kvizdos/locksmith/httpHelpers"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
+	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
+	"github.com/kvizdos/locksmith/shared-memory/providers"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -40,6 +43,8 @@ type LocksmithRoutesOptions struct {
 	InactivityLockDuration map[string]time.Duration
 	MinimumPasswordLength  int
 	NewRegistrationEvent   func(user users.LocksmithUserInterface)
+	SharedMemory           sharedmemory.MemoryProvider
+	LoginSettings          *login.LoginOptions
 }
 
 type ResetPasswordOptions struct {
@@ -49,6 +54,25 @@ type ResetPasswordOptions struct {
 func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor, options LocksmithRoutesOptions) {
 	if !options.DisableComponents {
 		mux.HandleFunc("/components/", components.ServeComponents)
+	}
+
+	useSharedMemory := options.SharedMemory
+	if useSharedMemory == nil {
+		useSharedMemory = providers.NewRamSharedMemoryProvider()
+	}
+
+	useLoginSettings := options.LoginSettings
+	if useLoginSettings == nil {
+		useLoginSettings = &login.LoginOptions{
+			LockoutPolicy: login.LockoutPolicy{
+				CaptchaAfter: 3,
+				LockoutAfter: 10,
+				ResetAfter:   24 * time.Hour,
+				OnLockout: func(username string) {
+					fmt.Println(username, "locked due to too many incorrect passwords")
+				},
+			},
+		}
 	}
 
 	InitializeLaunchpad(mux, db, options)
@@ -78,6 +102,8 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
 			HIBP:                options.HIBPIntegrationOptions,
 			LockInactivityAfter: lockAccountsAfter,
+			Options:             *useLoginSettings,
+			SharedMemory:        useSharedMemory,
 		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 

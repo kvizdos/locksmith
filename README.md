@@ -6,8 +6,8 @@ Key Features:
 
 - [x] Intuitive Web Interface: Easily integrate a pre-built web interface for registration and logins. Alternatively, utilize only the Locksmith Authentication endpoints with your custom UI.
 - [x] Token Storage: Authentication tokens are securely stored as cookies for enhanced security.
+- [ ] Smart Captchas: Require CAPTCHA's after 2 (variable) failed login attempts, and then Lock the user account after 5.
 - [ ] Seamless Integration of Stateless XSRF Protection: Enhance the security of non-GET/HEAD requests across your web services by leveraging stateless XSRF tokens for an additional layer of validation.
-- [x] Dedicated Login Page XSRF Security: Boost your login security with XSRF tokens that are uniquely generated for each login session, tying together the user's anonymous session ID and a preset expiration time for heightened protection.
 - [ ] Advanced "Remember Me" Authentication: Utilize sophisticated browser fingerprinting techniques to offer users a convenient "Remember Me" feature, ensuring persistent authentication while maintaining security
 - [ ] Automated Secure Token Renewal: Implement auto-refreshing of authentication tokens that rely on browser fingerprinting to continuously affirm that users are who they claim to be.
 - [x] Magic Tokens with Scoped Permissions: Grant users access to specific areas without requiring login using Magic Access Codes (MACs). Each token has a Time-To-Live (TTL) ensuring limited access duration. Ideal for password reset links or any notification-based URLs, allowing users to seamlessly interact with the app while maintaining limited permissions.
@@ -15,7 +15,8 @@ Key Features:
 - [x] Admin User Management: A comprehensive, pre-built admin panel that allows for viewing and removal of users with ease (or BYO and use our endpoints!).
 - [x] Role-based Access: Define user roles, create custom roles, and assign administrative privileges as required.
 - [x] User Invitation System: Simplify the onboarding process with a streamlined user invitation mechanism.
-- [ ] Minimum Character Length enforcement for Passwords: In accordance to NIST guidelines, password length is more important than complexity. Therefor, this package does not include out-of-the-box tooling to enforce password complexity. - [ ] HaveIBeenPwned Integration: Instead of strict password complexity requirements, HIBP's public API has been integrated to verify user passwords have not been found in historical breaches. This feature comes in two modes: a "strict" mode, which forces users to use a different password, and "loose", which will warn users and request that they change their password, but not mandate a change.
+- [ ] Minimum Character Length enforcement for Passwords: In accordance to NIST guidelines, password length is more important than complexity. Therefor, this package does not include out-of-the-box tooling to enforce password complexity.
+- [ ] HaveIBeenPwned Integration: Instead of strict password complexity requirements, HIBP's public API has been integrated to verify user passwords have not been found in historical breaches. This feature comes in two modes: a "strict" mode, which forces users to use a different password, and "loose", which will warn users and request that they change their password, but not mandate a change.
 - [ ] Continuous Password Security confirmations: HIBP + Length requirements are specified at registration, and to support changes in HIBP lists and length requirements are continously monitored upon each login.
 - [ ] Effective Brute Force Defense Mechanism: Deploy a robust user lockout protocol to effectively thwart and mitigate the impact of brute force attacks on your platform.
 - [ ] Enhanced Multi-Factor Authentication Options: Augment your security measures with multifactor authentication methods, including TOTP, WebAuthn, and PassKeys, to safeguard user identities.
