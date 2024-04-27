@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/hibp"
+	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/observability"
@@ -31,7 +32,8 @@ type LockoutPolicy struct {
 type LoginOptions struct {
 	// OnboardPath string
 	// InactivityLockDuration map[string]time.Duration
-	LockoutPolicy LockoutPolicy
+	LockoutPolicy   LockoutPolicy
+	CaptchaProvider captchaproviders.CAPTCHAProvider
 }
 
 type loginRequest struct {
@@ -227,7 +229,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Notify captcha required for next attempt!")
 		failedLoginResponse.CaptchaRequired = true
 	}
-	lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r), captchaAttempts)
 
 	// Dig into User-Specific Rate Limiting
 	var loginAttempts objects.UserLoginAttempt
@@ -254,7 +255,8 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			logger.LOGGER.Log(logger.LOGIN_LOCKED, loginReq.Username, logger.GetIPFromRequest(*r))
 		}
 
-		lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, loginReq.Username, loginAttempts)
+		go lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, loginReq.Username, loginAttempts)
+		go lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r), captchaAttempts)
 
 		observability.LoginFailures.WithLabelValues("locked_account").Inc()
 		w.WriteHeader(http.StatusLocked)
@@ -265,7 +267,8 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Only update the last attempt time IF its not already locked out
 		loginAttempts.LastAttempt = time.Now().UTC().UnixMilli()
-		lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, loginReq.Username, loginAttempts)
+		go lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, loginReq.Username, loginAttempts)
+		go lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r), captchaAttempts)
 	}
 
 	dbUser, usernameExists := db.FindOne("users", map[string]interface{}{
@@ -293,7 +296,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !passwordValidated {
-		lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, user.GetID(), loginAttempts)
+		go lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, user.GetID(), loginAttempts)
+		go lh.SharedMemory.Increment(objects.USER_LOGIN_ATTEMPTS, logger.GetIPFromRequest(*r), captchaAttempts)
+
 		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
 		observability.LoginFailures.WithLabelValues("invalid_password").Inc()
 		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
@@ -383,6 +388,7 @@ type LoginPageHandler struct {
 	Styling                   pages.LocksmithPageStyling
 	EmailAsUsername           bool
 	OnboardingPath            string
+	CaptchaProvider           captchaproviders.CAPTCHAProvider
 }
 
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -407,6 +413,7 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		EmailAsUsername bool
 		OnboardingPath  string
 		LoginXSRF       string
+		CaptchaProvider captchaproviders.CAPTCHAProvider
 	}
 
 	data := PageData{
@@ -415,6 +422,7 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		EmailAsUsername: lr.EmailAsUsername,
 		OnboardingPath:  lr.OnboardingPath,
 		LoginXSRF:       loginXSRF,
+		CaptchaProvider: lr.CaptchaProvider,
 	}
 
 	if data.Styling.SubmitColor == "" {

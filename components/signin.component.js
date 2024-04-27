@@ -511,6 +511,9 @@ export class LoginFormComponent extends LitElement {
               .signInText=${this.signingIn ? "Signing In" : "Sign In"}
               @click=${this.signin}
             ></sign-in>
+
+            <captcha-component></captcha-component>
+
             <a style="--color: ${this.backgroundColor};" href="/reset-password"
               >Forgot Password</a
             >

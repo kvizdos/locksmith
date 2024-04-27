@@ -12,6 +12,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
+	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/httpHelpers"
@@ -74,6 +75,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			},
 		}
 	}
+	useLoginSettings.CaptchaProvider = captchaproviders.UseProvider
 
 	InitializeLaunchpad(mux, db, options)
 
@@ -146,6 +148,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 				Styling:         options.Styling,
 				EmailAsUsername: options.UseEmailAsUsername,
 				OnboardingPath:  options.OnboardPath,
+				CaptchaProvider: captchaproviders.UseProvider,
 			},
 		})
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{

@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"net/http"
 
+	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/launchpad"
 )
 
@@ -50,6 +51,10 @@ func ServeComponents(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+	case "captcha.component.js":
+		w.Header().Set("Content-Type", "application/javascript")
+		captchaproviders.UseProvider.RenderCaptchaComponentCode(w, r)
+		return
 	default:
 		http.NotFound(w, r)
 	}

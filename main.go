@@ -79,6 +79,10 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	// captchaproviders.UseProvider = providers.TurnstileCaptcha{
+	// 	SiteKey:   "xxx",
+	// 	SecretKey: "yyy",
+	// }
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Locksmith Demo UI",
 		UseEmailAsUsername: true,
