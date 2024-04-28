@@ -14,10 +14,9 @@ import (
 )
 
 func TestSecureEndpointHTTPMiddlewareValidationFailsWithBadMagicToken(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -71,10 +70,9 @@ func TestSecureEndpointHTTPMiddlewareValidationFailsWithBadMagicToken(t *testing
 }
 
 func TestSecureEndpointHTTPMiddlewareValidationFailsWithInvalidatedMagicToken(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -124,10 +122,9 @@ func TestSecureEndpointHTTPMiddlewareValidationFailsWithInvalidatedMagicToken(t 
 }
 
 func TestSecureEndpointHTTPMiddlewareValidationFailsWithValidMagicTokenButNoMatchingPermissions(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -177,10 +174,9 @@ func TestSecureEndpointHTTPMiddlewareValidationFailsWithValidMagicTokenButNoMatc
 }
 
 func TestSecureEndpointHTTPMiddlewareValidationSucceedsWithMagicToken(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 

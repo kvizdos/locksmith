@@ -8,10 +8,13 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/entitlements"
 	"github.com/kvizdos/locksmith/roles"
+	"github.com/kvizdos/locksmith/tenant"
 )
 
 type LocksmithUserInterface interface {
@@ -19,6 +22,24 @@ type LocksmithUserInterface interface {
 	ValidateSessionToken(token string, db database.DatabaseAccessor) bool
 	GeneratePasswordSession() (authentication.PasswordSession, error)
 	SavePasswordSession(authentication.PasswordSession, database.DatabaseAccessor) error
+
+	GetTenantID() uuid.UUID
+
+	// Under regular use, this variable
+	// is only accessible after a Secure Middleware
+	// call that has a Tenant structure attached.
+	//
+	// It utilizes internalTenant from LocksmithUser.
+	GetTenant() tenant.Tenant
+	SetTenant(tenant.Tenant)
+
+	// Unlike role, entitlements should dictate specific
+	// *features* that are paywalled / not accessible
+	// by default.
+	//
+	// This is a list of Entitlement Names
+	HasEntitlement(entitlementName string) (entitlements.Entitlement, error)
+	GetAttachedEntitlements() []string
 
 	GetLastLoginDate() time.Time
 
@@ -101,6 +122,7 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 
 type LocksmithUser struct {
 	ID               string                          `bson:"id"`
+	TenantID         uuid.UUID                       `json:"tenantID,omitempty"`
 	Username         string                          `json:"username" bson:"username"`
 	Email            string                          `json:"email" bson:"email"`
 	PasswordInfo     authentication.PasswordInfo     `json:"-" bson:"password"`
@@ -112,6 +134,39 @@ type LocksmithUser struct {
 	ImMagic          bool                            `json:"-" bson:"-"`
 	ImRegular        bool                            `json:"-" bson:"-"`
 	LastLogin        time.Time                       `json:"-" bson:"-"`
+
+	// List of entitlement names
+	Entitlements []string `json:"-"`
+
+	// Never set internalTenant. Managed by Secure Middleware.
+	internalTenant tenant.Tenant `json:"-" bson:"-"`
+}
+
+func (u LocksmithUser) GetAttachedEntitlements() []string {
+	return u.Entitlements
+}
+
+func (u LocksmithUser) HasEntitlement(entitlementName string) (entitlements.Entitlement, error) {
+	for _, name := range u.Entitlements {
+		if name == entitlementName {
+			return entitlements.GetEntitlement(name), nil
+		}
+	}
+
+	// If the USER doesn't have the entitlement,
+	// fall back to trying the tenant
+	if u.internalTenant != nil {
+		return u.GetTenant().HasEntitlement(entitlementName)
+	}
+
+	return entitlements.Entitlement{}, fmt.Errorf("entitlement not attached")
+}
+
+func (u LocksmithUser) GetTenant() tenant.Tenant {
+	return u.internalTenant
+}
+func (u LocksmithUser) SetTenant(tenant tenant.Tenant) {
+	u.internalTenant = tenant
 }
 
 func (u LocksmithUser) GetLastLoginDate() time.Time {
@@ -154,6 +209,10 @@ func (u LocksmithUser) GetPasswordSessions() []authentication.PasswordSession {
 	return u.PasswordSessions
 }
 
+func (u LocksmithUser) GetTenantID() uuid.UUID {
+	return u.TenantID
+}
+
 func (u LocksmithUser) ToMap() map[string]interface{} {
 	out := make(map[string]interface{})
 
@@ -165,6 +224,11 @@ func (u LocksmithUser) ToMap() map[string]interface{} {
 	out["sessions"] = u.PasswordSessions.ToMap()
 	out["role"] = u.Role
 	out["magic"] = u.Magics.ToMap()
+	out["entitlements"] = u.Entitlements
+
+	if u.TenantID.String() != "" {
+		out["tenant"] = u.TenantID.String()
+	}
 
 	if u.GetLastLoginDate().IsZero() {
 		out["last_login"] = time.Now().UTC().Unix()
@@ -198,6 +262,16 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 				sessions = append(sessions, session)
 			}
 		}
+	}
+
+	var tenantID uuid.UUID
+	if tenantString, exists := user["tenant"].(string); exists {
+		tenantID = uuid.MustParse(tenantString)
+	}
+
+	entitlements := []string{}
+	if ents, exists := user["entitlements"].([]string); exists {
+		entitlements = ents
 	}
 
 	var passinfo authentication.PasswordInfo
@@ -235,6 +309,8 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		PasswordSessions: sessions,
 		Magics:           magics,
 		LastLogin:        loginTime,
+		TenantID:         tenantID,
+		Entitlements:     entitlements,
 	}
 }
 

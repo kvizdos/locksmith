@@ -19,14 +19,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 		"user": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -36,7 +34,7 @@ func TestMain(m *testing.M) {
 
 	m.Run()
 
-	roles.AVAILABLE_ROLES = map[string][]string{}
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{}
 }
 
 func TestLoginHandlerMissingBodyParams(t *testing.T) {
@@ -208,7 +206,7 @@ func TestLoginHandlerInvalidUsername(t *testing.T) {
 	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusNotFound {
+	if status := rr.Code; status != http.StatusUnauthorized {
 		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
 	}
 }

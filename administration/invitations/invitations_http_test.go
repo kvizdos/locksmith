@@ -13,16 +13,16 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"user.invite",
+			BackendPermissions: []string{"user.invite"},
 		},
 		"user": {},
 	}
 
 	m.Run()
 
-	roles.AVAILABLE_ROLES = map[string][]string{}
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{}
 }
 
 func TestInviteUserHTTPInvalidMethod(t *testing.T) {

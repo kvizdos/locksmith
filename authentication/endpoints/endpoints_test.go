@@ -10,6 +10,7 @@ import (
 
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/entitlements"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -76,7 +77,7 @@ func TestSecureEndpointHTTPMiddlewareInvalidToken(t *testing.T) {
 }
 
 func TestSecureEndpointHTTPMiddlewareInvalidPermissions(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"user": {},
 	}
 	testDb := database.TestDatabase{
@@ -124,10 +125,9 @@ func TestSecureEndpointHTTPMiddlewareInvalidPermissions(t *testing.T) {
 }
 
 func TestSecureEndpointHTTPMiddlewareValidPermissions(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 	testDb := database.TestDatabase{
@@ -176,12 +176,12 @@ func TestSecureEndpointHTTPMiddlewareValidPermissions(t *testing.T) {
 }
 
 func TestSecureEndpointHTTPMiddlewareFailsMultipleRequiredPermissions(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
+
 	testDb := database.TestDatabase{
 		Tables: map[string]map[string]interface{}{
 			"users": {
@@ -228,10 +228,9 @@ func TestSecureEndpointHTTPMiddlewareFailsMultipleRequiredPermissions(t *testing
 }
 
 func TestSecureEndpointHTTPMiddlewareSecondaryValidationFails(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 	testDb := database.TestDatabase{
@@ -282,10 +281,9 @@ func TestSecureEndpointHTTPMiddlewareSecondaryValidationFails(t *testing.T) {
 }
 
 func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceeds(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 	testDb := database.TestDatabase{
@@ -361,10 +359,9 @@ func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[str
 }
 
 func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceedsWithCustomUser(t *testing.T) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 	testDb := database.TestDatabase{
@@ -413,6 +410,63 @@ func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceedsWithCustomUser(t
 
 			return 200
 		},
+	}
+	middleware := SecureEndpointHTTPMiddleware(testHandler{}, testDb, opts)
+	middleware.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
+	}
+}
+
+func TestSecureEndpointHTTPMiddlewareRequiresEntitlementUserAttached(t *testing.T) {
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
+		"admin": {
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
+		},
+	}
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":           "c8531661-22a7-493f-b228-028842e09a05",
+					"username":     "kenton",
+					"email":        "email@email.com",
+					"sessions":     []interface{}{},
+					"role":         "admin",
+					"entitlements": []string{"test_entitlement"},
+				},
+			},
+		},
+	}
+
+	token := InjectTokenToDatabase(testDb)
+
+	req, err := http.NewRequest("POST", "/api/example", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Inject cookie..
+	cookie := http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  time.Now(),
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+	}
+	req.AddCookie(&cookie)
+
+	rr := httptest.NewRecorder()
+
+	entitlements.AddEntitlement(entitlements.Entitlement{
+		Name:             "test_entitlement",
+		AddedPermissions: map[string][]string{},
+	})
+
+	opts := EndpointSecurityOptions{
+		RequiresEntitlement: "test_entitlement",
 	}
 	middleware := SecureEndpointHTTPMiddleware(testHandler{}, testDb, opts)
 	middleware.ServeHTTP(rr, req)

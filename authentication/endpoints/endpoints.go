@@ -15,6 +15,7 @@ import (
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/ratelimits"
+	"github.com/kvizdos/locksmith/tenant"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -58,6 +59,9 @@ type EndpointSecurityOptions struct {
 	// Handlers can check permissions by themselves after this point
 	// for any conditional requirements.
 	MinimalPermissions []string
+	// If an Entitlement is necessary, specify
+	// it here.
+	RequiresEntitlement string
 	// Eventually, add:
 	// AllowAPITokens bool
 	// If enabled, the API Key Management system will validate the permissions of the token
@@ -66,6 +70,9 @@ type EndpointSecurityOptions struct {
 	// context user into some other LocksmithUserInterface,
 	// type it ehre.
 	CustomUser users.LocksmithUserInterface
+	// Define a custom Tenant interface
+	// if you plan on being multi-tenant.
+	TenantInterface tenant.Tenant
 	// After initial confirmation of a user is confirmed,
 	// you can use this function to validate endpoint-specific
 	// validations.
@@ -201,13 +208,35 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			http.SetCookie(w, &cookie)
 		}
 
-		if len(secureOptions.MinimalPermissions) > 0 {
-			userRole, err := user.GetRole()
-
+		if secureOptions.TenantInterface != nil {
+			tenantInfo, err := tenant.GetTenantFromID(user.GetTenantID(), db, secureOptions.TenantInterface)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Println("Failed to get Tenant ID!", user.GetTenantID(), err)
+			} else {
+				user.SetTenant(tenantInfo)
+			}
+		}
+
+		addedEntitlementPermissions := []string{}
+		userRole, err := user.GetRole()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if secureOptions.RequiresEntitlement != "" {
+			entitlement, err := user.HasEntitlement(secureOptions.RequiresEntitlement)
+			if err != nil {
+				// user does not have entitlement, reject.
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
+			addedEntitlementPermissions = entitlement.AddedPermissions[userRole.Name]
+		}
+
+		if len(secureOptions.MinimalPermissions) > 0 {
+			// make sure added entitlement permissions are attached!
+			userRole.Permissions = append(userRole.Permissions, addedEntitlementPermissions...)
 
 			for _, permission := range secureOptions.MinimalPermissions {
 				if !userRole.HasPermission(permission) {

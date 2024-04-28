@@ -19,6 +19,7 @@ import (
 	"github.com/kvizdos/locksmith/pages"
 	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
 	"github.com/kvizdos/locksmith/shared-memory/objects"
+	"github.com/kvizdos/locksmith/shared-memory/providers"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -106,6 +107,10 @@ func (lh LoginHandler) generateInvalidUsernamePasswordError(attemptsRemaining in
 }
 
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if lh.SharedMemory == nil {
+		lh.SharedMemory = providers.NewRamSharedMemoryProvider()
+	}
+
 	failedLoginResponse := LoginHTTPResponse{
 		Error:           "",
 		CaptchaRequired: false,
@@ -281,6 +286,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
 		w.Write(failedLoginResponse.Marshal())
+		fmt.Println("Right here??", http.StatusUnauthorized)
 		return
 	}
 

@@ -12,14 +12,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	roles.AVAILABLE_ROLES = map[string][]string{
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 		"user": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -27,7 +25,7 @@ func TestMain(m *testing.M) {
 	magic.MagicSigningPackage = &sp
 	m.Run()
 
-	roles.AVAILABLE_ROLES = map[string][]string{}
+	roles.AVAILABLE_ROLES = map[string]roles.RoleInfo{}
 }
 
 func TestCleanupMagicsFromUser(t *testing.T) {

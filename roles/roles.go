@@ -2,7 +2,12 @@ package roles
 
 import "fmt"
 
-var AVAILABLE_ROLES map[string][]string
+type RoleInfo struct {
+	FrontendPermissions []string
+	BackendPermissions  []string
+}
+
+var AVAILABLE_ROLES map[string]RoleInfo
 
 // Define required admin role for Locksmith to work
 func init() {
@@ -30,8 +35,9 @@ func init() {
 }
 
 type Role struct {
-	Name        string   `json:"name" bson:"name"`
-	Permissions []string `json:"permissions" bson:"permissions"`
+	Name                string   `json:"name" bson:"name"`
+	Permissions         []string `json:"permissions" bson:"permissions"`
+	FrontendPermissions []string `json:"frontend" bson:"frontend"`
 }
 
 func (r Role) HasPermission(permission string) bool {
@@ -43,11 +49,23 @@ func (r Role) HasPermission(permission string) bool {
 	return false
 }
 
+func (r Role) HasFrontendPermission(permission string) bool {
+	for _, perm := range r.FrontendPermissions {
+		if perm == permission {
+			return true
+		}
+	}
+	return false
+}
+
 func AddRole(role Role) {
 	if AVAILABLE_ROLES == nil {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	}
-	AVAILABLE_ROLES[role.Name] = role.Permissions
+	AVAILABLE_ROLES[role.Name] = RoleInfo{
+		FrontendPermissions: role.FrontendPermissions,
+		BackendPermissions:  role.Permissions,
+	}
 }
 
 func RoleExists(roleName string) bool {
@@ -63,8 +81,9 @@ func GetRole(roleName string) (Role, error) {
 	}
 
 	return Role{
-		Name:        roleName,
-		Permissions: perms,
+		Name:                roleName,
+		Permissions:         perms.BackendPermissions,
+		FrontendPermissions: perms.FrontendPermissions,
 	}, nil
 }
 
@@ -87,7 +106,35 @@ func AddPermissionsToRole(roleName string, permissions []string) error {
 		newPerms = append(newPerms, permission)
 	}
 
-	AVAILABLE_ROLES[roleName] = newPerms
+	AVAILABLE_ROLES[roleName] = RoleInfo{
+		FrontendPermissions: role.FrontendPermissions,
+		BackendPermissions:  newPerms,
+	}
+
+	return nil
+}
+
+func AddFrontendPermissionsToRole(roleName string, permissions []string) error {
+	role, err := GetRole(roleName)
+
+	if err != nil {
+		return err
+	}
+
+	newPerms := role.FrontendPermissions
+
+	for _, permission := range permissions {
+		if role.HasFrontendPermission(permission) {
+			continue
+		}
+
+		newPerms = append(newPerms, permission)
+	}
+
+	AVAILABLE_ROLES[roleName] = RoleInfo{
+		FrontendPermissions: newPerms,
+		BackendPermissions:  role.Permissions,
+	}
 
 	return nil
 }
@@ -99,5 +146,15 @@ func GetPermissionsForRole(roleName string) ([]string, error) {
 		return []string{}, fmt.Errorf("invalid role name")
 	}
 
-	return permissions, nil
+	return permissions.BackendPermissions, nil
+}
+
+func GetFrontendPermissionsForRole(roleName string) ([]string, error) {
+	permissions, exists := AVAILABLE_ROLES[roleName]
+
+	if !exists {
+		return []string{}, fmt.Errorf("invalid role name")
+	}
+
+	return permissions.FrontendPermissions, nil
 }

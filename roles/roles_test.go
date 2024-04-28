@@ -1,6 +1,8 @@
 package roles
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestRoleExistsDoesNot(t *testing.T) {
 	exists := RoleExists("test")
@@ -11,10 +13,9 @@ func TestRoleExistsDoesNot(t *testing.T) {
 }
 
 func TestRoleExistsDoes(t *testing.T) {
-	AVAILABLE_ROLES = map[string][]string{
+	AVAILABLE_ROLES = map[string]RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -25,7 +26,7 @@ func TestRoleExistsDoes(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
 
@@ -79,20 +80,19 @@ func TestAddRole(t *testing.T) {
 		return
 	}
 
-	if len(permissions) != 3 {
-		t.Errorf("could not find permissions, found %d expected %d", 2, len(permissions))
+	if len(permissions.BackendPermissions) != 3 {
+		t.Errorf("could not find permissions, found %d expected %d", 2, len(permissions.BackendPermissions))
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
 
 func TestGetRoleInvalidRole(t *testing.T) {
-	AVAILABLE_ROLES = map[string][]string{
+	AVAILABLE_ROLES = map[string]RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -108,15 +108,14 @@ func TestGetRoleInvalidRole(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
 
 func TestGetRole(t *testing.T) {
-	AVAILABLE_ROLES = map[string][]string{
+	AVAILABLE_ROLES = map[string]RoleInfo{
 		"admin": {
-			"view.admin",
-			"user.delete.self",
+			BackendPermissions: []string{"view.admin", "user.delete.self"},
 		},
 	}
 
@@ -136,14 +135,14 @@ func TestGetRole(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
 
 func TestAddPermissionToRoleFailsIfInvalidRole(t *testing.T) {
-	AVAILABLE_ROLES = map[string][]string{
-		"admin": {
-			"view.admin",
+	AVAILABLE_ROLES = map[string]RoleInfo{
+		"admin": RoleInfo{
+			BackendPermissions: []string{"view.admin"},
 		},
 	}
 
@@ -159,14 +158,14 @@ func TestAddPermissionToRoleFailsIfInvalidRole(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
 
 func TestAddPermissionToRoleContinuesIfPermissionExists(t *testing.T) {
-	AVAILABLE_ROLES = map[string][]string{
-		"admin": {
-			"view.admin",
+	AVAILABLE_ROLES = map[string]RoleInfo{
+		"admin": RoleInfo{
+			BackendPermissions: []string{"view.admin"},
 		},
 	}
 
@@ -179,19 +178,19 @@ func TestAddPermissionToRoleContinuesIfPermissionExists(t *testing.T) {
 
 	perms := AVAILABLE_ROLES["admin"]
 
-	if len(perms) != 3 {
-		t.Errorf("found invalid amount of permissions, found %d expected %d", len(perms), 3)
+	if len(perms.BackendPermissions) != 3 {
+		t.Errorf("found invalid amount of permissions, found %d expected %d", len(perms.BackendPermissions), 3)
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
 
 func TestAddPermissionToRole(t *testing.T) {
-	AVAILABLE_ROLES = map[string][]string{
-		"admin": {
-			"view.admin",
+	AVAILABLE_ROLES = map[string]RoleInfo{
+		"admin": RoleInfo{
+			BackendPermissions: []string{"view.admin"},
 		},
 	}
 
@@ -204,11 +203,11 @@ func TestAddPermissionToRole(t *testing.T) {
 
 	perms := AVAILABLE_ROLES["admin"]
 
-	if len(perms) != 3 {
-		t.Errorf("found invalid amount of permissions, found %d expected %d", len(perms), 3)
+	if len(perms.BackendPermissions) != 3 {
+		t.Errorf("found invalid amount of permissions, found %d expected %d", len(perms.BackendPermissions), 3)
 	}
 
 	t.Cleanup(func() {
-		AVAILABLE_ROLES = map[string][]string{}
+		AVAILABLE_ROLES = map[string]RoleInfo{}
 	})
 }
