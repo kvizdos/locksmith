@@ -19,6 +19,7 @@ import (
 	"github.com/kvizdos/locksmith/pages"
 	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
 	"github.com/kvizdos/locksmith/shared-memory/objects"
+	"github.com/kvizdos/locksmith/shared-memory/providers"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -175,6 +176,10 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(failedLoginResponse.Marshal())
 		return
+	}
+
+	if lh.SharedMemory == nil {
+		lh.SharedMemory = providers.NewRamSharedMemoryProvider()
 	}
 
 	// if loginReq.XSRF != loginXSRFCookie.Value {

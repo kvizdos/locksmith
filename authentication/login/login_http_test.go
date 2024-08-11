@@ -208,8 +208,8 @@ func TestLoginHandlerInvalidUsername(t *testing.T) {
 	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
+	if status := rr.Code; status != http.StatusUnauthorized {
+		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusUnauthorized)
 	}
 }
 
