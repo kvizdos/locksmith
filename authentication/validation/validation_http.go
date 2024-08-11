@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
@@ -14,32 +15,58 @@ type MagicValidation struct {
 	Prioritize bool
 }
 
-func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor, magic MagicValidation, userType ...users.LocksmithUserInterface) (users.LocksmithUserInterface, error) {
-	// Validate token
-	token, err := r.Cookie("token")
+type HTTPValidationOptions struct {
+	UserType       users.LocksmithUserInterface
+	ValidationKeys ValidationSigningKeys
+	Claims         jwt.Claims
+}
 
+func ValidateHTTPUserToken(r *http.Request, db database.DatabaseAccessor, magic MagicValidation, opts HTTPValidationOptions) (users.LocksmithUserInterface, error) {
 	var userInterface users.LocksmithUserInterface
 
-	if len(userType) > 0 {
-		userInterface = userType[0]
+	if opts.UserType != nil {
+		userInterface = opts.UserType
 	} else {
 		userInterface = users.LocksmithUser{}
 	}
 
-	var parsedToken authentication.Token
-	if magic.Token == "" || (err == nil && !magic.Prioritize) {
-		if err != nil {
-			return userInterface, fmt.Errorf("no cookie present")
-		}
+	// Validate token
+	token, tokenErr := r.Cookie("token")
+	profileToken, profileErr := r.Cookie("profile")
 
-		parsedToken, err = authentication.ParseToken(token.Value)
-
-		if err != nil {
-			return userInterface, fmt.Errorf("token could not be parsed")
-		}
+	if tokenErr != nil || profileErr != nil {
+		return userInterface, fmt.Errorf("missing cookies")
 	}
 
-	user, validated, err := ValidateToken(parsedToken, db, magic.Token, userInterface)
+	var claims jwt.Claims
+
+	if opts.Claims != nil {
+		claims = opts.Claims
+	} else {
+		claims = &users.BaseValidationClaims{}
+	}
+
+	// if magic.Token == "" || (err == nil && !magic.Prioritize) {
+	// 	if err != nil {
+	// 		return userInterface, fmt.Errorf("no cookie present")
+	// 	}
+
+	// 	parsedToken, err = authentication.ParseToken(token.Value)
+
+	// 	if err != nil {
+	// 		return userInterface, fmt.Errorf("token could not be parsed")
+	// 	}
+	// }
+
+	user, validated, err := ValidateToken(authentication.Token{
+		Token:        token.Value,
+		ProfileToken: profileToken.Value,
+		Username:     "",
+	}, db, magic.Token, ValidationOptions{
+		SigningKeys: opts.ValidationKeys,
+		UserType:    userInterface,
+		Claims:      claims,
+	})
 
 	if err != nil {
 		return userInterface, fmt.Errorf("token could not be validated")

@@ -2,6 +2,7 @@ package launchpad
 
 import (
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/tenant"
 )
 
 type LocksmithLaunchpadUserOptions struct {
@@ -10,7 +11,11 @@ type LocksmithLaunchpadUserOptions struct {
 	// Email to inherit
 	Email string
 	// Role that user will obtain
-	Role string
+	Roles []string
+	// Attached Entitlements
+	Entitlements []string
+	// Tenant ID attached
+	TenantID string
 	// Redirect Path on sucecssful login
 	Redirect string
 	// Specify custom params (useful for using Launchpad w/ Custom Users)
@@ -21,6 +26,8 @@ type LocksmithLaunchpadOptions struct {
 	// Is the Launchpad enabled? This will be
 	// ignored if the build tag is not present.
 	Enabled bool
+
+	Tenants []tenant.Tenant
 	// Caption to show under title in
 	// Web Launchpad UI
 	Caption string

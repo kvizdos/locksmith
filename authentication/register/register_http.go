@@ -39,13 +39,14 @@ func (r registrationRequest) HasRequiredFields() bool {
 type RegisterCustomUserFunc func(users.LocksmithUser, database.DatabaseAccessor) users.LocksmithUserInterface
 
 type RegistrationHandler struct {
-	DefaultRoleName           string
-	DisablePublicRegistration bool
-	ConfigureCustomUser       RegisterCustomUserFunc
-	EmailAsUsername           bool
-	MinimumLengthRequirement  int
-	HIBP                      hibp.HIBPSettings
-	NewRegistrationEvent      func(users.LocksmithUserInterface)
+	DefaultRoleName                string
+	DisablePublicRegistration      bool
+	ConfigureCustomUser            RegisterCustomUserFunc
+	EmailAsUsername                bool
+	MinimumLengthRequirement       int
+	HIBP                           hibp.HIBPSettings
+	DefaultRegistrationEntitlement string
+	NewRegistrationEvent           func(users.LocksmithUserInterface)
 }
 
 type registrationResponse struct {
@@ -175,10 +176,10 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
-	useRole := rr.DefaultRoleName
 	useID := uuid.New().String()
 
 	var invite invitations.Invitation
+	useRole := rr.DefaultRoleName
 	if len(registrationReq.Code) > 0 {
 		if len(registrationReq.Code) != 96 {
 			logger.LOGGER.Log(logger.INVITE_CODE_MALFORMED, logger.GetIPFromRequest(*r), registrationReq.Code)
@@ -261,7 +262,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		PasswordInfo:     password,
 		WebAuthnSessions: []webauthn.SessionData{},
 		PasswordSessions: []authentication.PasswordSession{},
-		Role:             useRole,
+		Roles:            []string{useRole},
 	}
 
 	if rr.ConfigureCustomUser != nil {

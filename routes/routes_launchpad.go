@@ -18,6 +18,7 @@ func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, optio
 	if options.LaunchpadSettings.Enabled {
 		options.LaunchpadSettings.BootstrapDatabase(db)
 		launchpad.BootstrapUsers(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Users)
+		launchpad.BootstrapTenants(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Tenants)
 
 		launchpadHandler := login.LoginPageMiddleware{
 			Next: endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{

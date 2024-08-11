@@ -164,8 +164,9 @@ func CompileLocksmithPassword(password string, saltString ...string) (PasswordIn
 }
 
 type Token struct {
-	Token    string
-	Username string
+	Token        string
+	ProfileToken string
+	Username     string
 }
 
 func ParseToken(cookieValue string) (Token, error) {

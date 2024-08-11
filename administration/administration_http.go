@@ -67,7 +67,7 @@ func (h AdministrationListUsersHandler) ServeHTTP(w http.ResponseWriter, r *http
 
 type AdministrationLockStatusAPI struct {
 	UserInterface       users.LocksmithUserInterface
-	LockInactivityAfter map[string]time.Duration
+	LockInactivityAfter time.Duration
 }
 
 func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +82,6 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 	authUser, _ := r.Context().Value("authUser").(users.LocksmithUser)
 	db := r.Context().Value("database").(database.DatabaseAccessor)
-	role, _ := authUser.GetRole()
 
 	requestingUserID := r.URL.Query().Get("id")
 
@@ -113,13 +112,8 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 
 		// Confirm user is not locked from inactivity
 		var lockAccountsAfter time.Duration
-		role, _ := user.GetRole()
-		if lockAfter, ok := h.LockInactivityAfter[role.Name]; ok {
-			// Use programmer-defined role lock-out period
-			lockAccountsAfter = lockAfter
-		} else if defaultValue, ok := h.LockInactivityAfter["default"]; ok {
-			// Use the default value if it is not found
-			lockAccountsAfter = defaultValue
+		if h.LockInactivityAfter > 0 {
+			lockAccountsAfter = h.LockInactivityAfter
 		} else {
 			// If no Default is specified, use 100 years and throw a log message.
 			fmt.Println("WARNING: No default LockInactivityAfter period set. Using 100 years.")
@@ -135,7 +129,7 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 		js, _ := json.Marshal(last)
 		w.Write(js)
 	} else if r.Method == http.MethodPost {
-		if !role.HasPermission("users.lock.manage") {
+		if !authUser.HasPermission("users.lock.manage") {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -216,21 +210,12 @@ func (h AdministrationDeleteUsersHandler) ServeHTTP(w http.ResponseWriter, r *ht
 		return
 	}
 
-	role, err := user.GetRole()
-
-	if err != nil {
-		// handle the error
-		fmt.Println("Error parsing role:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	if delReq.Username != user.GetUsername() {
-		if !role.HasPermission("user.delete.other") {
+		if !user.HasPermission("user.delete.other") {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-	} else if !role.HasPermission("user.delete.self") {
+	} else if !user.HasPermission("user.delete.self") {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

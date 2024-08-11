@@ -12,6 +12,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
+	"github.com/kvizdos/locksmith/authentication/validation"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
@@ -20,6 +21,7 @@ import (
 	"github.com/kvizdos/locksmith/pages"
 	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
 	"github.com/kvizdos/locksmith/shared-memory/providers"
+	"github.com/kvizdos/locksmith/tenant"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -41,11 +43,15 @@ type LocksmithRoutesOptions struct {
 	HIBPIntegrationOptions    hibp.HIBPSettings
 	// map[roleName]time.Duration
 	// Use "default" as a catch-all
-	InactivityLockDuration map[string]time.Duration
-	MinimumPasswordLength  int
-	NewRegistrationEvent   func(user users.LocksmithUserInterface)
-	SharedMemory           sharedmemory.MemoryProvider
-	LoginSettings          *login.LoginOptions
+	InactivityLockDuration         time.Duration
+	MinimumPasswordLength          int
+	NewRegistrationEvent           func(user users.LocksmithUserInterface)
+	SharedMemory                   sharedmemory.MemoryProvider
+	LoginSettings                  *login.LoginOptions
+	DefaultRegistrationEntitlement string
+	// ECDSA Keys used to sign tokens
+	TokenSigningPackage validation.ValidationSigningKeys
+	UseTenant           tenant.Tenant
 }
 
 type ResetPasswordOptions struct {
@@ -60,6 +66,10 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	useSharedMemory := options.SharedMemory
 	if useSharedMemory == nil {
 		useSharedMemory = providers.NewRamSharedMemoryProvider()
+	}
+
+	if options.UseTenant == nil {
+		options.UseTenant = tenant.BaseTenant{}
 	}
 
 	useLoginSettings := options.LoginSettings
@@ -79,25 +89,31 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 
 	InitializeLaunchpad(mux, db, options)
 
-	if !options.DisableAPI {
-		var lockAccountsAfter map[string]time.Duration
+	jwtAPIHandler := httpHelpers.InjectDatabaseIntoContext(validation.JWTEndpointHandler{
+		CustomUserOptions: validation.JWTCustomUserOptions{},
+	}, db)
+	mux.Handle("/jwt", jwtAPIHandler)
 
-		if len(options.InactivityLockDuration) == 0 {
+	if !options.DisableAPI {
+		var lockAccountsAfter time.Duration
+
+		if options.InactivityLockDuration == 0 {
 			// If no lock period specified,
 			// keep accounts open for 100 years.
-			lockAccountsAfter["default"] = 24 * 365 * 100 * time.Hour
+			lockAccountsAfter = 24 * 365 * 100 * time.Hour
 		} else {
 			lockAccountsAfter = options.InactivityLockDuration
 		}
 
 		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
-			DefaultRoleName:           "user",
-			DisablePublicRegistration: options.DisablePublicRegistration,
-			ConfigureCustomUser:       options.CustomUserRegistration,
-			EmailAsUsername:           options.UseEmailAsUsername,
-			HIBP:                      options.HIBPIntegrationOptions,
-			MinimumLengthRequirement:  options.MinimumPasswordLength,
-			NewRegistrationEvent:      options.NewRegistrationEvent,
+			DefaultRoleName:                "user",
+			DisablePublicRegistration:      options.DisablePublicRegistration,
+			ConfigureCustomUser:            options.CustomUserRegistration,
+			EmailAsUsername:                options.UseEmailAsUsername,
+			HIBP:                           options.HIBPIntegrationOptions,
+			MinimumLengthRequirement:       options.MinimumPasswordLength,
+			NewRegistrationEvent:           options.NewRegistrationEvent,
+			DefaultRegistrationEntitlement: options.DefaultRegistrationEntitlement,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
@@ -106,27 +122,34 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			LockInactivityAfter: lockAccountsAfter,
 			Options:             *useLoginSettings,
 			SharedMemory:        useSharedMemory,
+			TokenSigningKeys:    options.TokenSigningPackage,
+			TenantInterface:     options.UseTenant,
 		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 
 		listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
-			MinimalPermissions: []string{"users.list.all"},
+			MinimalPermissions:  []string{"AUTHENTICATION.users.list.all"},
+			RequiresEntitlement: []string{"SKU_AUTHENTICATION"},
 		})
 		mux.Handle("/api/users/list", listUsersAdminAPIHandler)
 
 		lockStatusAPI := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationLockStatusAPI{
 			LockInactivityAfter: lockAccountsAfter,
 		}, db, endpoints.EndpointSecurityOptions{
-			MinimalPermissions: []string{"users.lock"},
+			MinimalPermissions:  []string{"AUTHENTICATION.lock"},
+			RequiresEntitlement: []string{"SKU_AUTHENTICATION"},
 		})
 		mux.Handle("/api/users/lock-status", lockStatusAPI)
 
-		deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
+		deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db, endpoints.EndpointSecurityOptions{
+			RequiresEntitlement: []string{"SKU_AUTHENTICATION"},
+		})
 		mux.Handle("/api/users/delete", deleteUserAdminAPIHandler)
 
 		if !options.DisableInvites {
 			inviteUserAPIHandler := endpoints.SecureEndpointHTTPMiddleware(invitations.AdministrationInviteUserHandler{}, db, endpoints.EndpointSecurityOptions{
-				MinimalPermissions: []string{"user.invite"},
+				MinimalPermissions:  []string{"AUTHENTICATION.user.invite"},
+				RequiresEntitlement: []string{"SKU_AUTHENTICATION"},
 			})
 			mux.Handle("/api/users/invite", inviteUserAPIHandler)
 		}
@@ -178,14 +201,16 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			HIBP:                  options.HIBPIntegrationOptions,
 			MinimumPasswordLength: options.MinimumPasswordLength,
 		}, db, endpoints.EndpointSecurityOptions{
-			MinimalPermissions: []string{"magic.reset.password"},
-			PrioritizeMagic:    true,
+			MinimalPermissions:  []string{"AUTHENTICATION.magic.reset.password"},
+			PrioritizeMagic:     true,
+			RequiresEntitlement: []string{options.DefaultRegistrationEntitlement},
 		}))
 	}
 
 	if !options.DisableLocksmithPage {
 		serveAdminPage := endpoints.SecureEndpointHTTPMiddleware(administration.ServeAdminPage{}, db, endpoints.EndpointSecurityOptions{
-			MinimalPermissions: []string{"view.ls-admin"},
+			MinimalPermissions:  []string{"AUTHENTICATION.view.ls-admin"},
+			RequiresEntitlement: []string{"SKU_AUTHENTICATION"},
 		})
 		mux.Handle("/locksmith", serveAdminPage)
 	}

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/hibp"
+	"github.com/kvizdos/locksmith/authentication/validation"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -20,6 +21,7 @@ import (
 	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
 	"github.com/kvizdos/locksmith/shared-memory/objects"
 	"github.com/kvizdos/locksmith/shared-memory/providers"
+	"github.com/kvizdos/locksmith/tenant"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -49,7 +51,9 @@ func (r loginRequest) HasRequiredFields() bool {
 }
 
 type LoginHandler struct {
-	HIBP hibp.HIBPSettings
+	TokenSigningKeys validation.ValidationSigningKeys
+	HIBP             hibp.HIBPSettings
+	TenantInterface  tenant.Tenant
 	// Set this to be longer than your session
 	// duration. Session durations do not
 	// change the last login date, which is
@@ -57,9 +61,10 @@ type LoginHandler struct {
 	// It is set for every new session made,
 	// so once refresh is enabled, it will
 	// update the last login once refreshed.
-	LockInactivityAfter map[string]time.Duration
-	SharedMemory        sharedmemory.MemoryProvider
-	Options             LoginOptions
+	LockInactivityAfter          time.Duration
+	LockInactivityUseEntitlement string
+	SharedMemory                 sharedmemory.MemoryProvider
+	Options                      LoginOptions
 }
 
 type LoginHTTPResponse struct {
@@ -315,13 +320,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Confirm user is not locked from inactivity
 	var lockAccountsAfter time.Duration
-	role, _ := user.GetRole()
-	if lockAfter, ok := lh.LockInactivityAfter[role.Name]; ok {
+	if lh.LockInactivityAfter != 0 {
 		// Use programmer-defined role lock-out period
-		lockAccountsAfter = lockAfter
-	} else if defaultValue, ok := lh.LockInactivityAfter["default"]; ok {
-		// Use the default value if it is not found
-		lockAccountsAfter = defaultValue
+		lockAccountsAfter = lh.LockInactivityAfter
 	} else {
 		// If no Default is specified, use 100 years and throw a log message.
 		fmt.Println("WARNING: No default LockInactivityAfter period set. Using 100 years.")
@@ -376,14 +377,32 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	observability.LoginSuccess.Inc()
 
-	cookieValue := user.GenerateCookieValueFromSession(session)
+	if lh.TenantInterface != nil {
+		tenantInfo, err := tenant.GetTenantFromID(user.GetTenantID(), db, lh.TenantInterface)
+		if err != nil {
+			fmt.Println("Failed to get Tenant ID!", user.GetTenantID(), err)
+		} else {
+			user = user.SetTenant(tenantInfo).(users.LocksmithUser)
+		}
+	}
+	tokens, err := user.GenerateJWTCookies("top", validation.GetSigningKeys().PrivateKey, db)
+	if err != nil {
+		fmt.Println("Failed to generate JWT cookies:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// cookieValue := user.GenerateCookieValueFromSession(session)
 
 	// Expire Login XSRF cookie
 	cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login", SameSite: http.SameSiteStrictMode}
 
 	// Attach Session Cookie
-	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
-	http.SetCookie(w, &cookie)
+	accessCookie := http.Cookie{Name: "token", Value: tokens.Access, Expires: time.Now().UTC().Add(4 * time.Minute), HttpOnly: true, Secure: true, Path: "/"}
+	profileCookie := http.Cookie{Name: "profile", Value: tokens.Profile, Expires: tokens.RefreshExpiresAt, HttpOnly: false, Secure: true, Path: "/"}
+	refreshCookie := http.Cookie{Name: "refresh", Value: tokens.Refresh, Expires: tokens.RefreshExpiresAt, HttpOnly: true, Secure: true, Path: "/"}
+	http.SetCookie(w, &accessCookie)
+	http.SetCookie(w, &profileCookie)
+	http.SetCookie(w, &refreshCookie)
 	http.SetCookie(w, &cookieXSRF)
 }
 

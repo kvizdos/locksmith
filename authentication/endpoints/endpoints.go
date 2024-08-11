@@ -4,16 +4,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/base64"
 	"fmt"
 	"net/http"
-	"strings"
+	"slices"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
-	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/ratelimits"
 	"github.com/kvizdos/locksmith/tenant"
 	"github.com/kvizdos/locksmith/users"
@@ -59,9 +58,8 @@ type EndpointSecurityOptions struct {
 	// Handlers can check permissions by themselves after this point
 	// for any conditional requirements.
 	MinimalPermissions []string
-	// If an Entitlement is necessary, specify
-	// it here.
-	RequiresEntitlement string
+	// Define the Entitlement(s) that aligns to the permission
+	RequiresEntitlement []string
 	// Eventually, add:
 	// AllowAPITokens bool
 	// If enabled, the API Key Management system will validate the permissions of the token
@@ -69,7 +67,7 @@ type EndpointSecurityOptions struct {
 	// If you'd like to unwrap the Locksmith
 	// context user into some other LocksmithUserInterface,
 	// type it ehre.
-	CustomUser users.LocksmithUserInterface
+	CustomUser validation.JWTCustomUserOptions
 	// Define a custom Tenant interface
 	// if you plan on being multi-tenant.
 	TenantInterface tenant.Tenant
@@ -101,47 +99,11 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 
 		}))
 	}
+
+	if len(secureOptions.RequiresEntitlement) == 0 {
+		panic("secureOptions.RequiresEntitlement CANNOT be blank.")
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Initial Rate Limiting before any database calls are made.
-		// This rate limit identifier is based on the token username + IP,
-		// or if the token doesn't exist, just the IP.
-		//
-		// Here, it uses a mix of both IP + Username to try and prevent DoS
-		// issues if someone purposefully inserts an incorrect username into
-		// their token.
-		//
-		// There is a final rate limiter at the bottom that is specific
-		// to the User ID. The purpose for that one is in case the user
-		// is mobile / switching IP addresses, they will still be rate limited.
-		if secureOptions.RateLimit != nil {
-			tokenCookie, err := r.Cookie("token")
-			identifier := ""
-			ip := logger.GetIPFromRequest(*r)
-
-			if err == nil {
-				decoded, err := base64.StdEncoding.DecodeString(tokenCookie.Value)
-				if err != nil {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				split := strings.Split(string(decoded), ":")
-				username := split[1]
-
-				identifier = fmt.Sprintf("%s:%s", username, ip)
-			} else {
-				// This is a more "catch all", though it hopefully
-				// shouldn't block any "real" users, as if they don't have
-				// a token, they cant reach this anyways.
-				identifier = ip
-			}
-
-			if !secureOptions.RateLimit.CanHandle(identifier) {
-				fmt.Println("Pre-check Rate Limited!")
-				w.WriteHeader(http.StatusTooManyRequests)
-				return
-			}
-		}
-
 		sidCookie, err := r.Cookie("sid")
 		sidValue := ""
 		if err != nil {
@@ -161,11 +123,14 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		}
 
 		var userInterface users.LocksmithUserInterface
+		var userClaims jwt.Claims
 
-		if secureOptions.CustomUser != nil {
-			userInterface = secureOptions.CustomUser
+		if secureOptions.CustomUser.CustomUser != nil {
+			userInterface = secureOptions.CustomUser.CustomUser
+			userClaims = secureOptions.CustomUser.Claims
 		} else {
 			userInterface = users.LocksmithUser{}
+			userClaims = &users.BaseValidationClaims{}
 		}
 
 		magicQuery := r.URL.Query().Get("magic")
@@ -175,13 +140,18 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				magicQuery = magicCookie.Value
 			}
 		}
-		// Inject the database into the request
+
 		user, err := validation.ValidateHTTPUserToken(r, db, validation.MagicValidation{
 			Token:      magicQuery,
 			Prioritize: secureOptions.PrioritizeMagic,
-		}, userInterface)
+		}, validation.HTTPValidationOptions{
+			UserType:       userInterface,
+			Claims:         userClaims,
+			ValidationKeys: validation.GetSigningKeys(),
+		})
 
 		if err != nil {
+			fmt.Println("Failed to validate", err)
 			c := &http.Cookie{
 				Name:     "token",
 				Value:    "",
@@ -217,29 +187,18 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			}
 		}
 
-		addedEntitlementPermissions := []string{}
-		userRole, err := user.GetRole()
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		entitlements := user.GetAttachedEntitlements()
 
-		if secureOptions.RequiresEntitlement != "" {
-			entitlement, err := user.HasEntitlement(secureOptions.RequiresEntitlement)
-			if err != nil {
-				// user does not have entitlement, reject.
-				w.WriteHeader(http.StatusUnauthorized)
+		for _, entitlement := range secureOptions.RequiresEntitlement {
+			if !slices.Contains(entitlements, entitlement) {
+				w.WriteHeader(http.StatusForbidden)
 				return
 			}
-			addedEntitlementPermissions = entitlement.AddedPermissions[userRole.Name]
 		}
 
 		if len(secureOptions.MinimalPermissions) > 0 {
-			// make sure added entitlement permissions are attached!
-			userRole.Permissions = append(userRole.Permissions, addedEntitlementPermissions...)
-
 			for _, permission := range secureOptions.MinimalPermissions {
-				if !userRole.HasPermission(permission) {
+				if !user.HasPermission(permission) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}

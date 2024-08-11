@@ -12,23 +12,23 @@ var AVAILABLE_ROLES map[string]RoleInfo
 // Define required admin role for Locksmith to work
 func init() {
 	adminRole := Role{
-		Name: "admin",
+		Name: "AUTHENTICATION.admin",
 		Permissions: []string{
-			"view.ls-admin",
-			"user.invite",
-			"user.delete.self",
-			"user.delete.other",
-			"users.list.all",
-			"users.lock",        // get lock status
-			"users.lock.manage", // set lock state
+			"AUTHENTICATION.view.ls-admin",
+			"AUTHENTICATION.user.invite",
+			"AUTHENTICATION.user.delete.self",
+			"AUTHENTICATION.user.delete.other",
+			"AUTHENTICATION.users.list.all",
+			"AUTHENTICATION.users.lock",        // get lock status
+			"AUTHENTICATION.users.lock.manage", // set lock state
 		},
 	}
 	AddRole(adminRole)
 
 	userRole := Role{
-		Name: "user",
+		Name: "AUTHENTICATION.user",
 		Permissions: []string{
-			"user.delete.self",
+			"AUTHENTICATION.user.delete.self",
 		},
 	}
 	AddRole(userRole)

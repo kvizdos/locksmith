@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/tenant"
 )
 
 const (
@@ -107,13 +108,15 @@ func BootstrapUsers(db database.DatabaseAccessor, accessToken string, importUser
 		}
 
 		insert := map[string]interface{}{
-			"id":          uuid.New().String(),
-			"username":    username,
-			"password":    password,
-			"email":       opts.Email,
-			"sessions":    []interface{}{},
-			"websessions": []interface{}{},
-			"role":        opts.Role,
+			"id":           uuid.New().String(),
+			"username":     username,
+			"password":     password,
+			"email":        opts.Email,
+			"sessions":     []interface{}{},
+			"websessions":  []interface{}{},
+			"role":         opts.Roles,
+			"tenant":       opts.TenantID,
+			"entitlements": opts.Entitlements,
 		}
 
 		if opts.Custom != nil {
@@ -124,6 +127,14 @@ func BootstrapUsers(db database.DatabaseAccessor, accessToken string, importUser
 		if err != nil {
 			fmt.Println(err)
 		}
+	}
+
+}
+
+func BootstrapTenants(db database.DatabaseAccessor, accessToken string, tenants []tenant.Tenant) {
+	db.Drop("tenants")
+	for _, tenant := range tenants {
+		db.InsertOne("tenants", tenant.ToMap())
 	}
 
 }
