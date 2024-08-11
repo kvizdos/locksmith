@@ -1,11 +1,14 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type DatabaseUpdateActions string
@@ -21,6 +24,11 @@ type HealthCheckInterface interface {
 	IsMongoUp() bool
 }
 
+type TransactionOptions struct {
+	SessionOptions     *options.SessionOptions
+	TransactionOptions *options.TransactionOptions
+}
+
 type DatabaseAccessor interface {
 	InsertOne(table string, body map[string]interface{}) (interface{}, error)
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
@@ -34,6 +42,7 @@ type DatabaseAccessor interface {
 	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
 	GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error)
 	MonitorConnection(heartbeat time.Duration, health HealthCheckInterface)
+	Transact(ctx context.Context, opts *TransactionOptions, transaction func(sessCtx mongo.SessionContext) (interface{}, error)) (interface{}, error)
 }
 
 type TestDatabase struct {

@@ -74,6 +74,17 @@ func (db MongoDatabase) GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Tim
 	return timestamp, nil
 }
 
+func (db MongoDatabase) Transact(ctx context.Context, opts *TransactionOptions, transaction func(sessCtx mongo.SessionContext) (interface{}, error)) (interface{}, error) {
+	session, err := db.database.Client().StartSession(opts.SessionOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer session.EndSession(ctx)
+
+	out, err := session.WithTransaction(ctx, transaction, opts.TransactionOptions)
+	return out, err
+}
+
 func (db MongoDatabase) Drop(table string) error {
 	col := db.database.Collection(table)
 
