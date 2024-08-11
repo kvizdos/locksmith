@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,6 +64,11 @@ func (db TestDatabase) CreateTextIndex(table string, keys []string) error {
 
 func (db TestDatabase) CreateRegularIndex(table string, keys map[string]Direction, unique bool) error {
 	return nil
+}
+
+func (db TestDatabase) Transact(ctx context.Context, opts *TransactionOptions, transaction func(sessCtx mongo.SessionContext) (interface{}, error)) (interface{}, error) {
+	log.Println("WARNING: Transactions not supported in a testing environment.")
+	return nil, nil
 }
 
 func (db TestDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
