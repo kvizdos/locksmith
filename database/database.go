@@ -32,7 +32,9 @@ type TransactionOptions struct {
 
 type DatabaseAccessor interface {
 	InsertOne(table string, body map[string]interface{}) (interface{}, error)
+	InsertMany(table string, bodies []interface{}) error
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
+	UpdateMany(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
 	FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool)
@@ -73,6 +75,18 @@ func (db TestDatabase) Transact(ctx context.Context, opts *TransactionOptions, t
 
 func (db TestDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{}, nil
+}
+
+func (db TestDatabase) InsertMany(table string, documents []interface{}) error {
+	for _, doc := range documents {
+		_, err := db.InsertOne(table, doc.(map[string]interface{}))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (db TestDatabase) Drop(table string) error {
@@ -156,6 +170,69 @@ func (db TestDatabase) UpdateOne(table string, query map[string]interface{}, bod
 	}
 
 	return nil, fmt.Errorf("row not found")
+}
+
+func (db TestDatabase) UpdateMany(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
+	if tableData, ok := db.Tables[table]; ok {
+		updatedRows := []interface{}{}
+		for _, row := range tableData {
+			match := true
+			for queryKey, queryValue := range query {
+				if rowData, ok := row.(map[string]interface{}); ok {
+					if fieldValue, ok := rowData[queryKey]; ok && fieldValue != queryValue {
+						match = false
+						break
+					}
+				} else {
+					match = false
+					break
+				}
+			}
+
+			if match {
+				for action, updateBody := range body {
+					if action == SET {
+						for key, value := range updateBody {
+							row.(map[string]interface{})[key] = value
+						}
+					} else if action == PUSH {
+						for key, value := range updateBody {
+							if arrayField, ok := row.(map[string]interface{})[key].([]interface{}); ok {
+								// Check if the arrayField is an empty interface
+								if arrayField == nil {
+									// Initialize as an empty slice of interfaces
+									arrayField = []interface{}{}
+								}
+
+								// Append the value to the arrayField
+								arrayField = append(arrayField, value)
+
+								// Update the arrayField in the row
+								row.(map[string]interface{})[key] = arrayField
+							} else {
+								match = false
+								break
+							}
+						}
+					} else {
+						return nil, fmt.Errorf("unsupported update action")
+					}
+				}
+
+				// Add the updated row to the result list
+				if match {
+					updatedRows = append(updatedRows, row)
+				}
+			}
+		}
+
+		// If any rows were updated, return them
+		if len(updatedRows) > 0 {
+			return updatedRows, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no rows matched the query")
 }
 
 func (db TestDatabase) FindOne(table string, query map[string]interface{}) (interface{}, bool) {

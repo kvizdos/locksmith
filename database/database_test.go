@@ -159,6 +159,52 @@ func TestUpdateOneSET(t *testing.T) {
 	}
 }
 
+func TestUpdateManySET(t *testing.T) {
+	testDb := TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"users": {
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "kenton",
+				},
+				"z8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "c8531661-22a7-493f-b228-028842e09a05",
+					"username": "bob",
+				},
+				"b8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+					"id":       "b8531661-22a7-493f-b228-028842e09a05",
+					"username": "jane",
+				},
+			},
+		},
+	}
+
+	_, err := testDb.UpdateMany("users", map[string]interface{}{
+		"id": "c8531661-22a7-493f-b228-028842e09a05",
+	}, map[DatabaseUpdateActions]map[string]interface{}{
+		SET: {
+			"username": "overwrite",
+		},
+	})
+
+	if err != nil {
+		t.Errorf("failed to SET array: %s", err.Error())
+		return
+	}
+
+	if testDb.Tables["users"]["c8531661-22a7-493f-b228-028842e09a05"].(map[string]interface{})["username"] != "overwrite" {
+		t.Errorf("c8531661-22a7-493f-b228-028842e09a05 found invalid updated key: %s", testDb.Tables["users"]["c8531661-22a7-493f-b228-028842e09a05"].(map[string]interface{})["username"])
+	}
+
+	if testDb.Tables["users"]["z8531661-22a7-493f-b228-028842e09a05"].(map[string]interface{})["username"] != "overwrite" {
+		t.Errorf("z8531661-22a7-493f-b228-028842e09a05 found invalid updated key: %s", testDb.Tables["users"]["z8531661-22a7-493f-b228-028842e09a05"].(map[string]interface{})["username"])
+	}
+
+	if testDb.Tables["users"]["b8531661-22a7-493f-b228-028842e09a05"].(map[string]interface{})["username"] != "jane" {
+		t.Errorf("b8531661-22a7-493f-b228-028842e09a05 found invalid updated key: %s", testDb.Tables["users"]["c8531661-22a7-493f-b228-028842e09a05"].(map[string]interface{})["username"])
+	}
+}
+
 func TestUpdateOneSETMultiple(t *testing.T) {
 	testDb := TestDatabase{
 		Tables: map[string]map[string]interface{}{

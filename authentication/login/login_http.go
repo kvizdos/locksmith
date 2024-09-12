@@ -231,7 +231,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		captchaAttempts = objects.NewUserLoginAttempt()
 	}
 	if captchaAttempts.Attempts >= lh.Options.LockoutPolicy.CaptchaAfter-1 {
-		fmt.Println("Notify captcha required for next attempt!")
 		failedLoginResponse.CaptchaRequired = true
 	}
 

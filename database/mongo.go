@@ -85,6 +85,12 @@ func (db MongoDatabase) Transact(ctx context.Context, opts *TransactionOptions, 
 	return out, err
 }
 
+func (db MongoDatabase) InsertMany(table string, documents []interface{}) error {
+	_, err := db.database.Collection(table).InsertMany(context.Background(), documents)
+
+	return err
+}
+
 func (db MongoDatabase) Drop(table string) error {
 	col := db.database.Collection(table)
 
@@ -315,6 +321,38 @@ func (db MongoDatabase) UpdateOne(table string, query map[string]interface{}, bo
 		break
 	case SET:
 		res, err = col.UpdateOne(context.Background(), query, bson.M{"$set": bsonBody})
+		break
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (db MongoDatabase) UpdateMany(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
+	col := db.database.Collection(table)
+
+	bsonBody := bson.M{}
+	var useAction DatabaseUpdateActions
+	for action, fields := range body {
+		useAction = action
+		bsonFields := bson.M{}
+		for key, value := range fields {
+			bsonFields[key] = value
+		}
+		bsonBody = bsonFields
+	}
+
+	var res *mongo.UpdateResult
+	var err error
+
+	switch useAction {
+	case PUSH:
+		res, err = col.UpdateMany(context.Background(), query, bson.M{"$push": bsonBody})
+		break
+	case SET:
+		res, err = col.UpdateMany(context.Background(), query, bson.M{"$set": bsonBody})
 		break
 	}
 	if err != nil {
