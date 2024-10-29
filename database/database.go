@@ -17,6 +17,7 @@ type DatabaseUpdateActions string
 const (
 	SET  DatabaseUpdateActions = "set"
 	PUSH DatabaseUpdateActions = "push"
+	INC  DatabaseUpdateActions = "inc"
 )
 
 type HealthCheckInterface interface {

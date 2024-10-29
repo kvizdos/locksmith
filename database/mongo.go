@@ -322,6 +322,9 @@ func (db MongoDatabase) UpdateOne(table string, query map[string]interface{}, bo
 	case SET:
 		res, err = col.UpdateOne(context.Background(), query, bson.M{"$set": bsonBody})
 		break
+	case INC:
+		res, err = col.UpdateOne(context.Background(), query, bson.M{"$inc": bsonBody})
+		break
 	}
 	if err != nil {
 		return nil, err
@@ -353,6 +356,9 @@ func (db MongoDatabase) UpdateMany(table string, query map[string]interface{}, b
 		break
 	case SET:
 		res, err = col.UpdateMany(context.Background(), query, bson.M{"$set": bsonBody})
+		break
+	case INC:
+		res, err = col.UpdateMany(context.Background(), query, bson.M{"$inc": bsonBody})
 		break
 	}
 	if err != nil {
