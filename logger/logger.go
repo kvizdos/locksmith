@@ -18,7 +18,9 @@ var LOG_OUT = "./locksmith.log"
 func getLogFile() *os.File {
 	file, err := os.OpenFile(LOG_OUT, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		panic("error opening log file")
+		if os.Getenv("DO_NOT_PANIC_LOCKSMITH") != "true" {
+			panic("error opening log file")
+		}
 	}
 
 	return file
