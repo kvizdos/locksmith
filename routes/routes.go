@@ -10,6 +10,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
+	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
@@ -39,6 +40,7 @@ type LocksmithRoutesOptions struct {
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
 	HIBPIntegrationOptions    hibp.HIBPSettings
+	OAuthProviders            []oauth.OAuthProvider
 	// map[roleName]time.Duration
 	// Use "default" as a catch-all
 	InactivityLockDuration map[string]time.Duration
@@ -79,7 +81,14 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 
 	InitializeLaunchpad(mux, db, options)
 
+	for _, oauthProvider := range options.OAuthProviders {
+		oauthProvider.RegisterRoutes(mux)
+	}
+
 	if !options.DisableAPI {
+		oauthKeepAlive := httpHelpers.InjectDatabaseIntoContext(oauth.KeepAliveRoute{}, db)
+		mux.Handle("/api/auth/oauth/keep-alive", oauthKeepAlive)
+
 		var lockAccountsAfter map[string]time.Duration
 
 		if len(options.InactivityLockDuration) == 0 {
@@ -149,6 +158,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 				EmailAsUsername: options.UseEmailAsUsername,
 				OnboardingPath:  options.OnboardPath,
 				CaptchaProvider: captchaproviders.UseProvider,
+				OAuthProviders:  options.OAuthProviders,
 			},
 		})
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/hibp"
+	"github.com/kvizdos/locksmith/authentication/oauth"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -352,12 +353,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err != nil {
-		fmt.Println("Error marshalling session token:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	err = user.SavePasswordSession(session, db)
 
 	if err != nil {
@@ -381,7 +376,14 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Attach Session Cookie
 	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
+
+	sessionExpiresAtCookie := http.Cookie{Name: "ls_expires_at", Value: fmt.Sprintf("%d", session.ExpiresAt), Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: false, Secure: true, Path: "/"}
+
+	oauthprovidercookie := http.Cookie{Name: "ls_oauth_provider", Value: "", Expires: time.Unix(0, 0), HttpOnly: false, Secure: true, Path: "/"}
+
 	http.SetCookie(w, &cookie)
+	http.SetCookie(w, &sessionExpiresAtCookie)
+	http.SetCookie(w, &oauthprovidercookie)
 	http.SetCookie(w, &cookieXSRF)
 }
 
@@ -393,6 +395,7 @@ type LoginPageHandler struct {
 	EmailAsUsername           bool
 	OnboardingPath            string
 	CaptchaProvider           captchaproviders.CAPTCHAProvider
+	OAuthProviders            oauth.OAuthProviders
 }
 
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -417,7 +420,15 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		EmailAsUsername bool
 		OnboardingPath  string
 		LoginXSRF       string
+		OAuthProviders  string
 		CaptchaProvider captchaproviders.CAPTCHAProvider
+	}
+
+	providers := ""
+
+	if lr.OAuthProviders != nil {
+		js, _ := json.Marshal(lr.OAuthProviders.GetNames())
+		providers = string(js)
 	}
 
 	data := PageData{
@@ -427,6 +438,7 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		OnboardingPath:  lr.OnboardingPath,
 		LoginXSRF:       loginXSRF,
 		CaptchaProvider: lr.CaptchaProvider,
+		OAuthProviders:  providers,
 	}
 
 	if data.Styling.SubmitColor == "" {

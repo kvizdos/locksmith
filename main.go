@@ -14,6 +14,9 @@ import (
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/magic"
+	"github.com/kvizdos/locksmith/authentication/oauth"
+	oauth_github "github.com/kvizdos/locksmith/authentication/oauth/github"
+	oauth_google "github.com/kvizdos/locksmith/authentication/oauth/google"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
@@ -40,7 +43,11 @@ func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
 	role, _ := authUser.GetRole()
 	sid, _ := r.Context().Value("sid").(string)
-	w.Write([]byte(fmt.Sprintf("%t - %s %s %d - Your SID is %s", authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions), sid)))
+	w.Write([]byte(fmt.Sprintf(`<html>
+		<p>%s -- %t - %s %s %d - Your SID is %s</p>
+		<iframe src="/api/auth/oauth/keep-alive" width=0 height=0 style="display: none;"></iframe>
+		</html>
+		`, r.URL.Path, authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions), sid)))
 }
 
 func printResetToken(token string, user users.LocksmithUserInterface) {
@@ -85,9 +92,31 @@ func main() {
 	// }
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Locksmith Demo UI",
-		UseEmailAsUsername: true,
+		UseEmailAsUsername: false,
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
+		OAuthProviders: []oauth.OAuthProvider{
+			oauth_google.GoogleOauth{
+				BaseOAuthProvider: oauth.BaseOAuthProvider{
+					ClientID:                     "411423592350-us51ciaa3qgeb5aegteao2la4uu7gisv.apps.googleusercontent.com",
+					ClientSecret:                 "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",
+					BaseURL:                      "https://dev.kv.codes",
+					Scopes:                       "openid%20email%20profile",
+					RedirectToRegisterOnNotFound: false,
+					Database:                     db,
+				},
+			},
+			oauth_github.GitHubOauth{
+				BaseOAuthProvider: oauth.BaseOAuthProvider{
+					ClientID:                     "Ov23liJkvkKr1VK2mrmm",
+					ClientSecret:                 "5774a441cfe29b485d01ffda17871a54e3f8d0db",
+					BaseURL:                      "https://dev.kv.codes",
+					Scopes:                       "read:user",
+					Database:                     db,
+					RedirectToRegisterOnNotFound: true,
+				},
+			},
+		},
 		LoginSettings: &login.LoginOptions{
 			LockoutPolicy: login.LockoutPolicy{
 				CaptchaAfter: 2,
@@ -113,7 +142,8 @@ func main() {
 		ResetPasswordOptions: routes.ResetPasswordOptions{
 			SendResetToken: printResetToken,
 		},
-		MinimumPasswordLength: 8,
+		DisablePublicRegistration: false,
+		MinimumPasswordLength:     8,
 		HIBPIntegrationOptions: hibp.HIBPSettings{
 			Enabled:                  false, // true to enable
 			AppName:                  "Locksmith Demo",

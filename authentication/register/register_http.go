@@ -302,7 +302,7 @@ type RegistrationPageHandler struct {
 	MinimumLengthRequirement  int
 }
 
-func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
+func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http.Request, invite ...invitations.Invitation) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	tmpl, err := template.New("register.html").Parse(string(pages.RegisterPageHTML))

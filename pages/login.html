@@ -91,6 +91,7 @@
             />{{end}}
             <p>{{.Title}}</p>
             <login-form
+                oauthProviders="{{.OAuthProviders}}"
                 {{
                 if
                 .EmailAsUsername}}emailAsUsername{{end}}

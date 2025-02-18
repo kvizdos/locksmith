@@ -1,0 +1,27 @@
+<html>
+    <script>
+        const getCookieValue = (name) =>
+            document.cookie
+                .match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)")
+                ?.pop() || "";
+        console.log(getCookieValue("ls_oauth_provider"));
+        function doQuietReauthentication() {
+            window.location.href = `/api/auth/oauth/${getCookieValue("ls_oauth_provider")}?page=${encodeURI("/api/auth/oauth/keep-alive")}`;
+            return;
+        }
+        const expiration = +getCookieValue("ls_expires_at");
+        const now = Date.now() / 1000;
+
+        const secondsRemaining = expiration - now;
+
+        const targetSeconds = 600; // 10 minutes
+
+        if (secondsRemaining <= targetSeconds) {
+            doQuietReauthentication();
+        } else {
+            const delayMs = (secondsRemaining - targetSeconds) * 1000;
+            console.log("Waiting", delayMs / 1000, "to reauth");
+            setTimeout(doQuietReauthentication, delayMs);
+        }
+    </script>
+</html>
