@@ -7,10 +7,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication"
+	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -175,6 +177,33 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		}, userInterface)
 
 		if err != nil {
+			redirectURL := "/login"
+
+			if oauthProviderCookie, err := r.Cookie("ls_oauth_provider"); err == nil {
+				if oauth.IsOauthProviderEnabled(oauthProviderCookie.Value) {
+					validPage := "/app"
+					rawPage := r.URL.RequestURI()
+					if rawPage != "" {
+						// Parse the rawPage.
+						parsed, err := url.Parse(rawPage)
+						if err == nil && parsed.Scheme == "" && parsed.Host == "" && strings.HasPrefix(parsed.Path, "/") {
+							validPage = parsed.Path
+							if parsed.RawQuery != "" {
+								validPage += "?" + parsed.RawQuery
+							}
+							if parsed.Fragment != "" {
+								validPage += "#" + parsed.Fragment
+							}
+						}
+					}
+
+					// URL-encode the valid page value.
+					encodedState := url.QueryEscape(validPage)
+
+					redirectURL = fmt.Sprintf("/api/auth/oauth/%s?page=%s", oauthProviderCookie.Value, encodedState)
+				}
+			}
+			fmt.Println(redirectURL)
 			c := &http.Cookie{
 				Name:     "token",
 				Value:    "",
@@ -189,10 +218,18 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				Expires:  time.Unix(0, 0),
 				HttpOnly: true,
 			}
+			exp := &http.Cookie{
+				Name:     "ls_expires_at",
+				Value:    "",
+				Path:     "/",
+				Expires:  time.Unix(0, 0),
+				HttpOnly: false,
+			}
 
 			http.SetCookie(w, c)
 			http.SetCookie(w, mc)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.SetCookie(w, exp)
+			http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 			return
 		}
 

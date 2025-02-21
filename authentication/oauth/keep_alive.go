@@ -8,6 +8,9 @@ import (
 //go:embed keep_alive.html
 var keepAliveHTMLBytes []byte
 
+//go:embed keep_alive.js
+var keepAliveJSLBytes []byte
+
 type KeepAliveRoute struct{}
 
 func (k KeepAliveRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -17,4 +20,10 @@ func (k KeepAliveRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(keepAliveHTMLBytes)
+}
+
+type KeepAliveJSRoute struct{}
+
+func (k KeepAliveJSRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Write(keepAliveJSLBytes)
 }

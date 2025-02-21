@@ -43,7 +43,7 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 		return
 	}
 
-	session.ExpiresAt = time.Now().UTC().Add(11 * time.Minute).Unix()
+	session.ExpiresAt = time.Now().UTC().Add(6 * time.Minute).Unix()
 
 	err = user.SavePasswordSession(session, db)
 
@@ -65,12 +65,15 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 	// Attach Session Cookie
 	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
 
-	sessionExpiresAtCookie := http.Cookie{Name: "ls_expires_at", Value: fmt.Sprintf("%d", session.ExpiresAt), Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: false, Secure: true, Path: "/"}
+	sessionExpiresAtCookie := http.Cookie{Name: "ls_expires_at", Value: fmt.Sprintf("%d", session.ExpiresAt), Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: false, Secure: true, Path: "/"}
 
-	oauthprovidercookie := http.Cookie{Name: "ls_oauth_provider", Value: provider, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: false, Secure: true, Path: "/"}
+	oauthprovidercookie := http.Cookie{Name: "ls_oauth_provider", Value: provider, Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: false, Secure: true, Path: "/"}
+
+	oauthhint := http.Cookie{Name: "ls_oauth_hint", Value: user.GetEmail(), Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: true, Secure: true, Path: "/"}
 
 	http.SetCookie(w, &cookie)
 	http.SetCookie(w, &cookieXSRF)
+	http.SetCookie(w, &oauthhint)
 	http.SetCookie(w, &sessionExpiresAtCookie)
 	http.SetCookie(w, &oauthprovidercookie)
 	http.Redirect(w, r, redirectPage, http.StatusTemporaryRedirect)

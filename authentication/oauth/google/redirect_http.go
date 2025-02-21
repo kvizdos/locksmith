@@ -1,6 +1,7 @@
 package oauth_google
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,13 +14,7 @@ type googleRedirectHTTP struct {
 }
 
 func (g googleRedirectHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	encodedScopes, err := url.QueryUnescape(g.Scopes)
-
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Failed"))
-		return
-	}
+	encodedScopes := url.QueryEscape(g.Scopes)
 
 	// Retrieve the current page from a query parameter.
 	rawPage := r.URL.Query().Get("page")
@@ -47,9 +42,17 @@ func (g googleRedirectHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Build your Google OAuth URL. Replace the placeholders with your actual values.
 	googleAuthURL := "https://accounts.google.com/o/oauth2/auth?" +
 		"client_id=" + g.ClientID +
-		"&redirect_uri=" + g.BaseURL + "/api/auth/oauth/google/callback" +
+		"&redirect_uri=" + url.QueryEscape(g.BaseURL+"/api/auth/oauth/google/callback") +
 		"&scope=" + encodedScopes +
 		"&response_type=code" +
-		"&state=" + encodedState
+		"&state=" + encodedState +
+		"&prompt=none"
+
+	if loginHintCookie, err := r.Cookie("ls_oauth_hint"); err == nil {
+		googleAuthURL += "&login_hint=" + url.QueryEscape(loginHintCookie.Value)
+	}
+
+	log.Println(googleAuthURL)
+
 	http.Redirect(w, r, googleAuthURL, http.StatusTemporaryRedirect)
 }

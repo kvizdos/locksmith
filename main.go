@@ -44,8 +44,12 @@ func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	role, _ := authUser.GetRole()
 	sid, _ := r.Context().Value("sid").(string)
 	w.Write([]byte(fmt.Sprintf(`<html>
-		<p>%s -- %t - %s %s %d - Your SID is %s</p>
-		<iframe src="/api/auth/oauth/keep-alive" width=0 height=0 style="display: none;"></iframe>
+		<head>
+			<script defer type="text/javascript" src="/api/auth/oauth/keep-alive.js"></script>
+		</head>
+		<body>
+			<p>%s -- %t - %s %s %d - Your SID is %s</p>
+		</body>
 		</html>
 		`, r.URL.Path, authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions), sid)))
 }
@@ -101,7 +105,7 @@ func main() {
 					ClientID:                     "411423592350-us51ciaa3qgeb5aegteao2la4uu7gisv.apps.googleusercontent.com",
 					ClientSecret:                 "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",
 					BaseURL:                      "https://dev.kv.codes",
-					Scopes:                       "openid%20email%20profile",
+					Scopes:                       "openid email profile",
 					RedirectToRegisterOnNotFound: false,
 					Database:                     db,
 				},

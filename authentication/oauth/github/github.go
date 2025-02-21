@@ -2,7 +2,6 @@ package oauth_github
 
 import (
 	_ "embed"
-	"fmt"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/oauth"
@@ -39,5 +38,4 @@ func (g GitHubOauth) RegisterRoutes(apiMux *http.ServeMux) {
 		w.Header().Set("Content-Type", "image/svg+xml")
 		w.Write(logoBytes)
 	})
-	fmt.Println("Registered github oauth!")
 }

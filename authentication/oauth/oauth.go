@@ -7,6 +7,30 @@ import (
 	"github.com/kvizdos/locksmith/users"
 )
 
+var enabledOauthProviders []string
+
+func EnableOauthProvider(name string) {
+	if enabledOauthProviders == nil {
+		enabledOauthProviders = []string{name}
+		return
+	}
+
+	enabledOauthProviders = append(enabledOauthProviders, name)
+}
+
+func IsOauthProviderEnabled(name string) bool {
+	if enabledOauthProviders == nil {
+		return false
+	}
+
+	for _, n := range enabledOauthProviders {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
 type OAuthProviders []OAuthProvider
 
 func (o OAuthProviders) GetNames() []string {

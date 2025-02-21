@@ -2,7 +2,6 @@ package oauth_google
 
 import (
 	_ "embed"
-	"fmt"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/oauth"
@@ -39,5 +38,4 @@ func (g GoogleOauth) RegisterRoutes(apiMux *http.ServeMux) {
 		w.Header().Set("Content-Type", "image/webp")
 		w.Write(logoBytes)
 	})
-	fmt.Println("Registered google oauth!")
 }
