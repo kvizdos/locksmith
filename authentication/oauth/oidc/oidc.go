@@ -25,6 +25,8 @@ type OIDCConnection struct {
 	Verifier *oidc.IDTokenVerifier
 
 	LogoBytes []byte
+
+	GetUserFunc func(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface
 }
 
 type OIDCConnectionParams struct {
@@ -35,6 +37,7 @@ type OIDCConnectionParams struct {
 	ProviderName string
 	DB           database.DatabaseAccessor
 	LogoBytes    []byte
+	GetUserFunc  func(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface
 }
 
 // NewOIDCConnection creates a new OIDCConnection instance.
@@ -69,6 +72,7 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 		Config:       config,
 		Verifier:     verifier,
 		LogoBytes:    params.LogoBytes,
+		GetUserFunc:  params.GetUserFunc,
 	}, nil
 }
 
@@ -202,5 +206,8 @@ func (o *OIDCConnection) handleRefresh(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByEmail retrieves the user given an email.
 func (o *OIDCConnection) GetUserByEmail(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface {
+	if o.GetUserFunc != nil {
+		return o.GetUserFunc(email, r, customUserInterface...)
+	}
 	return o.BaseOAuthProvider.GetUserByEmail(email, r, customUserInterface...)
 }
