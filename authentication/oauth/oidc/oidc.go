@@ -35,7 +35,7 @@ type OIDCConnectionParams struct {
 	ProviderName           string
 	DB                     database.DatabaseAccessor
 	LogoBytes              []byte
-	CustomizedGetUserQuery func(r *http.Request) map[string]interface{}
+	CustomizedGetUserQuery func(email string, r *http.Request) map[string]interface{}
 }
 
 // NewOIDCConnection creates a new OIDCConnection instance.

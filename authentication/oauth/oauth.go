@@ -54,7 +54,7 @@ type BaseOAuthProvider struct {
 	Scopes                       string
 	Database                     database.DatabaseAccessor
 	RedirectToRegisterOnNotFound bool
-	CustomizedGetUserQuery       func(r *http.Request) map[string]interface{}
+	CustomizedGetUserQuery       func(email string, r *http.Request) map[string]interface{}
 }
 
 func (g BaseOAuthProvider) GetName() string {
@@ -71,7 +71,7 @@ func (g BaseOAuthProvider) GetUserByEmail(email string, r *http.Request, customU
 	}
 
 	if g.CustomizedGetUserQuery != nil {
-		query = g.CustomizedGetUserQuery(r)
+		query = g.CustomizedGetUserQuery(email, r)
 	}
 	rawUser, found := g.Database.FindOne("users", query)
 
