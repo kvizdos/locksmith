@@ -54,6 +54,7 @@ type BaseOAuthProvider struct {
 	Scopes                       string
 	Database                     database.DatabaseAccessor
 	RedirectToRegisterOnNotFound bool
+	CustomizedGetUserQuery       func(r *http.Request) map[string]interface{}
 }
 
 func (g BaseOAuthProvider) GetName() string {
@@ -65,9 +66,14 @@ func (g BaseOAuthProvider) RegisterRoutes(apiMux *http.ServeMux) {
 }
 
 func (g BaseOAuthProvider) GetUserByEmail(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface {
-	rawUser, found := g.Database.FindOne("users", map[string]interface{}{
+	query := map[string]interface{}{
 		"email": email,
-	})
+	}
+
+	if g.CustomizedGetUserQuery != nil {
+		query = g.CustomizedGetUserQuery(r)
+	}
+	rawUser, found := g.Database.FindOne("users", query)
 
 	if !found {
 		return nil

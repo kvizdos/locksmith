@@ -25,19 +25,17 @@ type OIDCConnection struct {
 	Verifier *oidc.IDTokenVerifier
 
 	LogoBytes []byte
-
-	GetUserFunc func(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface
 }
 
 type OIDCConnectionParams struct {
-	Issuer       string
-	ClientID     string
-	ClientSecret string
-	BaseURL      string
-	ProviderName string
-	DB           database.DatabaseAccessor
-	LogoBytes    []byte
-	GetUserFunc  func(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface
+	Issuer                 string
+	ClientID               string
+	ClientSecret           string
+	BaseURL                string
+	ProviderName           string
+	DB                     database.DatabaseAccessor
+	LogoBytes              []byte
+	CustomizedGetUserQuery func(r *http.Request) map[string]interface{}
 }
 
 // NewOIDCConnection creates a new OIDCConnection instance.
@@ -62,17 +60,17 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 
 	return &OIDCConnection{
 		BaseOAuthProvider: oauth.BaseOAuthProvider{
-			ClientID:     params.ClientID,
-			ClientSecret: params.ClientSecret,
-			BaseURL:      callbackURL,
-			Database:     params.DB,
+			ClientID:               params.ClientID,
+			ClientSecret:           params.ClientSecret,
+			BaseURL:                callbackURL,
+			Database:               params.DB,
+			CustomizedGetUserQuery: params.CustomizedGetUserQuery,
 		},
 		ProviderName: params.ProviderName,
 		Provider:     provider,
 		Config:       config,
 		Verifier:     verifier,
 		LogoBytes:    params.LogoBytes,
-		GetUserFunc:  params.GetUserFunc,
 	}, nil
 }
 
@@ -206,8 +204,5 @@ func (o *OIDCConnection) handleRefresh(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByEmail retrieves the user given an email.
 func (o *OIDCConnection) GetUserByEmail(email string, r *http.Request, customUserInterface ...users.LocksmithUserInterface) users.LocksmithUserInterface {
-	if o.GetUserFunc != nil {
-		return o.GetUserFunc(email, r, customUserInterface...)
-	}
 	return o.BaseOAuthProvider.GetUserByEmail(email, r, customUserInterface...)
 }
