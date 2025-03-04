@@ -3,6 +3,7 @@ package oauth
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -43,7 +44,19 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 		return
 	}
 
-	session.ExpiresAt = time.Now().UTC().Add(6 * time.Minute).Unix()
+	// Expire at 11 AM UTC
+	now := time.Now().UTC()
+	today11 := time.Date(now.Year(), now.Month(), now.Day(), 11, 0, 0, 0, time.UTC)
+
+	var next11 time.Time
+	if now.Before(today11) {
+		next11 = today11
+	} else {
+		next11 = today11.AddDate(0, 0, 1)
+	}
+
+	session.ExpiresAt = next11.Unix()
+	session.ExpiresAt = time.Now().UTC().Add(11 * time.Minute).Unix()
 
 	err = user.SavePasswordSession(session, db)
 
@@ -53,7 +66,7 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 		return
 	}
 
-	logger.LOGGER.Log(logger.LOGIN, user.GetUsername(), logger.GetIPFromRequest(*r))
+	logger.LOGGER.Log(logger.LOGIN, user.GetUsername()+" (OIDC)", logger.GetIPFromRequest(*r))
 
 	observability.LoginSuccess.Inc()
 
@@ -76,5 +89,10 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 	http.SetCookie(w, &oauthhint)
 	http.SetCookie(w, &sessionExpiresAtCookie)
 	http.SetCookie(w, &oauthprovidercookie)
-	http.Redirect(w, r, redirectPage, http.StatusTemporaryRedirect)
+	redirect, err := url.QueryUnescape(redirectPage)
+	if err != nil {
+		http.Redirect(w, r, "/app", http.StatusTemporaryRedirect)
+		return
+	}
+	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
 }

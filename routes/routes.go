@@ -87,8 +87,6 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	}
 
 	if !options.DisableAPI {
-		mux.Handle("/api/auth/oauth/keep-alive", oauth.KeepAliveRoute{})
-
 		mux.Handle("/api/auth/oauth/keep-alive.js", oauth.KeepAliveJSRoute{})
 
 		var lockAccountsAfter map[string]time.Duration

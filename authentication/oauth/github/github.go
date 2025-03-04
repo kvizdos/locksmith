@@ -8,7 +8,7 @@ import (
 )
 
 //go:embed logo.svg
-var logoBytes []byte
+var GitHubLogoBytes []byte
 
 type GitHubOauth struct {
 	oauth.BaseOAuthProvider
@@ -36,6 +36,6 @@ func (g GitHubOauth) RegisterRoutes(apiMux *http.ServeMux) {
 	apiMux.HandleFunc("/api/auth/oauth/github/logo", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "max-age=2592000")
 		w.Header().Set("Content-Type", "image/svg+xml")
-		w.Write(logoBytes)
+		w.Write(GitHubLogoBytes)
 	})
 }

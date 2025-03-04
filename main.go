@@ -16,7 +16,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	oauth_github "github.com/kvizdos/locksmith/authentication/oauth/github"
-	oauth_google "github.com/kvizdos/locksmith/authentication/oauth/google"
+	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
@@ -94,32 +94,26 @@ func main() {
 	// 	SiteKey:   "xxx",
 	// 	SecretKey: "yyy",
 	// }
+	googleOIDC, err := oauth_google_oidc.NewOIDCConnection(context.Background(), oauth_google_oidc.OIDCConnectionParams{
+		Issuer:       "https://accounts.google.com",
+		ClientID:     "ExampleClientID",
+		ClientSecret: "ExampleClientSecret",
+		BaseURL:      "https://example.com",
+		ProviderName: "google", // for the UI & a few backend things; make sure its unique!
+		DB:           db,
+		LogoBytes:    oauth_github.GitHubLogoBytes,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Locksmith Demo UI",
 		UseEmailAsUsername: false,
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
 		OAuthProviders: []oauth.OAuthProvider{
-			oauth_google.GoogleOauth{
-				BaseOAuthProvider: oauth.BaseOAuthProvider{
-					ClientID:                     "411423592350-us51ciaa3qgeb5aegteao2la4uu7gisv.apps.googleusercontent.com",
-					ClientSecret:                 "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",
-					BaseURL:                      "https://dev.kv.codes",
-					Scopes:                       "openid email profile",
-					RedirectToRegisterOnNotFound: false,
-					Database:                     db,
-				},
-			},
-			oauth_github.GitHubOauth{
-				BaseOAuthProvider: oauth.BaseOAuthProvider{
-					ClientID:                     "Ov23liJkvkKr1VK2mrmm",
-					ClientSecret:                 "5774a441cfe29b485d01ffda17871a54e3f8d0db",
-					BaseURL:                      "https://dev.kv.codes",
-					Scopes:                       "read:user",
-					Database:                     db,
-					RedirectToRegisterOnNotFound: true,
-				},
-			},
+			googleOIDC,
 		},
 		LoginSettings: &login.LoginOptions{
 			LockoutPolicy: login.LockoutPolicy{
