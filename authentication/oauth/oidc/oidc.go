@@ -24,7 +24,8 @@ type OIDCConnection struct {
 	Config   oauth2.Config
 	Verifier *oidc.IDTokenVerifier
 
-	LogoBytes []byte
+	LogoBytes      []byte
+	DynamicBaseURL func(r *http.Request) string
 }
 
 type OIDCConnectionParams struct {
@@ -36,6 +37,7 @@ type OIDCConnectionParams struct {
 	DB                     database.DatabaseAccessor
 	LogoBytes              []byte
 	CustomizedGetUserQuery func(email string, r *http.Request) map[string]interface{}
+	DynamicBaseURL         func(r *http.Request) string
 }
 
 // NewOIDCConnection creates a new OIDCConnection instance.
@@ -66,11 +68,12 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 			Database:               params.DB,
 			CustomizedGetUserQuery: params.CustomizedGetUserQuery,
 		},
-		ProviderName: params.ProviderName,
-		Provider:     provider,
-		Config:       config,
-		Verifier:     verifier,
-		LogoBytes:    params.LogoBytes,
+		ProviderName:   params.ProviderName,
+		Provider:       provider,
+		Config:         config,
+		Verifier:       verifier,
+		LogoBytes:      params.LogoBytes,
+		DynamicBaseURL: params.DynamicBaseURL,
 	}, nil
 }
 
@@ -105,7 +108,11 @@ func (o *OIDCConnection) handleRedirect(w http.ResponseWriter, r *http.Request) 
 			state = "/app"
 		}
 	}
-	authURL := o.Config.AuthCodeURL(url.QueryEscape(state), oauth2.AccessTypeOffline)
+	cfg := o.Config
+	if o.DynamicBaseURL != nil {
+		cfg.RedirectURL = fmt.Sprintf("%s/api/auth/oauth/%s/callback", o.DynamicBaseURL(r), o.ProviderName)
+	}
+	authURL := cfg.AuthCodeURL(url.QueryEscape(state), oauth2.AccessTypeOffline)
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
