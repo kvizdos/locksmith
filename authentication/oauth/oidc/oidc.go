@@ -131,7 +131,12 @@ func (o *OIDCConnection) handleCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	token, err := o.Config.Exchange(ctx, code)
+	cfg := o.Config
+	if o.DynamicBaseURL != nil {
+		cfg.RedirectURL = fmt.Sprintf("%s/api/auth/oauth/%s/callback", o.DynamicBaseURL(r), o.ProviderName)
+	}
+
+	token, err := cfg.Exchange(ctx, code)
 	if err != nil {
 		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
 		return
