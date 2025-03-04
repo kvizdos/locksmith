@@ -14,18 +14,20 @@
 
 	let alerted = false;
 	let redirectTriggered = false;
-
+	let runOnce = false;
 	const checkExpiration = () => {
 		const nowSec = Date.now() / 1000;
 		const remaining = expiresAt - nowSec; // remaining time in seconds
 
-		console.debug(
-			"[LS] Current Time (s):",
-			nowSec,
-			"Remaining (s):",
-			remaining,
-		);
-
+		if (!runOnce) {
+			console.debug(
+				"[LS] Current Time (s):",
+				nowSec,
+				"Remaining (s):",
+				remaining,
+			);
+			runOnce = true;
+		}
 		// If less than 5 minutes remain (or already expired), trigger the redirect immediately.
 		if (remaining <= 300 && !redirectTriggered) {
 			console.debug(

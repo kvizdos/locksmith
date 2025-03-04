@@ -56,7 +56,7 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 	}
 
 	session.ExpiresAt = next11.Unix()
-	session.ExpiresAt = time.Now().UTC().Add(11 * time.Minute).Unix()
+	// session.ExpiresAt = time.Now().UTC().Add(11 * time.Minute).Unix()
 
 	err = user.SavePasswordSession(session, db)
 
