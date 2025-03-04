@@ -25,7 +25,7 @@ func TestDeleteOne(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func TestDeleteOneNothingDeleted(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 		return
 	}
 
@@ -92,7 +92,7 @@ func TestInsertDatabase(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 		return
 	}
 }

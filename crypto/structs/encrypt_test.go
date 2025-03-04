@@ -61,7 +61,7 @@ func TestEncryptStructJSON(t *testing.T) {
 	encrypted, error := EncryptStructIntoMap(testStr, JSON, testEngine)
 
 	if error != nil {
-		t.Errorf(error.Error())
+		t.Error(error)
 		return
 	}
 
@@ -119,7 +119,7 @@ func TestEncryptStructBSON(t *testing.T) {
 	encrypted, error := EncryptStructIntoMap(testStr, BSON, testEngine)
 
 	if error != nil {
-		t.Errorf(error.Error())
+		t.Error(error)
 		return
 	}
 

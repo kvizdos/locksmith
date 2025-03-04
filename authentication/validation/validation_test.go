@@ -104,7 +104,7 @@ func TestValidateInvalidToken(t *testing.T) {
 	_, validated, err := ValidateToken(testToken, testDb, "")
 
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func TestValidateValidToken(t *testing.T) {
 	_, validated, err := ValidateToken(testToken, testDb, "")
 
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 		return
 	}
 
