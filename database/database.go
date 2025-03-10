@@ -50,7 +50,8 @@ type DatabaseAccessor interface {
 }
 
 type TestDatabase struct {
-	Tables map[string]map[string]interface{}
+	Tables            map[string]map[string]interface{}
+	StubAggregateCall []map[string]interface{}
 }
 
 func (db TestDatabase) GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error) {
@@ -75,7 +76,10 @@ func (db TestDatabase) Transact(ctx context.Context, opts *TransactionOptions, t
 }
 
 func (db TestDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
-	return []map[string]interface{}{}, nil
+	if db.StubAggregateCall != nil {
+		return db.StubAggregateCall, nil
+	}
+	panic("Testing Aggregate requires StubAggregateCall to be set!")
 }
 
 func (db TestDatabase) InsertMany(table string, documents []interface{}) error {
