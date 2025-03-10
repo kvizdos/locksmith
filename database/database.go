@@ -43,6 +43,7 @@ type DatabaseAccessor interface {
 	CreateTextIndex(table string, keys []string) error
 	CreateRegularIndex(table string, keys map[string]Direction, unique bool) error
 	Drop(table string) error
+	AggregateStream(ctx context.Context, table string, pipeline []map[string]interface{}, bufferSize int) (<-chan map[string]interface{}, <-chan error)
 	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
 	GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error)
 	MonitorConnection(heartbeat time.Duration, health HealthCheckInterface)
@@ -80,6 +81,27 @@ func (db TestDatabase) Aggregate(table string, pipeline []map[string]interface{}
 		return db.StubAggregateCall, nil
 	}
 	panic("Testing Aggregate requires StubAggregateCall to be set!")
+}
+
+func (db TestDatabase) AggregateStream(ctx context.Context, table string, pipeline []map[string]interface{}, bufferSize int) (<-chan map[string]interface{}, <-chan error) {
+	out := make(chan map[string]interface{}, bufferSize)
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer close(out)
+		defer close(errChan)
+
+		// If a stub channel is provided, stream from it.
+		if db.StubAggregateCall != nil {
+			for _, result := range db.StubAggregateCall {
+				convertArraysToSlices(result)
+				out <- result
+			}
+			return
+		}
+	}()
+
+	return out, errChan
 }
 
 func (db TestDatabase) InsertMany(table string, documents []interface{}) error {

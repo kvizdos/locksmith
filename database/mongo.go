@@ -125,6 +125,39 @@ func (db MongoDatabase) Aggregate(table string, pipeline []map[string]interface{
 	return finalResults, nil
 }
 
+func (db MongoDatabase) AggregateStream(ctx context.Context, table string, pipeline []map[string]interface{}, bufferSize int) (<-chan map[string]interface{}, <-chan error) {
+	out := make(chan map[string]interface{}, bufferSize)
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer close(out)
+		defer close(errChan)
+
+		col := db.database.Collection(table)
+		cursor, err := col.Aggregate(ctx, pipeline)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		defer cursor.Close(ctx)
+
+		for cursor.Next(ctx) {
+			var result map[string]interface{}
+			if err := cursor.Decode(&result); err != nil {
+				errChan <- err
+				return
+			}
+			convertArraysToSlices(result)
+			out <- result
+		}
+		if err := cursor.Err(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	return out, errChan
+}
+
 func (db MongoDatabase) DeleteOne(table string, query map[string]interface{}) (bool, error) {
 	col := db.database.Collection(table)
 
