@@ -108,8 +108,8 @@ func main() {
 	}
 
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
-		AppName:            "Locksmith Demo UI",
-		UseEmailAsUsername: false,
+		AppName:            "Demo App",
+		UseEmailAsUsername: true,
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
 		OAuthProviders: []oauth.OAuthProvider{
@@ -126,11 +126,11 @@ func main() {
 			},
 		},
 		InactivityLockDuration: map[string]time.Duration{
-			"default": 15 * time.Minute, // If not set, defaults to 100 years.
-			"admin":   100 * time.Hour,
+			"default": 100 * 365 * 24 * time.Hour, // If not set, defaults to 100 years.
+			"admin":   100 * 365 * 24 * time.Hour,
 		},
 		Styling: pages.LocksmithPageStyling{
-			LogoURL: "https://example.com/logo.webp",
+			LogoURL: "/components/locksmith.svg",
 			InjectHeader: template.HTML(
 				`<script>
 					console.log("Loaded page.")

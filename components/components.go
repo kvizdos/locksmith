@@ -8,6 +8,15 @@ import (
 	"github.com/kvizdos/locksmith/launchpad"
 )
 
+//go:embed node_modules/locksmith-ui/bundle/locksmith-ui.bundle.js
+var BundleBytes []byte
+
+//go:embed node_modules/locksmith-ui/bundle/locksmith-admin.bundle.js
+var AdminBundleBytes []byte
+
+//go:embed locksmith.svg
+var LogoBytes []byte
+
 //go:embed register.component.js
 var RegistrationComponentJS []byte
 
@@ -31,7 +40,15 @@ var EphemeralTokensJS []byte
 
 func ServeComponents(w http.ResponseWriter, r *http.Request) {
 	component := r.URL.Path[len("/components/"):]
+	w.Header().Set("Cache-Control", "max-age=300")
+
 	switch component {
+	case "bundle.js":
+		serveJSComponent(w, BundleBytes)
+	case "admin.bundle.js":
+		serveJSComponent(w, AdminBundleBytes)
+	case "locksmith.svg":
+		serveSVGComponent(w, LogoBytes)
 	case "ephemeral_tokens.js":
 		serveJSComponent(w, EphemeralTokensJS)
 	case "register.component.js":
@@ -61,5 +78,10 @@ func ServeComponents(w http.ResponseWriter, r *http.Request) {
 }
 func serveJSComponent(w http.ResponseWriter, jsData []byte) {
 	w.Header().Set("Content-Type", "application/javascript")
+	w.Write(jsData)
+}
+
+func serveSVGComponent(w http.ResponseWriter, jsData []byte) {
+	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Write(jsData)
 }

@@ -370,7 +370,8 @@ func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	inviteCode := params.Get("invite")
 
 	if rr.DisablePublicRegistration && len(inviteCode) == 0 {
-		w.Write([]byte("public registrations are not allowed."))
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		// w.Write([]byte("public registrations are not allowed."))
 		return
 	}
 

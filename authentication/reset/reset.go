@@ -53,6 +53,14 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}).ServeHTTP(w, r)
 		return
 	case http.MethodPost:
+		start := time.Now()
+		const minDuration = 2 * time.Second
+
+		delayIfNeeded := func() {
+			if elapsed := time.Since(start); elapsed < minDuration {
+				time.Sleep(minDuration - elapsed)
+			}
+		}
 		// Creates the MAC if the user exists.
 		username := r.URL.Query().Get("username")
 
@@ -66,6 +74,7 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		})
 
 		if !found {
+			delayIfNeeded()
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -85,6 +94,8 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 
 		h.SendResetToken(token, lsUser)
+
+		delayIfNeeded()
 
 		w.WriteHeader(http.StatusOK)
 	default:

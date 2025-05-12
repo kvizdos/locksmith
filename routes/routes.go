@@ -10,9 +10,11 @@ import (
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
+	"github.com/kvizdos/locksmith/authentication/management"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
+	sign_out "github.com/kvizdos/locksmith/authentication/sign_out_http"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
@@ -138,7 +140,13 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 				MinimalPermissions: []string{"user.invite"},
 			})
 			mux.Handle("/api/users/invite", inviteUserAPIHandler)
+			invitesListAPIHandler := endpoints.SecureEndpointHTTPMiddleware(invitations.AdministrationInviteListHandler{}, db, endpoints.EndpointSecurityOptions{
+				MinimalPermissions: []string{"user.invite"},
+			})
+			mux.Handle("/api/users/invitations", invitesListAPIHandler)
 		}
+
+		management.RouteManagementAPI(mux, db)
 
 		// This endpoint requires a bit of dynamic Secure Endpointness,
 		// so all of that is handled within it.
@@ -151,14 +159,16 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	}
 
 	if !options.DisableUI {
+		mux.Handle("/sign-out", sign_out.SignOutHTTP{})
 		mux.Handle("/login", login.LoginPageMiddleware{
 			Next: login.LoginPageHandler{
-				AppName:         options.AppName,
-				Styling:         options.Styling,
-				EmailAsUsername: options.UseEmailAsUsername,
-				OnboardingPath:  options.OnboardPath,
-				CaptchaProvider: captchaproviders.UseProvider,
-				OAuthProviders:  options.OAuthProviders,
+				AppName:                   options.AppName,
+				Styling:                   options.Styling,
+				EmailAsUsername:           options.UseEmailAsUsername,
+				OnboardingPath:            options.OnboardPath,
+				CaptchaProvider:           captchaproviders.UseProvider,
+				OAuthProviders:            options.OAuthProviders,
+				DisablePublicRegistration: options.DisablePublicRegistration,
 			},
 		})
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
@@ -197,6 +207,6 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		serveAdminPage := endpoints.SecureEndpointHTTPMiddleware(administration.ServeAdminPage{}, db, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"view.ls-admin"},
 		})
-		mux.Handle("/locksmith", serveAdminPage)
+		mux.Handle("/locksmith/", serveAdminPage)
 	}
 }

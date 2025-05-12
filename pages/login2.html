@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <title>Login - {{.Title}}</title>
+        <script type="module" src="/components/signin.component.js"></script>
+        {{.CaptchaProvider.GetHeadInjection }}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0"
+        />
+        {{if ne .Styling.ManifestURL ""}}
+        <link rel="manifest" href="{{.Styling.ManifestURL}}" />
+        {{end}} {{.Styling.InjectHeader}}
+
+        <style>
+            html {
+                font-family: "Lato", sans-serif;
+            }
+
+            body {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                margin: 0;
+            }
+
+            main {
+                display: flex;
+                height: 100%;
+                justify-content: center;
+                align-items: center;
+                gap: 2rem;
+                flex-direction: column;
+            }
+
+            header {
+                background: linear-gradient(
+                    var(--startGradient),
+                    var(--endGradient)
+                );
+                height: 50vh;
+            }
+
+            #subsection {
+                height: 50vh;
+                box-shadow: 0 -15px 15px rgba(0, 0, 0, 0.15);
+                z-index: 10;
+                background-color: #f2f2f2;
+            }
+
+            #subsection login-form {
+                margin-bottom: 60vh;
+                background-color: white;
+                padding: 2rem;
+                padding-bottom: 1rem;
+                border-radius: 0.25rem;
+                border: 1px solid #c1c4c7;
+                min-width: 18rem;
+                filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.15));
+            }
+
+            #subsection p {
+                font-size: 2rem;
+                margin: 0;
+                color: white;
+                font-weight: bold;
+            }
+
+            img {
+                width: 8rem;
+            }
+        </style>
+    </head>
+
+    <body>
+        <header
+            style="--startGradient: {{.Styling.StartGradient}}; --endGradient: {{.Styling.EndGradient}};"
+        ></header>
+        <main id="subsection">
+            {{if ne .Styling.LogoURL ""}}<img
+                src="{{.Styling.LogoURL}}"
+            />{{end}}
+            <p>{{.Title}}</p>
+            <login-form
+                oauthProviders="{{.OAuthProviders}}"
+                {{
+                if
+                .EmailAsUsername}}emailAsUsername{{end}}
+                backgroundColor="{{.Styling.SubmitColor}}"
+                pathToOnboard="{{.OnboardingPath}}"
+                loginxsrf="{{.LoginXSRF}}"
+            ></login-form>
+        </main>
+    </body>
+</html>

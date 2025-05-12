@@ -46,7 +46,7 @@ type loginRequest struct {
 }
 
 func (r loginRequest) HasRequiredFields() bool {
-	return !(r.Username == "" || r.Password == "" || r.XSRF == "")
+	return !(r.Username == "" || r.Password == "")
 }
 
 type LoginHandler struct {
@@ -133,6 +133,15 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write(failedLoginResponse.Marshal())
 		return
+	}
+
+	start := time.Now()
+	const minDuration = 3 * time.Second
+
+	delayIfNeeded := func() {
+		if elapsed := time.Since(start); elapsed < minDuration {
+			time.Sleep(minDuration - elapsed)
+		}
 	}
 
 	// loginXSRFCookie, err := r.Cookie("login_xsrf")
@@ -283,6 +292,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !usernameExists {
 		logger.LOGGER.Log(logger.LOGIN_INVALID_USERNAME, logger.GetIPFromRequest(*r), loginReq.Username)
 		observability.LoginFailures.WithLabelValues("invalid_username").Inc()
+		delayIfNeeded()
 		w.WriteHeader(http.StatusUnauthorized)
 		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
 		w.Write(failedLoginResponse.Marshal())
@@ -307,6 +317,7 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.LOGGER.Log(logger.LOGIN_FAIL_BAD_PASSWORD, loginReq.Username, logger.GetIPFromRequest(*r))
 		observability.LoginFailures.WithLabelValues("invalid_password").Inc()
 		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
+		delayIfNeeded()
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write(failedLoginResponse.Marshal())
 		return
@@ -415,13 +426,14 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type PageData struct {
-		Title           string
-		Styling         pages.LocksmithPageStyling
-		EmailAsUsername bool
-		OnboardingPath  string
-		LoginXSRF       string
-		OAuthProviders  string
-		CaptchaProvider captchaproviders.CAPTCHAProvider
+		Title                     string
+		Styling                   pages.LocksmithPageStyling
+		EmailAsUsername           bool
+		OnboardingPath            string
+		LoginXSRF                 string
+		OAuthProviders            string
+		CaptchaProvider           captchaproviders.CAPTCHAProvider
+		DisablePublicRegistration bool
 	}
 
 	providers := ""
@@ -432,13 +444,14 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PageData{
-		Title:           lr.AppName,
-		Styling:         lr.Styling,
-		EmailAsUsername: lr.EmailAsUsername,
-		OnboardingPath:  lr.OnboardingPath,
-		LoginXSRF:       loginXSRF,
-		CaptchaProvider: lr.CaptchaProvider,
-		OAuthProviders:  providers,
+		Title:                     lr.AppName,
+		Styling:                   lr.Styling,
+		EmailAsUsername:           lr.EmailAsUsername,
+		OnboardingPath:            lr.OnboardingPath,
+		LoginXSRF:                 loginXSRF,
+		CaptchaProvider:           lr.CaptchaProvider,
+		OAuthProviders:            providers,
+		DisablePublicRegistration: lr.DisablePublicRegistration,
 	}
 
 	if data.Styling.SubmitColor == "" {

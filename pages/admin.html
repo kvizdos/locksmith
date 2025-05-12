@@ -1,249 +1,80 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+        />
+        <script type="module" src="/components/admin.bundle.js"></script>
 
-<head>
-    <meta charset="utf-8">
-    <title>Users & Administration - Locksmith</title>
-    <script type="module" src="/components/user-list.component.js"></script>
-    <script type="module" src="/components/user-tab.component.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
-    <div id="root" style="--color: ${this.backgroundColor};">
+        <meta name="theme-color" content="#1a5cf4" />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+            rel="stylesheet"
+        />
 
         <style>
-            html {
-                font-family: 'Lato', sans-serif;
-                --primary: #2f3235;
-                --secondary: #575b60;
+            * {
+                font-family: "Inter", sans-serif;
+                touch-action: manipulation;
             }
-
-            body {
-                height: 100vh;
-                margin: 0;
+            *:has(:not(:defined)) {
+                visibility: hidden;
             }
-
-            p,
-            h1 {
-                margin: 0;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-                font-weight: 600;
-                color: var(--primary);
-            }
-
-            nav {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                background-color: #e6ebf2;
-                height: fit-content;
-                padding: 1rem;
-                width: calc(100% - 2rem);
-            }
-
-            nav div {
-                display: flex;
-                gap: 2rem;
-            }
-
-            nav p#title {
-                font-weight: bold;
-            }
-
-            div#contentWrapper {
-                display: flex;
-                justify-content: center;
-            }
-
-            main {
-                padding: 1rem;
-                max-width: 64rem;
-                width: 100%;
-            }
-
-            button#invite {
-                margin-top: 0.5rem;
-                border-radius: 0.25rem;
-                border: 2px solid #32d16c;
-                color: #32d16c;
-                font-weight: bold;
-                background-color: white;
-                padding: 0.5rem;
-                transition: 200ms;
-            }
-
-            button#invite:hover {
-                transition: 200ms;
-                background-color: #32d16c;
-                color: white;
-            }
-
-            #modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            #modal #content {
-                background-color: white;
-                padding: 1rem;
-                border-radius: 0.35rem;
-                min-width: 18rem;
-            }
-
-            #modal #content #step1 {
-                display: flex;
-                flex-direction: column;
-            }
-
-            #modal #content #header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 1rem;
-            }
-
-            #modal #content #header button {
-                margin: 0 !important;
-                background: unset;
-                border: unset;
-                padding: 0 !important;
-                font-size: 1.25rem;
-            }
-
-            .hidden {
-                display: none !important;
-            }
-
-            #modal #content * #title {
-                font-weight: bold;
-            }
-
-            #modal #content #step1 input {
-                padding: 0.5rem;
-                border-radius: 0.25rem;
-                border: 1px solid rgb(220, 220, 220);
-            }
-
-            #modal #content #step1 input:not(:last-of-type) {
-                margin-bottom: 0.75rem;
-            }
-
-            #modal #content #step1 button {
-                padding: 0.5rem;
-                border-radius: 0.25rem;
-                margin-top: 1rem;
-            }
-
         </style>
 
-        <script>
-            const closeModal = () => {
-                document.querySelector("#modal").classList.add("hidden")
+        <style>
+            body {
+                margin: 0;
+                --background-color: rgb(243, 243, 250);
+                --primary-50: #eef6ff;
+                --primary-100: #d9eaff;
+                --primary-200: #bcdaff;
+                --primary-300: #8ec4ff;
+                --primary-400: #59a2ff;
+                --primary-500: #327eff;
+                --primary-600: #1a5cf4;
+                --primary-700: #1448e1;
+                --primary-800: #173ab6;
+                --primary-900: #19378f;
+                --primary-950: #142257;
+
+                --danger-50: #fff1f2;
+                --danger-100: #ffe4e6;
+                --danger-200: #fecdd3;
+                --danger-300: #fda4af;
+                --danger-400: #fb7185;
+                --danger-500: #f3405d;
+                --danger-600: #e01e47;
+                --danger-700: #b8123a;
+                --danger-800: #9f1239;
+                --danger-900: #881337;
+                --danger-950: #4c0519;
+
+                --gray-50: #f8f8f8;
+                --gray-100: #eaeaea;
+                --gray-200: #dcdcdc;
+                --gray-300: #bdbdbd;
+                --gray-400: #989898;
+                --gray-500: #7c7c7c;
+                --gray-600: #656565;
+                --gray-700: #525252;
+                --gray-800: #464646;
+                --gray-900: #3d3d3d;
+                --gray-950: #292929;
+                background-color: var(--background-color);
             }
-            const openModal = () => {
-                document.querySelector("#modal").classList.remove("hidden")
+            * {
+                box-sizing: border-box;
+                margin: 0;
             }
-            const isValidEmail = (email) => {
-                const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                return pattern.test(email);
-            }
-            const sendInvite = async () => {
-                const email = document.querySelector("#modal #content #email")
-                const role = document.querySelector("#modal #content #role")
-
-                if (!isValidEmail(email.value)) {
-                    alert("Invalid email.")
-                    return
-                }
-
-                if (role.value.length == 0) {
-                    alert("A role must be specified.")
-                    return
-                }
-
-                const options = {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: `{"email":"${email.value}","role":"${role.value}"}`
-                };
-
-                fetch('/api/users/invite', options)
-                    .then(async response => {
-                        switch (response.status) {
-                            case 500:
-                                alert("Invalid role")
-                                return
-                            case 409:
-                                alert("User already invited / registered.")
-                                return
-                            case 200:
-                                const code = await response.text();
-                                const url = `${window.location.protocol}//${window.location.host}/register?invite=${code}`
-                                document.querySelector("#modal #code").setAttribute("href", url)
-                                document.querySelector("#modal #step1").classList.add("hidden")
-                                document.querySelector("#modal #step2").classList.remove("hidden")
-                        }
-                    })
-                    .catch(err => console.error(err));
-            }
-        </script>
-</head>
-
-<body>
-    <nav>
-        <div>
-            <p id="title">Locksmith</p>
-            <p>Users</p>
-        </div>
-
-        <div>
-            <p>Log out</p>
-        </div>
-    </nav>
-
-    <div id="modal" class="hidden">
-        <div id="content">
-            <div id="step1">
-                <div id="header">
-                    <p id="title">Invite a user</p>
-                    <button onclick="closeModal()">&times;</button>
-                </div>
-                <input id="email" type="email" placeholder="Email" />
-                <input id="role" type="text" placeholder="Role" />
-                <button id="invite" onclick="sendInvite()">Get Invite Code</button>
-            </div>
-            <div id="step2" class="hidden">
-                <div id="header">
-                    <p id="title">User invited!</p>
-                    <button onclick="closeModal()">&times;</button>
-                </div>
-                <p>Their registration URL is <a href="#" target="_blank" id="code">this link.</a></p>
-            </div>
-        </div>
-    </div>
-
-    <div id="contentWrapper">
-        <main>
-            <h1>Users</h1>
-            <button id="invite" onclick="openModal()">Invite User</button>
-
-            <user-list>
-                <user-tab slot="tab"></user-tab>
-            </user-list>
-        </main>
-    </div>
-</body>
-
+        </style>
+    </head>
+    <body>
+        <div id="outlet"></div>
+    </body>
 </html>

@@ -13,7 +13,7 @@ import (
 )
 
 type Invitation struct {
-	Code         string `json:"code"`
+	Code         string `json:"code,omitempty"`
 	Email        string `json:"email"`
 	Role         string `json:"role"`
 	AttachUserID string `json:"userid"` // Attach THIS user ID once they register
@@ -36,6 +36,36 @@ func (i Invitation) ToMap() map[string]interface{} {
 		"inviter": i.InvitedBy,
 		"userid":  i.AttachUserID,
 	}
+}
+
+func InvitationFromMap(inp any) Invitation {
+	input := inp.(map[string]interface{})
+
+	return Invitation{
+		Code:         input["code"].(string),
+		Email:        input["email"].(string),
+		SentAt:       input["sentAt"].(int64),
+		Role:         input["role"].(string),
+		InvitedBy:    input["inviter"].(string),
+		AttachUserID: input["userid"].(string),
+	}
+}
+
+func ListInvites(db database.DatabaseAccessor) []Invitation {
+	rawInvite, found := db.Find("invites", map[string]interface{}{})
+
+	if !found {
+		return []Invitation{}
+	}
+
+	out := make([]Invitation, len(rawInvite))
+	for i, raw := range rawInvite {
+		inv := InvitationFromMap(raw)
+		inv.Code = ""
+		out[i] = inv
+	}
+
+	return out
 }
 
 // InviteUser() is a handler that allows applications to directly

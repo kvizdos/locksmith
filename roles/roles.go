@@ -1,33 +1,10 @@
 package roles
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var AVAILABLE_ROLES map[string][]string
-
-// Define required admin role for Locksmith to work
-func init() {
-	adminRole := Role{
-		Name: "admin",
-		Permissions: []string{
-			"view.ls-admin",
-			"user.invite",
-			"user.delete.self",
-			"user.delete.other",
-			"users.list.all",
-			"users.lock",        // get lock status
-			"users.lock.manage", // set lock state
-		},
-	}
-	AddRole(adminRole)
-
-	userRole := Role{
-		Name: "user",
-		Permissions: []string{
-			"user.delete.self",
-		},
-	}
-	AddRole(userRole)
-}
 
 type Role struct {
 	Name        string   `json:"name" bson:"name"`
@@ -43,6 +20,9 @@ func (r Role) HasPermission(permission string) bool {
 	return false
 }
 
+// Used to add a new role into the system.
+//
+// Deprecated: Use CreatePermissionSet() instead for more capable features.
 func AddRole(role Role) {
 	if AVAILABLE_ROLES == nil {
 		AVAILABLE_ROLES = map[string][]string{}
@@ -68,8 +48,7 @@ func GetRole(roleName string) (Role, error) {
 	}, nil
 }
 
-// Useful to add roles to the default Locksmith Admin role
-// not many other uses..
+// Deprecated: Use roles.CreatePermissionSet()
 func AddPermissionsToRole(roleName string, permissions []string) error {
 	role, err := GetRole(roleName)
 
