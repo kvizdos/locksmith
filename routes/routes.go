@@ -160,6 +160,10 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 
 	if !options.DisableUI {
 		mux.Handle("/sign-out", sign_out.SignOutHTTP{})
+		mux.Handle("/profile", login.ProfileHTTP{
+			AppName: options.AppName,
+			Styling: options.Styling,
+		})
 		mux.Handle("/login", login.LoginPageMiddleware{
 			Next: login.LoginPageHandler{
 				AppName:                   options.AppName,

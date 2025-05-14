@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+        />
+        <meta name="theme-color" content="{{.Styling.SubmitColor}}" />
+
+        <script type="module" src="/components/bundle.js"></script>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+            rel="stylesheet"
+        />
+
+        <style>
+            * {
+                font-family: "Inter", sans-serif;
+                touch-action: manipulation;
+            }
+        </style>
+
+        <style>
+            body {
+                margin: 0;
+                --accent: {{.Styling.SubmitColor}};
+                --fl-button-bg: {{.Styling.SubmitColor}};
+                --fl-button-bg-hover: {{.Styling.StartGradient}};
+                --fl-button-bg-active: {{.Styling.EndGradient}};
+                --fl-button-bg-disabled: {{.Styling.EndGradient}};;
+                --fl-button-text-disabled: #FFF;
+                --fl-button-loader-spinner: var(--fl-button-bg-disabled);
+                --fl-button-loader-loop: #FFF;
+            }
+            @media (min-width: 650px) {
+                body {
+                    --background-color: rgb(243, 243, 250);
+                    background-color: var(--background-color);
+                }
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <locksmith-layout logoURL="{{.Styling.LogoURL}}">
+            <section slot="main">
+                <locksmith-profile appName="{{.Title}}"></locksmith-profile>
+            </section>
+        </locksmith-layout>
+    </body>
+</html>
