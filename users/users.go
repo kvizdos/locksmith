@@ -64,7 +64,7 @@ type LocksmithUserInterface interface {
 // sent to the frontend
 type PublicLocksmithUserInterface interface {
 	FromRegular(LocksmithUserInterface) (PublicLocksmithUserInterface, error)
-	MakeUserSafe()
+	MakeUserSafe() PublicLocksmithUserInterface
 }
 
 // Only used to show user data to an endpoint
@@ -79,9 +79,10 @@ type PublicLocksmithUser struct {
 	Role               string `json:"role"`
 }
 
-func (u *PublicLocksmithUser) MakeUserSafe() {
+func (u PublicLocksmithUser) MakeUserSafe() PublicLocksmithUserInterface {
 	u.LastActive = 0
 	u.ActiveSessionCount = 0
+	return u
 }
 
 // Convert a LocksmithUser{} into
@@ -92,7 +93,7 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 	role, err := user.GetRole()
 
 	if err != nil {
-		return &PublicLocksmithUser{}, err
+		return PublicLocksmithUser{}, err
 	}
 
 	publicUser.Username = user.GetUsername()
@@ -102,7 +103,7 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 	publicUser.LastActive = -1
 	publicUser.Role = role.Name
 
-	return &publicUser, nil
+	return publicUser, nil
 }
 
 type LocksmithUser struct {

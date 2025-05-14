@@ -48,10 +48,10 @@ func (m meEndpointHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pub.MakeUserSafe()
+	u := pub.MakeUserSafe()
 
 	api_helpers.WriteResponse(w, map[string]interface{}{
-		"info":        pub,
+		"info":        u,
 		"permissions": roles.GetExposable(role.Permissions),
 	}, http.StatusOK)
 }
