@@ -156,6 +156,9 @@
 
                 fetch("/api/login", options)
                     .then((response) => {
+                        localStorage.removeItem("_identity_p");
+                        localStorage.removeItem("_identity_la");
+                        localStorage.removeItem("_identity_i");
                         document.cookie = `LaunchpadUser=${displayName};`;
                         window.location.href = redirect;
                     })
