@@ -7,6 +7,8 @@ import (
 type LocksmithLaunchpadUserOptions struct {
 	// Name to show on Launchpad
 	DisplayName string
+	// Description to show on Launchpad
+	Description string
 	// Email to inherit
 	Email string
 	// Role that user will obtain

@@ -162,6 +162,7 @@ func main() {
 			Users: map[string]launchpad.LocksmithLaunchpadUserOptions{
 				"lp-admin": {
 					DisplayName: "Administrator",
+					Description: "Add a description for extra context.",
 					Email:       "admin@admin.com",
 					Role:        "admin",
 					Redirect:    "/locksmith",
