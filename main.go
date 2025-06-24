@@ -20,6 +20,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/jwts"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
 	"github.com/kvizdos/locksmith/ratelimits"
@@ -236,6 +237,31 @@ func main() {
 			"can.see.magic.view",
 		},
 	}))
+
+	roles.CreatePermissionSet([]roles.Permission{
+		{
+			Permission: "issue.token.demo",
+			IsElevated: false,
+			JWTOnly:    false,
+			AvailableRoles: []string{
+				"admin",
+			},
+			DontExposeFrontend: false,
+		},
+	})
+	jwts.RegisterJWT("demo", jwts.RegisteredJWT{
+		RequiredPermission: "issue.token.demo",
+		AttachPermissions: []string{
+			"test.permission",
+			"test.permission2",
+		},
+		ForAudience: "demo-svc",
+		Issuer:      "my-app",
+		ExpiresIn:   60 * time.Second,
+		SigningKey: func(context.Context) (string, error) {
+			return "your_private_key_here", nil
+		},
+	})
 
 	/*
 		Replace this with your OWN key

@@ -19,6 +19,7 @@ import (
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/httpHelpers"
+	jwt_endpoints "github.com/kvizdos/locksmith/jwts/endpoints"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
 	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
@@ -147,6 +148,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		}
 
 		management.RouteManagementAPI(mux, db)
+		jwt_endpoints.RouteJWTEndpoints(mux, db)
 
 		// This endpoint requires a bit of dynamic Secure Endpointness,
 		// so all of that is handled within it.

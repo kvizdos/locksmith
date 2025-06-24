@@ -30,6 +30,13 @@ func init() {
 			DontExposeFrontend: true,
 		},
 		{
+			Permission:         "jwt.issue",
+			IsElevated:         true,
+			JWTOnly:            false,
+			AvailableRoles:     []string{"admin", "user"},
+			DontExposeFrontend: true,
+		},
+		{
 			Permission:     "user.delete.self",
 			IsElevated:     false,
 			JWTOnly:        false,
