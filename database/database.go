@@ -184,6 +184,44 @@ func (db TestDatabase) UpdateOne(table string, query map[string]interface{}, bod
 								break
 							}
 						}
+					} else if action == INC {
+						for key, value := range updateBody {
+							current, ok := row.(map[string]interface{})[key]
+							if !ok {
+								// If the field doesn't exist, assume 0
+								row.(map[string]interface{})[key] = value
+								continue
+							}
+
+							switch curr := current.(type) {
+							case int:
+								if delta, ok := value.(int); ok {
+									row.(map[string]interface{})[key] = curr + delta
+								} else {
+									return nil, fmt.Errorf("cannot $inc non-int value for key %s", key)
+								}
+							case int32:
+								if delta, ok := value.(int32); ok {
+									row.(map[string]interface{})[key] = curr + delta
+								} else {
+									return nil, fmt.Errorf("cannot $inc non-int32 value for key %s", key)
+								}
+							case int64:
+								if delta, ok := value.(int64); ok {
+									row.(map[string]interface{})[key] = curr + delta
+								} else {
+									return nil, fmt.Errorf("cannot $inc non-int64 value for key %s", key)
+								}
+							case float64:
+								if delta, ok := value.(float64); ok {
+									row.(map[string]interface{})[key] = curr + delta
+								} else {
+									return nil, fmt.Errorf("cannot $inc non-float64 value for key %s", key)
+								}
+							default:
+								return nil, fmt.Errorf("unsupported $inc type for key %s", key)
+							}
+						}
 					} else {
 						return nil, fmt.Errorf("unsupported update action")
 					}

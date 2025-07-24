@@ -252,12 +252,11 @@ func main() {
 	jwts.RegisterJWT("demo", jwts.RegisteredJWT{
 		RequiredPermission: "issue.token.demo",
 		AttachPermissions: []string{
-			"test.permission",
-			"test.permission2",
+			"svc.notify.connect",
 		},
-		ForAudience: "demo-svc",
+		ForAudience: "edvizion-notify",
 		Issuer:      "my-app",
-		ExpiresIn:   60 * time.Second,
+		ExpiresIn:   60 * time.Hour,
 		SigningKey: func(context.Context) (string, error) {
 			return "your_private_key_here", nil
 		},
