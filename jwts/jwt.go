@@ -15,7 +15,7 @@ type RegisteredJWT struct {
 	Issuer             string
 	ExpiresIn          time.Duration
 	SigningKey         func(context.Context) (string, error)
-	ExtraClaims        func(context.Context, *http.Request) map[string]any
+	ExtraClaims        func(context.Context, *http.Request) (map[string]any, error)
 }
 
 func RegisterJWT(name string, jwt RegisteredJWT) {

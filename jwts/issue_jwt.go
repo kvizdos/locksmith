@@ -27,7 +27,11 @@ func (j RegisteredJWT) IssueJWT(ctx context.Context, opts IssueJWTOptions) (stri
 
 	// Pull from request if provided
 	if j.ExtraClaims != nil && opts.Req != nil {
-		maps.Copy(claims, j.ExtraClaims(ctx, opts.Req))
+		extraClaims, err := j.ExtraClaims(ctx, opts.Req)
+		if err != nil {
+			return "", err
+		}
+		maps.Copy(claims, extraClaims)
 	}
 
 	// Explicit extras override request extras
