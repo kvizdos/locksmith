@@ -91,13 +91,14 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 	http.SetCookie(w, &sessionExpiresAtCookie)
 	http.SetCookie(w, &oauthprovidercookie)
 	redirect, err := url.QueryUnescape(redirectPage)
-	if err != nil {
-		http.Redirect(w, r, "/app", http.StatusTemporaryRedirect)
-		return
-	}
 
 	if LoginInfoCallback != nil {
 		LoginInfoCallback(fmt.Sprintf("oauth-%s", strings.ToLower(provider)), user.ToMap())
+	}
+
+	if err != nil {
+		http.Redirect(w, r, "/app", http.StatusTemporaryRedirect)
+		return
 	}
 
 	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
