@@ -51,6 +51,7 @@ type LocksmithRoutesOptions struct {
 	NewRegistrationEvent   func(user users.LocksmithUserInterface)
 	SharedMemory           sharedmemory.MemoryProvider
 	LoginSettings          *login.LoginOptions
+	LoginInfoCallback      func(method string, user map[string]any)
 }
 
 type ResetPasswordOptions struct {
@@ -118,6 +119,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			LockInactivityAfter: lockAccountsAfter,
 			Options:             *useLoginSettings,
 			SharedMemory:        useSharedMemory,
+			LoginInfoCallback:   options.LoginInfoCallback,
 		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 

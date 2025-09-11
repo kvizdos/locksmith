@@ -61,6 +61,7 @@ type LoginHandler struct {
 	LockInactivityAfter map[string]time.Duration
 	SharedMemory        sharedmemory.MemoryProvider
 	Options             LoginOptions
+	LoginInfoCallback   func(method string, user map[string]any)
 }
 
 type LoginHTTPResponse struct {
@@ -396,6 +397,10 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &sessionExpiresAtCookie)
 	http.SetCookie(w, &oauthprovidercookie)
 	http.SetCookie(w, &cookieXSRF)
+
+	if lh.LoginInfoCallback != nil {
+		lh.LoginInfoCallback("password", dbUser.(map[string]any))
+	}
 }
 
 type LoginPageHandler struct {

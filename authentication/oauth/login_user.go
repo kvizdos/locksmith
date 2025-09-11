@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/validation"
@@ -14,7 +15,7 @@ import (
 	"github.com/kvizdos/locksmith/users"
 )
 
-func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, provider string, redirectPage string, w http.ResponseWriter, r *http.Request) {
+func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, provider string, redirectPage string, LoginInfoCallback func(method string, user map[string]any), w http.ResponseWriter, r *http.Request) {
 	if tokencookie, err := r.Cookie("token"); err == nil && tokencookie.Value != "" {
 		expiresAtString, expiresErr := r.Cookie("ls_expires_at")
 
@@ -94,5 +95,10 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 		http.Redirect(w, r, "/app", http.StatusTemporaryRedirect)
 		return
 	}
+
+	if LoginInfoCallback != nil {
+		LoginInfoCallback(fmt.Sprintf("oauth-%s", strings.ToLower(provider)), user.ToMap())
+	}
+
 	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
 }

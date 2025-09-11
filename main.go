@@ -15,7 +15,6 @@ import (
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/oauth"
-	oauth_github "github.com/kvizdos/locksmith/authentication/oauth/github"
 	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
@@ -102,7 +101,9 @@ func main() {
 		BaseURL:      "https://example.com",
 		ProviderName: "google", // for the UI & a few backend things; make sure its unique!
 		DB:           db,
-		LogoBytes:    oauth_github.GitHubLogoBytes,
+		LoginInfoCallback: func(method string, user map[string]any) {
+			fmt.Printf("User logged in via Google: %+v", user)
+		},
 	})
 	if err != nil {
 		panic(err)
@@ -113,6 +114,9 @@ func main() {
 		UseEmailAsUsername: true,
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
+		LoginInfoCallback: func(method string, user map[string]any) {
+			fmt.Printf("User logged in via username / password: %+v", user)
+		},
 		OAuthProviders: []oauth.OAuthProvider{
 			googleOIDC,
 		},

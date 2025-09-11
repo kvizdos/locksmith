@@ -38,6 +38,7 @@ type OIDCConnectionParams struct {
 	LogoBytes              []byte
 	CustomizedGetUserQuery func(email string, r *http.Request) map[string]interface{}
 	DynamicBaseURL         func(r *http.Request) string
+	LoginInfoCallback      func(method string, user map[string]any)
 }
 
 // NewOIDCConnection creates a new OIDCConnection instance.
@@ -182,7 +183,7 @@ func (o *OIDCConnection) handleCallback(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	oauth.LoginUser(o.Database, user, o.GetName(), redirectPath, w, r)
+	oauth.LoginUser(o.Database, user, o.GetName(), redirectPath, o.LoginInfoCallback, w, r)
 }
 
 func (o *OIDCConnection) handleRefresh(w http.ResponseWriter, r *http.Request) {
