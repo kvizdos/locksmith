@@ -68,6 +68,7 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 			BaseURL:                callbackURL,
 			Database:               params.DB,
 			CustomizedGetUserQuery: params.CustomizedGetUserQuery,
+			LoginInfoCallback:      params.LoginInfoCallback,
 		},
 		ProviderName:   params.ProviderName,
 		Provider:       provider,
