@@ -115,7 +115,7 @@ func main() {
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
 		LoginInfoCallback: func(method string, user map[string]any) {
-			fmt.Printf("User logged in via username / password: %+v", user)
+			fmt.Printf("User logged in via username / password: %+v\n", user)
 		},
 		OAuthProviders: []oauth.OAuthProvider{
 			googleOIDC,

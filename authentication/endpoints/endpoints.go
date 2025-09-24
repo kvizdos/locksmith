@@ -177,33 +177,33 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 		}, userInterface)
 
 		if err != nil {
-			redirectURL := "/login"
+			validPage := "/app"
+			rawPage := r.URL.RequestURI()
+			if rawPage != "" {
+				// Parse the rawPage.
+				parsed, err := url.Parse(rawPage)
+				if err == nil && parsed.Scheme == "" && parsed.Host == "" && strings.HasPrefix(parsed.Path, "/") {
+					validPage = parsed.Path
+					if parsed.RawQuery != "" {
+						validPage += "?" + parsed.RawQuery
+					}
+					if parsed.Fragment != "" {
+						validPage += "#" + parsed.Fragment
+					}
+				}
+			}
+
+			// URL-encode the valid page value.
+			encodedState := url.QueryEscape(validPage)
+
+			redirectURL := fmt.Sprintf("/login?b=%s&utm_source=locksmith&utm_campaign=session_expired", encodedState)
 
 			if oauthProviderCookie, err := r.Cookie("ls_oauth_provider"); err == nil {
 				if oauth.IsOauthProviderEnabled(oauthProviderCookie.Value) {
-					validPage := "/app"
-					rawPage := r.URL.RequestURI()
-					if rawPage != "" {
-						// Parse the rawPage.
-						parsed, err := url.Parse(rawPage)
-						if err == nil && parsed.Scheme == "" && parsed.Host == "" && strings.HasPrefix(parsed.Path, "/") {
-							validPage = parsed.Path
-							if parsed.RawQuery != "" {
-								validPage += "?" + parsed.RawQuery
-							}
-							if parsed.Fragment != "" {
-								validPage += "#" + parsed.Fragment
-							}
-						}
-					}
-
-					// URL-encode the valid page value.
-					encodedState := url.QueryEscape(validPage)
-
 					redirectURL = fmt.Sprintf("/api/auth/oauth/%s?page=%s", oauthProviderCookie.Value, encodedState)
 				}
 			}
-			fmt.Println(redirectURL)
+
 			c := &http.Cookie{
 				Name:     "token",
 				Value:    "",
