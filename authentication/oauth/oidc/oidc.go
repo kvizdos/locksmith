@@ -118,7 +118,6 @@ func (o *OIDCConnection) handleRedirect(w http.ResponseWriter, r *http.Request) 
 
 	// check cookie
 	if c, err := r.Cookie("ls_oauth_hint"); err == nil && c.Value != "" {
-		// you may want to validate it looks like an email
 		opts = append(opts, oauth2.SetAuthURLParam("login_hint", c.Value))
 	}
 
