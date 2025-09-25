@@ -114,7 +114,15 @@ func (o *OIDCConnection) handleRedirect(w http.ResponseWriter, r *http.Request) 
 	if o.DynamicBaseURL != nil {
 		cfg.RedirectURL = fmt.Sprintf("%s/api/auth/oauth/%s/callback", o.DynamicBaseURL(r), o.ProviderName)
 	}
-	authURL := cfg.AuthCodeURL(url.QueryEscape(state), oauth2.AccessTypeOffline)
+	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
+
+	// check cookie
+	if c, err := r.Cookie("ls_oauth_hint"); err == nil && c.Value != "" {
+		// you may want to validate it looks like an email
+		opts = append(opts, oauth2.SetAuthURLParam("login_hint", c.Value))
+	}
+
+	authURL := cfg.AuthCodeURL(state, opts...)
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
