@@ -49,8 +49,20 @@ func (m issueJWTHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sub := user.GetID()
+
+	if jwt.GetSubject != nil {
+		sub, err = jwt.GetSubject(r.Context(), r)
+		if err != nil {
+			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
+				Reason: "failed",
+			}, http.StatusInternalServerError)
+			return
+		}
+	}
+
 	tokenStr, err := jwt.IssueJWT(r.Context(), jwts.IssueJWTOptions{
-		Sub: user.GetID(),
+		Sub: sub,
 		Req: r,
 	})
 	if err != nil {

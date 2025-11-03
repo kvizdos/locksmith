@@ -14,6 +14,7 @@ type RegisteredJWT struct {
 	ForAudience        string
 	Issuer             string
 	ExpiresIn          time.Duration
+	GetSubject         func(context.Context, *http.Request) (string, error)
 	SigningKey         func(context.Context) (string, error)
 	ExtraClaims        func(context.Context, *http.Request) (map[string]any, error)
 }

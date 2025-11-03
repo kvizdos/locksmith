@@ -265,6 +265,21 @@ func main() {
 			return "your_private_key_here", nil
 		},
 	})
+	jwts.RegisterJWT("demo-group", jwts.RegisteredJWT{
+		RequiredPermission: "issue.token.demo",
+		AttachPermissions: []string{
+			"svc.notify.connect",
+		},
+		GetSubject: func(context.Context, *http.Request) (string, error) {
+			return "group-random-id", nil
+		},
+		ForAudience: "edvizion-notify",
+		Issuer:      "my-app",
+		ExpiresIn:   60 * time.Hour,
+		SigningKey: func(context.Context) (string, error) {
+			return "your_private_key_here", nil
+		},
+	})
 
 	/*
 		Replace this with your OWN key
