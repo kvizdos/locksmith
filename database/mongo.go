@@ -26,6 +26,10 @@ type MongoDatabase struct {
 	database *mongo.Database
 }
 
+func (db *MongoDatabase) Conn() *mongo.Database {
+	return db.database
+}
+
 func (db *MongoDatabase) Initialize(uri string, database string) error {
 	clientOptions := options.Client().ApplyURI(uri)
 	defer db.Cancel()
