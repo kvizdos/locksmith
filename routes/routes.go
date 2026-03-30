@@ -14,10 +14,13 @@ import (
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
+	"github.com/kvizdos/locksmith/authentication/saml/saml_config"
+	"github.com/kvizdos/locksmith/authentication/saml/saml_http"
 	sign_out "github.com/kvizdos/locksmith/authentication/sign_out_http"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/error_svc"
 	"github.com/kvizdos/locksmith/httpHelpers"
 	jwt_endpoints "github.com/kvizdos/locksmith/jwts/endpoints"
 	"github.com/kvizdos/locksmith/launchpad"
@@ -44,6 +47,7 @@ type LocksmithRoutesOptions struct {
 	ResetPasswordOptions      ResetPasswordOptions
 	HIBPIntegrationOptions    hibp.HIBPSettings
 	OAuthProviders            []oauth.OAuthProvider
+	SAMLConfig                *saml_config.IdPConfig
 	// map[roleName]time.Duration
 	// Use "default" as a catch-all
 	InactivityLockDuration map[string]time.Duration
@@ -52,6 +56,8 @@ type LocksmithRoutesOptions struct {
 	SharedMemory           sharedmemory.MemoryProvider
 	LoginSettings          *login.LoginOptions
 	LoginInfoCallback      func(method string, user map[string]any)
+
+	WithErrors func(error_svc.ErrorService)
 }
 
 type ResetPasswordOptions struct {
@@ -149,6 +155,11 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			mux.Handle("/api/users/invitations", invitesListAPIHandler)
 		}
 
+		if options.SAMLConfig != nil {
+			fmt.Println("Serving SAML..")
+			mux.Handle("/api/auth/saml/", http.StripPrefix("/api/auth/saml", saml_http.ServeSAML(db, options.SAMLConfig)))
+		}
+
 		management.RouteManagementAPI(mux, db)
 		jwt_endpoints.RouteJWTEndpoints(mux, db)
 
@@ -163,6 +174,13 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	}
 
 	if !options.DisableUI {
+		if options.WithErrors != nil {
+			es := error_svc.NewErrorSvc()
+			options.WithErrors(es)
+
+			mux.Handle("/err", es.HandleHTTP(options.AppName, options.Styling))
+		}
+
 		mux.Handle("/sign-out", sign_out.SignOutHTTP{})
 		mux.Handle("/profile", login.ProfileHTTP{
 			AppName: options.AppName,

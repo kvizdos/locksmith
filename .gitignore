@@ -5,3 +5,5 @@ components/node_modules/*
 !components/node_modules/locksmith-ui/
 components/node_modules/locksmith-ui/*
 !components/node_modules/locksmith-ui/bundle/
+saml-*.pem
+.env

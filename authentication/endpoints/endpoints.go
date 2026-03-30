@@ -79,6 +79,9 @@ type EndpointSecurityOptions struct {
 	PrioritizeMagic bool
 	// Optionally, rate limit the endpoint.
 	RateLimit *ratelimits.RateLimiter
+
+	// Set this for nested things that MAY be hit unauthenticated
+	BaseURL string
 }
 
 func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccessor, opts ...EndpointSecurityOptions) http.Handler {
@@ -180,6 +183,9 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			validPage := "/app"
 			rawPage := r.URL.RequestURI()
 			if rawPage != "" {
+				if secureOptions.BaseURL != "" {
+					rawPage = secureOptions.BaseURL + rawPage
+				}
 				// Parse the rawPage.
 				parsed, err := url.Parse(rawPage)
 				if err == nil && parsed.Scheme == "" && parsed.Host == "" && strings.HasPrefix(parsed.Path, "/") {

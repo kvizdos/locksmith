@@ -20,6 +20,9 @@ var AdminPageHTML []byte
 //go:embed login.html
 var LoginPageHTML []byte
 
+//go:embed error.html
+var ErrorPageHTML []byte
+
 //go:embed register.html
 var RegisterPageHTML []byte
 

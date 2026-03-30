@@ -2,9 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"time"
@@ -16,9 +24,13 @@ import (
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
+	"github.com/kvizdos/locksmith/authentication/saml/saml_discovery"
+	"github.com/kvizdos/locksmith/authentication/saml/saml_entities"
+	"github.com/kvizdos/locksmith/authentication/saml/saml_init"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
+	"github.com/kvizdos/locksmith/error_svc"
 	"github.com/kvizdos/locksmith/jwts"
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
@@ -109,6 +121,43 @@ func main() {
 		panic(err)
 	}
 
+	samlProvider, err := saml_init.LoadServiceProviderFromMetadata("buzz", []byte(os.Getenv("saml_demo")))
+	if err != nil {
+		panic(err)
+	}
+
+	certPEM, keyPEM, err := LoadOrGenerateDemoKeypair("./saml-cert.pem", "./saml-key.pem")
+
+	if err != nil {
+		panic(err)
+	}
+
+	samlCfg := saml_init.NewIdPConfig(
+		"demoEntityID",
+		"https://dev.kv.codes/api/auth/saml/sso",
+		certPEM,
+		[]string{"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress", "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"},
+		"sso@edvizion.com",
+		"Demo Org",
+		samlProvider).WithDiscoveryFunc(func(r *http.Request, sp *saml_entities.SAMLProvider) (*saml_discovery.IdPDiscovery, error) {
+		out := new(saml_discovery.IdPDiscovery)
+
+		authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
+
+		if authUser.GetUsername() == "lp-admin" {
+			return nil, saml_discovery.DiscoveryError{
+				ErrorCode:   error_svc.ErrorCode("J0YUT"),
+				SystemError: fmt.Errorf("user is not authorized to continue with saml on service '%s'", sp.Nickname),
+			}
+		}
+
+		// Demo
+		out.SetUserID("visdosadmin")
+
+		return out, nil
+	}).WithSigner(keyPEM)
+	// .WithUserDecoder(users.LocksmithUser{})
+
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:            "Demo App",
 		UseEmailAsUsername: true,
@@ -116,6 +165,13 @@ func main() {
 		InviteUsedRedirect: "/app",
 		LoginInfoCallback: func(method string, user map[string]any) {
 			fmt.Printf("User logged in via username / password: %+v\n", user)
+		},
+		SAMLConfig: samlCfg,
+		WithErrors: func(es error_svc.ErrorService) {
+			es.RegisterError("J0YUT", error_svc.Error{
+				Header:      "You are not authorized to access the LMS.",
+				Description: "If you are a student, make sure you are logging in with your student account. Parents can view progress by clicking 'Return to App'",
+			})
 		},
 		OAuthProviders: []oauth.OAuthProvider{
 			googleOIDC,
@@ -308,5 +364,81 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
 
+func GenerateDemoKeypair() (certPEM, keyPEM string, err error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "demo-saml-idp",
+		},
+		NotBefore: time.Now().Add(-time.Hour),
+		NotAfter:  time.Now().Add(365 * 24 * time.Hour),
+
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		BasicConstraintsValid: true,
+	}
+
+	derCert, err := x509.CreateCertificate(
+		rand.Reader,
+		&template,
+		&template,
+		&priv.PublicKey,
+		priv,
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	certPEM = string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: derCert,
+	}))
+
+	keyPEM = string(pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(priv),
+	}))
+
+	return certPEM, keyPEM, nil
+}
+
+func LoadOrGenerateDemoKeypair(certPath, keyPath string) (certPEM, keyPEM string, err error) {
+	// try load
+	certBytes, certErr := os.ReadFile(certPath)
+	keyBytes, keyErr := os.ReadFile(keyPath)
+
+	if certErr == nil && keyErr == nil {
+		return string(certBytes), string(keyBytes), nil
+	}
+
+	// only tolerate "not exists"
+	if certErr != nil && !errors.Is(certErr, fs.ErrNotExist) {
+		return "", "", certErr
+	}
+	if keyErr != nil && !errors.Is(keyErr, fs.ErrNotExist) {
+		return "", "", keyErr
+	}
+
+	// generate
+	certPEM, keyPEM, err = GenerateDemoKeypair()
+	if err != nil {
+		return "", "", err
+	}
+
+	// persist (0600 for key)
+	if err := os.WriteFile(certPath, []byte(certPEM), 0644); err != nil {
+		return "", "", err
+	}
+	if err := os.WriteFile(keyPath, []byte(keyPEM), 0600); err != nil {
+		return "", "", err
+	}
+
+	return certPEM, keyPEM, nil
 }

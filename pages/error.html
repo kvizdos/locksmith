@@ -48,15 +48,15 @@
             }
         </style>
 
-        <title>Login | {{.Title}}</title>
+        <title>That's an error | {{.Title}}</title>
     </head>
     <body>
         <locksmith-layout logoURL="{{.Styling.LogoURL}}">
             <section slot="main">
-                <locksmith-login
-                    appName="{{.Title}}"
-                    jsonSettings='{"OauthProviders": {{.OAuthProviders}}, "PublicRegistrationsDisabled": {{.DisablePublicRegistration}}, "PathToOnboard": "{{.OnboardingPath}}"}'
-                ></locksmith-login>
+                <locksmith-error
+                    errorTitle="{{.ErrorHeader}}"
+                    errorDescription="{{.ErrorDescription}}"
+                ></locksmith-error>
             </section>
         </locksmith-layout>
     </body>

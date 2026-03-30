@@ -17,7 +17,7 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor, mag
 		lsu = users.LocksmithUser{}
 	}
 
-	var dbUser map[string]interface{}
+	var dbUser map[string]any
 	var mac magic.MagicAuthentication
 
 	if magicToken != "" && token.Token == "" {
@@ -38,7 +38,7 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor, mag
 			return lsu, false, fmt.Errorf("invalid username")
 		}
 
-		dbUser = rawUser.(map[string]interface{})
+		dbUser = rawUser.(map[string]any)
 	}
 
 	var tmpUser users.LocksmithUserInterface
