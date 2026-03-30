@@ -23,6 +23,13 @@ func GetExposable(perms []string) []string {
 func init() {
 	CreatePermissionSet([]Permission{
 		{
+			Permission:         "verify.email",
+			IsElevated:         true,
+			JWTOnly:            false,
+			AvailableRoles:     []string{"verification_required"},
+			DontExposeFrontend: true,
+		},
+		{
 			Permission:         "human",
 			IsElevated:         true,
 			JWTOnly:            false,

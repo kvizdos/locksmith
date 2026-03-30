@@ -28,6 +28,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/saml/saml_entities"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_init"
 	"github.com/kvizdos/locksmith/authentication/signing"
+	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/error_svc"
@@ -163,6 +164,16 @@ func main() {
 		UseEmailAsUsername: true,
 		OnboardPath:        "/onboard",
 		InviteUsedRedirect: "/app",
+		RequiresEmailVerification: func(ctx context.Context, da database.DatabaseAccessor, lui users.LocksmithUserInterface, validationRes textvalidation.ValidationResultEvaluator) bool {
+			_, res := validationRes.Result(true)
+			if res != textvalidation.ValidationResult_VALID {
+				fmt.Println("Since validation was skipped, we're going to require an email-based verification to be completed.")
+				return true
+			}
+
+			fmt.Println("No verification required, email likely exits")
+			return false
+		},
 		LoginInfoCallback: func(method string, user map[string]any) {
 			fmt.Printf("User logged in via username / password: %+v\n", user)
 		},
@@ -262,7 +273,8 @@ func main() {
 	// You only need to be "authenticated" to see this page.
 	// Use permissionless-endpoints with caution.
 	mux.Handle("/app", endpoints.SecureEndpointHTTPMiddleware(TestAppHandler{}, db, endpoints.EndpointSecurityOptions{
-		RateLimit: ratelimits.NewRateLimiter(15, 15).WithSecondsLimits(5, 5),
+		RateLimit:          ratelimits.NewRateLimiter(15, 15).WithSecondsLimits(5, 5),
+		MinimalPermissions: []string{"human"},
 	}))
 
 	// Only the Logged-In users can see this page

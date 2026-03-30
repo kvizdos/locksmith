@@ -1,6 +1,7 @@
 package register
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -16,6 +17,8 @@ import (
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/hibp"
+	"github.com/kvizdos/locksmith/authentication/textvalidation"
+	"github.com/kvizdos/locksmith/authentication/verificationcodes"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/pages"
@@ -25,11 +28,12 @@ import (
 )
 
 type registrationRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	Code     string `json:"code"`
-	PwnOK    bool   `json:"pwnok,omitempty"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	Email        string `json:"email"`
+	Code         string `json:"code"`
+	PwnOK        bool   `json:"pwnok,omitempty"`
+	ValidationOK bool   `json:"validationok,omitempty"`
 }
 
 func (r registrationRequest) HasRequiredFields() bool {
@@ -42,6 +46,9 @@ type RegistrationHandler struct {
 	DefaultRoleName           string
 	DisablePublicRegistration bool
 	ConfigureCustomUser       RegisterCustomUserFunc
+	RequiresEmailVerification func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
+	AccountVerifier           verificationcodes.Verifier
+	EmailValidation           textvalidation.EmailValidator
 	EmailAsUsername           bool
 	MinimumLengthRequirement  int
 	HIBP                      hibp.HIBPSettings
@@ -49,8 +56,11 @@ type RegistrationHandler struct {
 }
 
 type registrationResponse struct {
-	Error     string `json:"error,omitempty"`
-	PwnStatus bool   `json:"pwned,omitempty"`
+	Error        string `json:"error,omitempty"`
+	PwnStatus    bool   `json:"pwned,omitempty"`
+	ConfirmEmail bool   `json:"confirmEmail,omitempty"`
+	EmailBlocked bool   `json:"rejectEmail,omitempty"`
+	DidYouMean   string `json:"didYouMean,omitempty"`
 }
 
 func (r registrationResponse) Marshal() []byte {
@@ -122,6 +132,43 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Error: "missing fields",
 		}.Marshal())
 		return
+	}
+
+	r = r.WithContext(context.WithValue(r.Context(), "ip_address", logger.GetIPFromRequest(*r)))
+
+	var emailValidationResult textvalidation.ValidationResultEvaluator
+	if rr.EmailValidation != nil {
+		var err error
+		emailValidationResult, err = rr.EmailValidation.Validate(r.Context(), registrationReq.Email)
+		if err == nil {
+			emailValidationResult.DebugPrint(registrationReq.Email)
+			didYouMean, res := emailValidationResult.Result(registrationReq.ValidationOK)
+			if res != textvalidation.ValidationResult_VALID {
+				switch res {
+				case textvalidation.ValidationResult_CONFIRM:
+					if !registrationReq.ValidationOK {
+						w.WriteHeader(http.StatusBadRequest)
+						dym := ""
+						if didYouMean != nil {
+							dym = *didYouMean
+						}
+						w.Write(registrationResponse{
+							ConfirmEmail: true,
+							DidYouMean:   dym,
+						}.Marshal())
+						return
+					}
+				case textvalidation.ValidationResult_REJECT:
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write(registrationResponse{
+						EmailBlocked: true,
+					}.Marshal())
+					return
+				}
+			}
+		} else {
+			fmt.Println("Skipped email validation due to an error: ", err.Error())
+		}
 	}
 
 	// Start HIBP Check
@@ -268,6 +315,10 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		lsu = rr.ConfigureCustomUser(lsu.(users.LocksmithUser), db)
 	}
 
+	if rr.RequiresEmailVerification != nil {
+		lsu = lsu.SetRequiresEmailVerification(rr.RequiresEmailVerification(r.Context(), db, lsu, emailValidationResult))
+	}
+
 	_, err = db.InsertOne("users", lsu.ToMap())
 
 	if err != nil {
@@ -281,6 +332,15 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		invite.Expire(db)
 	} else {
 		logger.LOGGER.Log(logger.REGISTRATION_SUCCESS, logger.GetIPFromRequest(*r), registrationReq.Username)
+	}
+
+	if rr.AccountVerifier != nil && lsu.RequiresEmailVerification() {
+		err := rr.AccountVerifier.SendVerification(r.Context(), lsu, verificationcodes.VerifierMethod_EMAIL, lsu.GetEmail())
+		if err != nil {
+			fmt.Println("Error sending verification code:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if rr.NewRegistrationEvent != nil {

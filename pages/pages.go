@@ -26,6 +26,12 @@ var ErrorPageHTML []byte
 //go:embed register.html
 var RegisterPageHTML []byte
 
+//go:embed verification.html
+var VerificationPageHTML []byte
+
+//go:embed verification-exchange.html
+var VerificationExchangePageHTML []byte
+
 //go:embed profile.html
 var ProfilePageHTML []byte
 

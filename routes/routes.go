@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,6 +18,8 @@ import (
 	"github.com/kvizdos/locksmith/authentication/saml/saml_config"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_http"
 	sign_out "github.com/kvizdos/locksmith/authentication/sign_out_http"
+	"github.com/kvizdos/locksmith/authentication/textvalidation"
+	"github.com/kvizdos/locksmith/authentication/verificationcodes"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/components"
 	"github.com/kvizdos/locksmith/database"
@@ -39,9 +42,13 @@ type LocksmithRoutesOptions struct {
 	DisablePublicRegistration bool
 	DisableLocksmithPage      bool
 	UseEmailAsUsername        bool
+	DefaultUserRole           string
 	OnboardPath               string
 	InviteUsedRedirect        string
 	CustomUserRegistration    register.RegisterCustomUserFunc
+	RequiresEmailVerification func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
+	AccountVerifier           verificationcodes.Verifier
+	EmailValidation           textvalidation.EmailValidator
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
@@ -67,6 +74,14 @@ type ResetPasswordOptions struct {
 func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor, options LocksmithRoutesOptions) {
 	if !options.DisableComponents {
 		mux.HandleFunc("/components/", components.ServeComponents)
+	}
+
+	if options.AccountVerifier == nil {
+		options.AccountVerifier = verificationcodes.NewVerifier(db, nil)
+	}
+
+	if options.EmailValidation == nil {
+		options.EmailValidation = textvalidation.NewEmailValidator(textvalidation.EmailValidatorOptions{})
 	}
 
 	useSharedMemory := options.SharedMemory
@@ -109,14 +124,21 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			lockAccountsAfter = options.InactivityLockDuration
 		}
 
+		defaultUserRole := "user"
+		if options.DefaultUserRole != "" {
+			defaultUserRole = options.DefaultUserRole
+		}
 		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
-			DefaultRoleName:           "user",
+			DefaultRoleName:           defaultUserRole,
 			DisablePublicRegistration: options.DisablePublicRegistration,
 			ConfigureCustomUser:       options.CustomUserRegistration,
+			RequiresEmailVerification: options.RequiresEmailVerification,
+			AccountVerifier:           options.AccountVerifier,
 			EmailAsUsername:           options.UseEmailAsUsername,
 			HIBP:                      options.HIBPIntegrationOptions,
 			MinimumLengthRequirement:  options.MinimumPasswordLength,
 			NewRegistrationEvent:      options.NewRegistrationEvent,
+			EmailValidation:           options.EmailValidation,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
@@ -140,6 +162,18 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			MinimalPermissions: []string{"users.lock"},
 		})
 		mux.Handle("/api/users/lock-status", lockStatusAPI)
+
+		mux.Handle("POST /api/verify/resend", endpoints.SecureEndpointHTTPMiddleware(verificationcodes.VerifierResendHTTP{
+			Verifier: options.AccountVerifier,
+		}, db, endpoints.EndpointSecurityOptions{
+			MinimalPermissions: []string{"verify.email"},
+		}))
+
+		mux.Handle("POST /api/verify/exchange", endpoints.SecureEndpointHTTPMiddleware(verificationcodes.VerifierExchangeHTTP{
+			Verifier: options.AccountVerifier,
+		}, db, endpoints.EndpointSecurityOptions{
+			MinimalPermissions: []string{"verify.email"},
+		}))
 
 		deleteUserAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationDeleteUsersHandler{}, db)
 		mux.Handle("/api/users/delete", deleteUserAdminAPIHandler)
@@ -197,6 +231,14 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 				DisablePublicRegistration: options.DisablePublicRegistration,
 			},
 		})
+
+		mux.Handle("/verify", endpoints.SecureEndpointHTTPMiddleware(verificationcodes.VerificationPageHandler{
+			AppName: options.AppName,
+			Styling: options.Styling,
+		}, db, endpoints.EndpointSecurityOptions{
+			MinimalPermissions: []string{"verify.email"},
+		}))
+
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
 			AppName:                   options.AppName,
 			DisablePublicRegistration: options.DisablePublicRegistration,

@@ -41,6 +41,9 @@ type LocksmithUserInterface interface {
 	GetMagicPermissions() []string
 	IsMagic() bool
 
+	RequiresEmailVerification() bool
+	SetRequiresEmailVerification(requiresEmailVerification bool) LocksmithUserInterface
+
 	WebAuthnID() []byte
 	WebAuthnDisplayName() string
 	WebAuthnName() string
@@ -65,24 +68,30 @@ type LocksmithUserInterface interface {
 type PublicLocksmithUserInterface interface {
 	FromRegular(LocksmithUserInterface) (PublicLocksmithUserInterface, error)
 	MakeUserSafe() PublicLocksmithUserInterface
+	RequiresEmailVerification() bool
 }
 
 // Only used to show user data to an endpoint
 // This should hide any sensitive data like
 // password session info, etc
 type PublicLocksmithUser struct {
-	ID                 string `json:"id"`
-	Username           string `json:"username"`
-	Email              string `json:"email"`
-	ActiveSessionCount int    `json:"sessions,omitempty"`
-	LastActive         int64  `json:"lastActive,omitzero"`
-	Role               string `json:"role"`
+	ID                      string `json:"id"`
+	Username                string `json:"username"`
+	Email                   string `json:"email"`
+	ActiveSessionCount      int    `json:"sessions,omitempty"`
+	LastActive              int64  `json:"lastActive,omitzero"`
+	EmailVerificationNeeded bool   `json:"requiresEmailVerification"`
+	Role                    string `json:"role"`
 }
 
 func (u PublicLocksmithUser) MakeUserSafe() PublicLocksmithUserInterface {
 	u.LastActive = 0
 	u.ActiveSessionCount = 0
 	return u
+}
+
+func (u PublicLocksmithUser) RequiresEmailVerification() bool {
+	return u.EmailVerificationNeeded
 }
 
 // Convert a LocksmithUser{} into
@@ -102,23 +111,26 @@ func (u PublicLocksmithUser) FromRegular(user LocksmithUserInterface) (PublicLoc
 	publicUser.ID = user.GetID()
 	publicUser.LastActive = -1
 	publicUser.Role = role.Name
+	publicUser.EmailVerificationNeeded = user.RequiresEmailVerification()
 
 	return publicUser, nil
 }
 
 type LocksmithUser struct {
-	ID               string                          `bson:"id"`
-	Username         string                          `json:"username" bson:"username"`
-	Email            string                          `json:"email" bson:"email"`
-	PasswordInfo     authentication.PasswordInfo     `json:"-" bson:"password"`
-	WebAuthnSessions []webauthn.SessionData          `json:"-" bson:"websessions"`
-	PasswordSessions authentication.PasswordSessions `json:"-" bson:"sessions"`
-	Magics           magic.MagicAuthentications      `json:"-" bson:"magic"`
-	Role             string                          `json:"role" bson:"role"`
-	MagicPermissions []string                        `json:"-" bson:"-"`
-	ImMagic          bool                            `json:"-" bson:"-"`
-	ImRegular        bool                            `json:"-" bson:"-"`
-	LastLogin        time.Time                       `json:"-" bson:"-"`
+	ID                     string                          `bson:"id"`
+	Username               string                          `json:"username" bson:"username"`
+	Email                  string                          `json:"email" bson:"email"`
+	PasswordInfo           authentication.PasswordInfo     `json:"-" bson:"password"`
+	WebAuthnSessions       []webauthn.SessionData          `json:"-" bson:"websessions"`
+	PasswordSessions       authentication.PasswordSessions `json:"-" bson:"sessions"`
+	Magics                 magic.MagicAuthentications      `json:"-" bson:"magic"`
+	Role                   string                          `json:"role" bson:"role"`
+	MagicPermissions       []string                        `json:"-" bson:"-"`
+	ImMagic                bool                            `json:"-" bson:"-"`
+	ImRegular              bool                            `json:"-" bson:"-"`
+	LastLogin              time.Time                       `json:"-" bson:"-"`
+	EmailVerified          bool                            `json:"emailVerified" bson:"emailVerified"`
+	NeedsEmailVerification bool                            `json:"requiresEmailVerification" bson:"requiresEmailVerification"`
 }
 
 func (u LocksmithUser) GetLastLoginDate() time.Time {
@@ -127,6 +139,15 @@ func (u LocksmithUser) GetLastLoginDate() time.Time {
 
 func (u LocksmithUser) GetMagics() []magic.MagicAuthentication {
 	return u.Magics
+}
+
+func (u LocksmithUser) RequiresEmailVerification() bool {
+	return u.NeedsEmailVerification && !u.EmailVerified
+}
+
+func (u LocksmithUser) SetRequiresEmailVerification(requiresEmailVerification bool) LocksmithUserInterface {
+	u.NeedsEmailVerification = requiresEmailVerification
+	return u
 }
 
 func (u LocksmithUser) GetRole() (roles.Role, error) {
@@ -172,6 +193,8 @@ func (u LocksmithUser) ToMap() map[string]interface{} {
 	out["sessions"] = u.PasswordSessions.ToMap()
 	out["role"] = u.Role
 	out["magic"] = u.Magics.ToMap()
+	out["emailVerified"] = u.EmailVerified
+	out["needsEmailVerification"] = u.NeedsEmailVerification
 
 	if u.GetLastLoginDate().IsZero() {
 		out["last_login"] = time.Now().UTC().Unix()
@@ -215,6 +238,16 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]interface{}))
 	}
 
+	emailVerified := false
+	if user["emailVerified"] != nil {
+		emailVerified = user["emailVerified"].(bool)
+	}
+
+	needsEmailVerification := false
+	if user["needsEmailVerification"] != nil {
+		needsEmailVerification = user["needsEmailVerification"].(bool)
+	}
+
 	var magics []magic.MagicAuthentication
 	if magicValue, ok := user["magic"]; ok {
 		switch magicValue.(type) {
@@ -234,14 +267,16 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 	}
 
 	*writeTo = LocksmithUser{
-		ID:               user["id"].(string),
-		Username:         user["username"].(string),
-		Email:            user["email"].(string),
-		Role:             user["role"].(string),
-		PasswordInfo:     passinfo,
-		PasswordSessions: sessions,
-		Magics:           magics,
-		LastLogin:        loginTime,
+		ID:                     user["id"].(string),
+		Username:               user["username"].(string),
+		Email:                  user["email"].(string),
+		Role:                   user["role"].(string),
+		EmailVerified:          emailVerified,
+		NeedsEmailVerification: needsEmailVerification,
+		PasswordInfo:           passinfo,
+		PasswordSessions:       sessions,
+		Magics:                 magics,
+		LastLogin:              loginTime,
 	}
 }
 

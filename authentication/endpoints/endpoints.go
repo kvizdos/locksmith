@@ -17,6 +17,7 @@ import (
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/ratelimits"
+	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -243,10 +244,18 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			cookie := http.Cookie{Name: "magic", Value: r.URL.Query().Get("magic"), HttpOnly: true, Secure: true, Path: "/"}
 			http.SetCookie(w, &cookie)
 		}
+		userRole, err := user.GetRole()
+
+		if user.RequiresEmailVerification() {
+			userRole, err = roles.GetRole("verification_required")
+			if err != nil {
+				fmt.Println("Missing required role: verification_required")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 
 		if len(secureOptions.MinimalPermissions) > 0 {
-			userRole, err := user.GetRole()
-
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -254,6 +263,10 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 
 			for _, permission := range secureOptions.MinimalPermissions {
 				if !userRole.HasPermission(permission) {
+					if userRole.Name == "verification_required" {
+						http.Redirect(w, r, "/verify", http.StatusTemporaryRedirect)
+						return
+					}
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
