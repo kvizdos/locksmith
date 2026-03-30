@@ -95,6 +95,11 @@ func (es *errorSvc) HandleHTTP(appName string, styling pages.LocksmithPageStylin
 
 func NewErrorSvc() *errorSvc {
 	return &errorSvc{
-		registeredErrors: make(map[ErrorCode]Error),
+		registeredErrors: map[ErrorCode]Error{
+			"UNAUTHORIZED": {
+				Header:      "You are not authorized to access this page.",
+				Description: "We cannot serve you with that request.",
+			},
+		},
 	}
 }

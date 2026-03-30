@@ -85,6 +85,21 @@ type EndpointSecurityOptions struct {
 	BaseURL string
 }
 
+func isHTMLRequest(r *http.Request) bool {
+	secHeader := r.Header.Get("sec-fetch-dest")
+
+	if secHeader == "document" {
+		return true
+	}
+
+	if secHeader == "" {
+		accepts := r.Header.Get("accept")
+		return strings.Contains(accepts, "text/html")
+	}
+
+	return false
+}
+
 func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccessor, opts ...EndpointSecurityOptions) http.Handler {
 	var secureOptions EndpointSecurityOptions
 	if len(opts) == 0 {
@@ -265,6 +280,11 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				if !userRole.HasPermission(permission) {
 					if userRole.Name == "verification_required" {
 						http.Redirect(w, r, "/verify", http.StatusTemporaryRedirect)
+						return
+					}
+
+					if isHTMLRequest(r) {
+						http.Redirect(w, r, "/err?code=UNAUTHORIZED", http.StatusTemporaryRedirect)
 						return
 					}
 					w.WriteHeader(http.StatusUnauthorized)
