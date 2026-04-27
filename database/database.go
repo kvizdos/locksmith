@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,6 +41,7 @@ type DatabaseAccessor interface {
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
 	FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool)
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
+	DeleteMany(table string, query map[string]interface{}) (bool, error)
 	CreateTextIndex(table string, keys []string) error
 	CreateRegularIndex(table string, keys map[string]Direction, unique bool) error
 	Drop(table string) error
@@ -401,6 +403,46 @@ func (db TestDatabase) DeleteOne(table string, query map[string]interface{}) (bo
 				db.Tables[table] = newTableData
 				return true, nil
 			}
+		}
+	}
+
+	return false, nil
+}
+
+func (db TestDatabase) DeleteMany(table string, query map[string]interface{}) (bool, error) {
+	if tableData, ok := db.Tables[table]; ok {
+		keysToDelete := []string{}
+		for key, row := range tableData {
+			match := true
+			for queryKey, queryValue := range query {
+				if rowData, ok := row.(map[string]interface{}); ok {
+					if fieldValue, ok := rowData[queryKey]; ok && fieldValue != queryValue {
+						match = false
+						break
+					}
+				} else {
+					match = false
+					break
+				}
+			}
+
+			if match {
+				keysToDelete = append(keysToDelete, key)
+			}
+		}
+
+		if len(keysToDelete) > 0 {
+			// Create a new map without the matching items
+			newTableData := make(map[string]interface{})
+			for k, v := range tableData {
+				if !slices.Contains(keysToDelete, k) {
+					newTableData[k] = v
+				}
+			}
+
+			// Update the map in the database with the modified map
+			db.Tables[table] = newTableData
+			return true, nil
 		}
 	}
 

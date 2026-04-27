@@ -178,6 +178,22 @@ func (db MongoDatabase) DeleteOne(table string, query map[string]interface{}) (b
 	return true, nil
 }
 
+func (db MongoDatabase) DeleteMany(table string, query map[string]interface{}) (bool, error) {
+	col := db.database.Collection(table)
+
+	res, err := col.DeleteMany(context.Background(), query)
+
+	if err != nil {
+		return false, err
+	}
+
+	if res.DeletedCount == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (db MongoDatabase) FindOne(table string, query map[string]interface{}) (interface{}, bool) {
 	col := db.database.Collection(table)
 
