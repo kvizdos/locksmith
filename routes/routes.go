@@ -57,12 +57,14 @@ type LocksmithRoutesOptions struct {
 	SAMLConfig                *saml_config.IdPConfig
 	// map[roleName]time.Duration
 	// Use "default" as a catch-all
-	InactivityLockDuration map[string]time.Duration
-	MinimumPasswordLength  int
-	NewRegistrationEvent   func(user users.LocksmithUserInterface)
-	SharedMemory           sharedmemory.MemoryProvider
-	LoginSettings          *login.LoginOptions
-	LoginInfoCallback      func(method string, user map[string]any)
+	InactivityLockDuration      map[string]time.Duration
+	MinimumPasswordLength       int
+	NewRegistrationEvent        func(user users.LocksmithUserInterface)
+	RequestNewRegistrationEvent func(r *http.Request, user users.LocksmithUserInterface)
+	SharedMemory                sharedmemory.MemoryProvider
+	LoginSettings               *login.LoginOptions
+	LoginInfoCallback           func(method string, user map[string]any)
+	RequestLoginInfoCallback    func(r *http.Request, method string, user map[string]any)
 
 	WithErrors func(error_svc.ErrorService)
 }
@@ -129,25 +131,27 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			defaultUserRole = options.DefaultUserRole
 		}
 		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
-			DefaultRoleName:           defaultUserRole,
-			DisablePublicRegistration: options.DisablePublicRegistration,
-			ConfigureCustomUser:       options.CustomUserRegistration,
-			RequiresEmailVerification: options.RequiresEmailVerification,
-			AccountVerifier:           options.AccountVerifier,
-			EmailAsUsername:           options.UseEmailAsUsername,
-			HIBP:                      options.HIBPIntegrationOptions,
-			MinimumLengthRequirement:  options.MinimumPasswordLength,
-			NewRegistrationEvent:      options.NewRegistrationEvent,
-			EmailValidation:           options.EmailValidation,
+			DefaultRoleName:             defaultUserRole,
+			DisablePublicRegistration:   options.DisablePublicRegistration,
+			ConfigureCustomUser:         options.CustomUserRegistration,
+			RequiresEmailVerification:   options.RequiresEmailVerification,
+			AccountVerifier:             options.AccountVerifier,
+			EmailAsUsername:             options.UseEmailAsUsername,
+			HIBP:                        options.HIBPIntegrationOptions,
+			MinimumLengthRequirement:    options.MinimumPasswordLength,
+			NewRegistrationEvent:        options.NewRegistrationEvent,
+			RequestNewRegistrationEvent: options.RequestNewRegistrationEvent,
+			EmailValidation:             options.EmailValidation,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
 		loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
-			HIBP:                options.HIBPIntegrationOptions,
-			LockInactivityAfter: lockAccountsAfter,
-			Options:             *useLoginSettings,
-			SharedMemory:        useSharedMemory,
-			LoginInfoCallback:   options.LoginInfoCallback,
+			HIBP:                     options.HIBPIntegrationOptions,
+			LockInactivityAfter:      lockAccountsAfter,
+			Options:                  *useLoginSettings,
+			SharedMemory:             useSharedMemory,
+			LoginInfoCallback:        options.LoginInfoCallback,
+			RequestLoginInfoCallback: options.RequestLoginInfoCallback,
 		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 
