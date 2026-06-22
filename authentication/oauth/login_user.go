@@ -15,7 +15,7 @@ import (
 	"github.com/kvizdos/locksmith/users"
 )
 
-func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, provider string, redirectPage string, LoginInfoCallback func(method string, user map[string]any), w http.ResponseWriter, r *http.Request) {
+func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, provider string, redirectPage string, LoginInfoCallback func(request *http.Request, method string, user map[string]any), w http.ResponseWriter, r *http.Request) {
 	if tokencookie, err := r.Cookie("token"); err == nil && tokencookie.Value != "" {
 		expiresAtString, expiresErr := r.Cookie("ls_expires_at")
 
@@ -93,7 +93,7 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 	redirect, err := url.QueryUnescape(redirectPage)
 
 	if LoginInfoCallback != nil {
-		LoginInfoCallback(fmt.Sprintf("oauth-%s", strings.ToLower(provider)), user.ToMap())
+		LoginInfoCallback(r, fmt.Sprintf("oauth-%s", strings.ToLower(provider)), user.ToMap())
 	}
 
 	if err != nil {

@@ -58,10 +58,11 @@ type LoginHandler struct {
 	// It is set for every new session made,
 	// so once refresh is enabled, it will
 	// update the last login once refreshed.
-	LockInactivityAfter map[string]time.Duration
-	SharedMemory        sharedmemory.MemoryProvider
-	Options             LoginOptions
-	LoginInfoCallback   func(method string, user map[string]any)
+	LockInactivityAfter      map[string]time.Duration
+	SharedMemory             sharedmemory.MemoryProvider
+	Options                  LoginOptions
+	LoginInfoCallback        func(method string, user map[string]any)
+	RequestLoginInfoCallback func(r *http.Request, method string, user map[string]any)
 }
 
 type LoginHTTPResponse struct {
@@ -398,6 +399,9 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &oauthprovidercookie)
 	http.SetCookie(w, &cookieXSRF)
 
+	if lh.RequestLoginInfoCallback != nil {
+		lh.RequestLoginInfoCallback(r, "password", dbUser.(map[string]any))
+	}
 	if lh.LoginInfoCallback != nil {
 		lh.LoginInfoCallback("password", dbUser.(map[string]any))
 	}

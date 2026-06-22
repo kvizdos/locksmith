@@ -29,16 +29,17 @@ type OIDCConnection struct {
 }
 
 type OIDCConnectionParams struct {
-	Issuer                 string
-	ClientID               string
-	ClientSecret           string
-	BaseURL                string
-	ProviderName           string
-	DB                     database.DatabaseAccessor
-	LogoBytes              []byte
-	CustomizedGetUserQuery func(email string, r *http.Request) map[string]interface{}
-	DynamicBaseURL         func(r *http.Request) string
-	LoginInfoCallback      func(method string, user map[string]any)
+	Issuer                   string
+	ClientID                 string
+	ClientSecret             string
+	BaseURL                  string
+	ProviderName             string
+	DB                       database.DatabaseAccessor
+	LogoBytes                []byte
+	CustomizedGetUserQuery   func(email string, r *http.Request) map[string]interface{}
+	DynamicBaseURL           func(r *http.Request) string
+	LoginInfoCallback        func(method string, user map[string]any)
+	RequestLoginInfoCallback func(r *http.Request, method string, user map[string]any)
 }
 
 // NewOIDCConnection creates a new OIDCConnection instance.
@@ -61,6 +62,13 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 
 	verifier := provider.Verifier(&oidc.Config{ClientID: params.ClientID})
 
+	callback := params.RequestLoginInfoCallback
+	if callback == nil && params.LoginInfoCallback != nil {
+		callback = func(r *http.Request, method string, user map[string]any) {
+			params.LoginInfoCallback(method, user)
+		}
+	}
+
 	return &OIDCConnection{
 		BaseOAuthProvider: oauth.BaseOAuthProvider{
 			ClientID:               params.ClientID,
@@ -68,7 +76,7 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 			BaseURL:                callbackURL,
 			Database:               params.DB,
 			CustomizedGetUserQuery: params.CustomizedGetUserQuery,
-			LoginInfoCallback:      params.LoginInfoCallback,
+			LoginInfoCallback:      callback,
 		},
 		ProviderName:   params.ProviderName,
 		Provider:       provider,

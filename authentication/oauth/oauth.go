@@ -55,7 +55,7 @@ type BaseOAuthProvider struct {
 	Database                     database.DatabaseAccessor
 	RedirectToRegisterOnNotFound bool
 	CustomizedGetUserQuery       func(email string, r *http.Request) map[string]interface{}
-	LoginInfoCallback            func(method string, user map[string]any)
+	LoginInfoCallback            func(r *http.Request, method string, user map[string]any)
 }
 
 func (g BaseOAuthProvider) GetName() string {
