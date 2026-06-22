@@ -43,16 +43,17 @@ func (r registrationRequest) HasRequiredFields() bool {
 type RegisterCustomUserFunc func(users.LocksmithUser, database.DatabaseAccessor) users.LocksmithUserInterface
 
 type RegistrationHandler struct {
-	DefaultRoleName           string
-	DisablePublicRegistration bool
-	ConfigureCustomUser       RegisterCustomUserFunc
-	RequiresEmailVerification func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
-	AccountVerifier           verificationcodes.Verifier
-	EmailValidation           textvalidation.EmailValidator
-	EmailAsUsername           bool
-	MinimumLengthRequirement  int
-	HIBP                      hibp.HIBPSettings
-	NewRegistrationEvent      func(users.LocksmithUserInterface)
+	DefaultRoleName             string
+	DisablePublicRegistration   bool
+	ConfigureCustomUser         RegisterCustomUserFunc
+	RequiresEmailVerification   func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
+	AccountVerifier             verificationcodes.Verifier
+	EmailValidation             textvalidation.EmailValidator
+	EmailAsUsername             bool
+	MinimumLengthRequirement    int
+	HIBP                        hibp.HIBPSettings
+	NewRegistrationEvent        func(users.LocksmithUserInterface)
+	RequestNewRegistrationEvent func(*http.Request, users.LocksmithUserInterface)
 }
 
 type registrationResponse struct {
@@ -345,6 +346,10 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if rr.NewRegistrationEvent != nil {
 		go rr.NewRegistrationEvent(lsu)
+	}
+
+	if rr.RequestNewRegistrationEvent != nil {
+		go rr.RequestNewRegistrationEvent(r, lsu)
 	}
 
 	w.WriteHeader(http.StatusOK)
