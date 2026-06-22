@@ -95,7 +95,12 @@ func main() {
 		Ctx:    ctx,
 		Cancel: timeout,
 	}
-	err := db.Initialize("mongodb://localhost:27017", os.Getenv("database"))
+	fmt.Println("DB", os.Getenv("database"))
+	dbUri := os.Getenv("dburi")
+	if dbUri == "" {
+		dbUri = "mongodb://localhost:27017"
+	}
+	err := db.Initialize(dbUri, os.Getenv("database"))
 
 	if err != nil {
 		fmt.Println(err)
