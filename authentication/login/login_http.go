@@ -13,6 +13,7 @@ import (
 
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/oauth"
+	"github.com/kvizdos/locksmith/authentication/packets"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -63,6 +64,8 @@ type LoginHandler struct {
 	Options                  LoginOptions
 	LoginInfoCallback        func(method string, user map[string]any)
 	RequestLoginInfoCallback func(r *http.Request, method string, user map[string]any)
+
+	RegistrationJWTService packets.RegistrationJWTServiceInterface
 }
 
 type LoginHTTPResponse struct {
@@ -109,6 +112,135 @@ func (lh LoginHandler) generateInvalidUsernamePasswordError(attemptsRemaining in
 	return "Invalid username or password."
 }
 
+func (lh LoginHandler) loginWithToken(w http.ResponseWriter, r *http.Request) {
+	tokenString := strings.TrimSpace(r.Header.Get("Authorization"))
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+
+	if tokenString == "" {
+		http.Error(w, "authorization is required", http.StatusBadRequest)
+		return
+	}
+
+	token, err := lh.RegistrationJWTService.ConfirmAutoLogin(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	db := r.Context().Value("database").(database.DatabaseAccessor)
+
+	dbUser, exists := db.FindOne("users", map[string]interface{}{
+		"id": token.Subject,
+	})
+	if !exists {
+		fmt.Println("SUBJECT NOT FOUND", token.Subject)
+		http.Error(w, "user not found", http.StatusUnauthorized)
+		return
+	}
+
+	var tmpUser users.LocksmithUserInterface
+	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
+	user := tmpUser.(users.LocksmithUser)
+
+	session, err := user.GeneratePasswordSession()
+	if err != nil {
+		http.Error(w, "failed to generate session", http.StatusInternalServerError)
+		return
+	}
+
+	if err := user.SavePasswordSession(session, db); err != nil {
+		http.Error(w, "failed to save session", http.StatusInternalServerError)
+		return
+	}
+
+	cookieValue := user.GenerateCookieValueFromSession(session)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    cookieValue,
+		Expires:  time.Unix(session.ExpiresAt, 0),
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "ls_expires_at",
+		Value:    fmt.Sprintf("%d", session.ExpiresAt),
+		Expires:  time.Unix(session.ExpiresAt, 0),
+		HttpOnly: false,
+		Secure:   true,
+		Path:     "/",
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "login_xsrf",
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/api/login",
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	if token.Source != "password" {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "ls_oauth_provider",
+			Value:    token.Source,
+			Expires:  time.Now().UTC().AddDate(10, 0, 0),
+			HttpOnly: false,
+			Secure:   true,
+			Path:     "/",
+		})
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "ls_oauth_hint",
+			Value:    user.GetEmail(),
+			Expires:  time.Now().UTC().AddDate(10, 0, 0),
+			HttpOnly: true,
+			Secure:   true,
+			Path:     "/",
+		})
+	} else {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "ls_oauth_provider",
+			Value:    "",
+			Expires:  time.Unix(0, 0),
+			HttpOnly: false,
+			Secure:   true,
+			Path:     "/",
+		})
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "ls_oauth_hint",
+			Value:    "",
+			Expires:  time.Unix(0, 0),
+			HttpOnly: true,
+			Secure:   true,
+			Path:     "/",
+		})
+	}
+
+	method := token.Source
+	if method != "password" {
+		method = fmt.Sprintf("oauth-%s", strings.ToLower(method))
+	}
+
+	if lh.RequestLoginInfoCallback != nil {
+		lh.RequestLoginInfoCallback(r, method, dbUser.(map[string]any))
+	}
+
+	if lh.LoginInfoCallback != nil {
+		lh.LoginInfoCallback(method, dbUser.(map[string]any))
+	}
+
+	observability.LoginSuccess.Inc()
+	logger.LOGGER.Log(logger.LOGIN, user.GetUsername(), logger.GetIPFromRequest(*r))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"success":true}`))
+}
+
 func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	failedLoginResponse := LoginHTTPResponse{
 		Error:           "",
@@ -134,6 +266,11 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write(failedLoginResponse.Marshal())
+		return
+	}
+
+	if r.Header.Get("Authorization") != "" {
+		lh.loginWithToken(w, r)
 		return
 	}
 
@@ -304,6 +441,14 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var tmpUser users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
 	user := tmpUser.(users.LocksmithUser)
+
+	if user.PasswordInfo.Passwordless {
+		failedLoginResponse.Error = lh.generateInvalidUsernamePasswordError(attemptsRemaining, timeTillLockoutReset)
+		delayIfNeeded()
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(failedLoginResponse.Marshal())
+		return
+	}
 
 	passwordValidated, err := user.ValidatePassword(loginReq.Password)
 

@@ -24,6 +24,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
+	"github.com/kvizdos/locksmith/authentication/packets"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_discovery"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_entities"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_init"
@@ -112,13 +113,22 @@ func main() {
 	// 	SiteKey:   "xxx",
 	// 	SecretKey: "yyy",
 	// }
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+
+	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
+
+	regAutoLogin := packets.NewRegistrationAutoLoginJWTService(sp, "oauth-reg-auto-login-svc", 30*time.Second)
+	registrationSvc := packets.NewRegistrationJWTService(sp, "oauth-reg-svc", 1*time.Minute, regAutoLogin)
+
 	googleOIDC, err := oauth_google_oidc.NewOIDCConnection(context.Background(), oauth_google_oidc.OIDCConnectionParams{
-		Issuer:       "https://accounts.google.com",
-		ClientID:     "ExampleClientID",
-		ClientSecret: "ExampleClientSecret",
-		BaseURL:      "https://example.com",
-		ProviderName: "google", // for the UI & a few backend things; make sure its unique!
-		DB:           db,
+		Issuer:                 "https://accounts.google.com",
+		ClientID:               googleClientID,
+		ClientSecret:           googleClientSecret,
+		BaseURL:                "https://dev.kv.codes",
+		ProviderName:           "google", // for the UI & a few backend things; make sure its unique!
+		DB:                     db,
+		RegistrationJWTService: registrationSvc,
 		LoginInfoCallback: func(method string, user map[string]any) {
 			fmt.Printf("User logged in via Google: %+v", user)
 		},
@@ -165,10 +175,11 @@ func main() {
 	// .WithUserDecoder(users.LocksmithUser{})
 
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
-		AppName:            "Demo App",
-		UseEmailAsUsername: true,
-		OnboardPath:        "/onboard",
-		InviteUsedRedirect: "/app",
+		AppName:                "Demo App",
+		UseEmailAsUsername:     true,
+		OnboardPath:            "/onboard",
+		InviteUsedRedirect:     "/app",
+		RegistrationJWTService: registrationSvc,
 		RequiresEmailVerification: func(ctx context.Context, da database.DatabaseAccessor, lui users.LocksmithUserInterface, validationRes textvalidation.ValidationResultEvaluator) bool {
 			_, res := validationRes.Result(true)
 			if res != textvalidation.ValidationResult_VALID {
@@ -208,11 +219,24 @@ func main() {
 		},
 		Styling: pages.LocksmithPageStyling{
 			LogoURL: "/components/locksmith.svg",
-			InjectHeader: template.HTML(
+			InjectHeader: template.HTML(fmt.Sprintf(
 				`<script>
 					console.log("Loaded page.")
-				</script>`,
-			),
+				</script>
+
+				<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+				<div
+					id="g_id_onload"
+					data-client_id="%s"
+					data-login_uri="/api/auth/oauth/google/credential"
+					data-auto_select="true"
+					data-use_fedcm_for_prompt="true"
+				    data-context="use"
+					data-color_scheme="light"
+					data-itp_support="false">
+				</div>`, googleClientID,
+			)),
 		},
 		ResetPasswordOptions: routes.ResetPasswordOptions{
 			SendResetToken: printResetToken,
@@ -359,7 +383,6 @@ func main() {
 		pkg, err := signing.CreateSigningPackage()
 		marshaledPK, err := pkg.MarshalPrivate() // use this output as the "DecodePrivateKey" variable
 	*/
-	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
 	magic.MagicSigningPackage = &sp
 	xsrf.XSRFSigningPackage.Anonymous = &sp
 	xsrf.XSRFSigningPackage.Authenticated = &sp

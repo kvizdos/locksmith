@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-skip-onetap="true">
     <head>
         <meta charset="UTF-8" />
         <meta
@@ -36,7 +36,6 @@
                 --fl-button-loader-spinner: var(--fl-button-bg-disabled);
                 --fl-button-loader-loop: #FFF;
             }
-
             @media (min-width: 650px) {
                 body {
                     --background-color: rgb(243, 243, 250);
@@ -49,18 +48,17 @@
             }
         </style>
 
+        <title>Login | {{.Title}}</title>
+
         {{.Styling.InjectHeader}}
     </head>
     <body>
         <locksmith-layout logoURL="{{.Styling.LogoURL}}">
             <section slot="main">
-                <locksmith-registration
+                <locksmith-register-trusted
                     appName="{{.Title}}"
-                    forceEmail="{{.Invitation.Email}}"
-                    inviteCode="{{.Invitation.Code}}"
-                    minimumPasswordLength="{{.MinimumPasswordLength}}"
-                    jsonSettings='{"OauthProviders": {{.OAuthProviders}}}'
-                ></locksmith-registration>
+                    registrationpacketjwt="{{.RegistrationPacket}}"
+                ></locksmith-register-trusted>
             </section>
         </locksmith-layout>
     </body>

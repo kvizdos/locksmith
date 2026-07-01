@@ -85,6 +85,7 @@ type PasswordInfo struct {
 	Password            string                `json:"password" bson:"password"`
 	Salt                string                `json:"salt" bson:"salt"`
 	WebAuthnCredentials []webauthn.Credential `json:"webauthn" bson:"webauthn"`
+	Passwordless        bool                  `json:"passwordless" bson:"passwordless"`
 }
 
 func (p PasswordInfo) ToMap() map[string]interface{} {
@@ -93,16 +94,23 @@ func (p PasswordInfo) ToMap() map[string]interface{} {
 	out["password"] = p.Password
 	out["salt"] = p.Salt
 	out["webauth"] = map[string]interface{}{} // TODO
+	out["passwordless"] = p.Passwordless
 
 	return out
 }
 
 func PasswordInfoFromMap(passinfo map[string]interface{}) PasswordInfo {
-	return PasswordInfo{
+	p := PasswordInfo{
 		Password:            passinfo["password"].(string),
 		Salt:                passinfo["salt"].(string),
 		WebAuthnCredentials: []webauthn.Credential{},
 	}
+
+	if passwordless, ok := passinfo["passwordless"].(bool); ok {
+		p.Passwordless = passwordless
+	}
+
+	return p
 }
 
 func ValidatePassword(locksmithPassword PasswordInfo, inputPassword string) (bool, error) {
@@ -133,6 +141,11 @@ func ValidatePassword(locksmithPassword PasswordInfo, inputPassword string) (boo
 }
 
 func CompileLocksmithPassword(password string, saltString ...string) (PasswordInfo, error) {
+	if len(password) == 0 {
+		return PasswordInfo{
+			Passwordless: true,
+		}, nil
+	}
 	var salt []byte
 
 	if len(saltString) != 0 {

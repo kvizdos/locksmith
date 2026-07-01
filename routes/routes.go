@@ -13,6 +13,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/management"
 	"github.com/kvizdos/locksmith/authentication/oauth"
+	"github.com/kvizdos/locksmith/authentication/packets"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_config"
@@ -49,6 +50,7 @@ type LocksmithRoutesOptions struct {
 	RequiresEmailVerification func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
 	AccountVerifier           verificationcodes.Verifier
 	EmailValidation           textvalidation.EmailValidator
+	RegistrationJWTService    packets.RegistrationJWTServiceInterface
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
@@ -142,6 +144,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			NewRegistrationEvent:        options.NewRegistrationEvent,
 			RequestNewRegistrationEvent: options.RequestNewRegistrationEvent,
 			EmailValidation:             options.EmailValidation,
+			RegistrationJWTService:      options.RegistrationJWTService,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
@@ -152,6 +155,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			SharedMemory:             useSharedMemory,
 			LoginInfoCallback:        options.LoginInfoCallback,
 			RequestLoginInfoCallback: options.RequestLoginInfoCallback,
+			RegistrationJWTService:   options.RegistrationJWTService,
 		}, db)
 		mux.Handle("/api/login", loginAPIHandler)
 
@@ -243,7 +247,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			MinimalPermissions: []string{"verify.email"},
 		}))
 
-		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(register.RegistrationPageHandler{
+		reg := register.RegistrationPageHandler{
 			AppName:                   options.AppName,
 			DisablePublicRegistration: options.DisablePublicRegistration,
 			Styling:                   options.Styling,
@@ -252,7 +256,9 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			InviteUsedRedirect:        options.InviteUsedRedirect,
 			HIBPIntegrationOptions:    options.HIBPIntegrationOptions,
 			MinimumLengthRequirement:  options.MinimumPasswordLength,
-		}, db))
+			OAuthProviders:            options.OAuthProviders,
+		}
+		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(reg, db))
 		mux.Handle("/reset-password", httpHelpers.InjectDatabaseIntoContext(reset.ResetPasswordPageHandler{
 			AppName:               options.AppName,
 			Styling:               options.Styling,

@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
 	"github.com/kvizdos/locksmith/authentication/oauth"
+	"github.com/kvizdos/locksmith/authentication/packets"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -24,16 +26,20 @@ type OIDCConnection struct {
 	Config   oauth2.Config
 	Verifier *oidc.IDTokenVerifier
 
+	RegistrationJWTService packets.RegistrationJWTServiceInterface
+
 	LogoBytes      []byte
 	DynamicBaseURL func(r *http.Request) string
 }
 
 type OIDCConnectionParams struct {
-	Issuer                   string
-	ClientID                 string
-	ClientSecret             string
-	BaseURL                  string
-	ProviderName             string
+	Issuer                 string
+	ClientID               string
+	ClientSecret           string
+	BaseURL                string
+	ProviderName           string
+	RegistrationJWTService packets.RegistrationJWTServiceInterface
+
 	DB                       database.DatabaseAccessor
 	LogoBytes                []byte
 	CustomizedGetUserQuery   func(email string, r *http.Request) map[string]interface{}
@@ -78,12 +84,13 @@ func NewOIDCConnection(ctx context.Context, params OIDCConnectionParams) (*OIDCC
 			CustomizedGetUserQuery: params.CustomizedGetUserQuery,
 			LoginInfoCallback:      callback,
 		},
-		ProviderName:   params.ProviderName,
-		Provider:       provider,
-		Config:         config,
-		Verifier:       verifier,
-		LogoBytes:      params.LogoBytes,
-		DynamicBaseURL: params.DynamicBaseURL,
+		RegistrationJWTService: params.RegistrationJWTService,
+		ProviderName:           params.ProviderName,
+		Provider:               provider,
+		Config:                 config,
+		Verifier:               verifier,
+		LogoBytes:              params.LogoBytes,
+		DynamicBaseURL:         params.DynamicBaseURL,
 	}, nil
 }
 
@@ -100,6 +107,7 @@ func (o *OIDCConnection) RegisterRoutes(apiMux *http.ServeMux) {
 	apiMux.Handle("/api/auth/oauth/"+o.GetName(), http.HandlerFunc(o.handleRedirect))
 	apiMux.Handle("/api/auth/oauth/"+o.GetName()+"/callback", http.HandlerFunc(o.handleCallback))
 	apiMux.Handle("/api/auth/oauth/"+o.GetName()+"/refresh", http.HandlerFunc(o.handleRefresh))
+	apiMux.Handle("/api/auth/oauth/"+o.GetName()+"/credential", http.HandlerFunc(o.handleCredentialFlow))
 	apiMux.HandleFunc("/api/auth/oauth/"+o.GetName()+"/logo", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "max-age=2592000")
 		w.Header().Set("Content-Type", "image/svg+xml")
@@ -186,6 +194,28 @@ func (o *OIDCConnection) handleCallback(w http.ResponseWriter, r *http.Request) 
 
 	user := o.GetUserByEmail(claims.Email, r)
 	if user == nil {
+		if o.RegistrationJWTService != nil {
+			token, err := o.RegistrationJWTService.Create(o.GetName(), claims.Email)
+
+			if err != nil {
+				fmt.Println("failed to register user", err)
+				http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "registration_pkt",
+				Value:    token,
+				Path:     "/register",
+				Expires:  time.Now().Add(1 * time.Minute),
+				SameSite: http.SameSiteLaxMode,
+				Secure:   true,
+				HttpOnly: true,
+			})
+
+			http.Redirect(w, r, "/register", http.StatusTemporaryRedirect)
+			return
+		}
 		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
 		return
 	}
@@ -200,6 +230,113 @@ func (o *OIDCConnection) handleCallback(w http.ResponseWriter, r *http.Request) 
 	}
 
 	oauth.LoginUser(o.Database, user, o.GetName(), redirectPath, o.LoginInfoCallback, w, r)
+}
+
+func verifyGISCSRF(r *http.Request) bool {
+	bodyToken := r.FormValue("g_csrf_token")
+	if bodyToken == "" {
+		return false
+	}
+
+	cookie, err := r.Cookie("g_csrf_token")
+	if err != nil || cookie.Value == "" {
+		return false
+	}
+
+	return cookie.Value == bodyToken
+}
+
+func (o *OIDCConnection) handleCredentialFlow(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if err := r.ParseForm(); err != nil {
+		fmt.Println("failed to parse form")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !verifyGISCSRF(r) {
+		fmt.Println("failed to verify csrf")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	rawIDToken := r.FormValue("credential")
+	if rawIDToken == "" {
+		fmt.Println("no credential")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	idToken, err := o.Verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		fmt.Println("failed to verify token")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	var claims struct {
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
+		Sub           string `json:"sub"`
+	}
+
+	if err := idToken.Claims(&claims); err != nil {
+		fmt.Println("failed to parse claims")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	if !claims.EmailVerified {
+		fmt.Println("email not verified")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	user := o.GetUserByEmail(claims.Email, r)
+	if user == nil {
+		if o.RegistrationJWTService != nil {
+			token, err := o.RegistrationJWTService.Create(o.GetName(), claims.Email)
+
+			if err != nil {
+				fmt.Println("failed to register user", err)
+				http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "registration_pkt",
+				Value:    token,
+				Path:     "/register",
+				SameSite: http.SameSiteLaxMode,
+				Secure:   true,
+				HttpOnly: true,
+				Expires:  time.Now().Add(1 * time.Minute),
+			})
+
+			http.Redirect(w, r, "/register", http.StatusTemporaryRedirect)
+			return
+		}
+		fmt.Println("user not found")
+		http.Redirect(w, r, "/login?err=oauth_email_not_found", http.StatusTemporaryRedirect)
+		return
+	}
+
+	redirectPath := "/app"
+	if state := r.FormValue("state"); state != "" {
+		if parsed, err := url.Parse(state); err == nil && !parsed.IsAbs() && strings.HasPrefix(parsed.Path, "/") {
+			redirectPath = parsed.String()
+		}
+	}
+
+	oauth.LoginUser(o.Database, user, fmt.Sprintf("%s-credential", o.GetName()), redirectPath, o.LoginInfoCallback, w, r)
 }
 
 func (o *OIDCConnection) handleRefresh(w http.ResponseWriter, r *http.Request) {

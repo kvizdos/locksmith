@@ -3,6 +3,7 @@ package register
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -11,12 +12,15 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/hibp"
+	"github.com/kvizdos/locksmith/authentication/oauth"
+	"github.com/kvizdos/locksmith/authentication/packets"
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/verificationcodes"
 	"github.com/kvizdos/locksmith/database"
@@ -28,15 +32,19 @@ import (
 )
 
 type registrationRequest struct {
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	Email        string `json:"email"`
-	Code         string `json:"code"`
-	PwnOK        bool   `json:"pwnok,omitempty"`
-	ValidationOK bool   `json:"validationok,omitempty"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	Email              string `json:"email"`
+	Code               string `json:"code"`
+	PwnOK              bool   `json:"pwnok,omitempty"`
+	ValidationOK       bool   `json:"validationok,omitempty"`
+	RestrictToOauthSrc string `json:"-"`
 }
 
 func (r registrationRequest) HasRequiredFields() bool {
+	if r.RestrictToOauthSrc != "" {
+		return r.Username != "" && r.Email != ""
+	}
 	return !(r.Username == "" || r.Password == "")
 }
 
@@ -54,6 +62,7 @@ type RegistrationHandler struct {
 	HIBP                        hibp.HIBPSettings
 	NewRegistrationEvent        func(users.LocksmithUserInterface)
 	RequestNewRegistrationEvent func(*http.Request, users.LocksmithUserInterface)
+	RegistrationJWTService      packets.RegistrationJWTServiceInterface
 }
 
 type registrationResponse struct {
@@ -71,6 +80,27 @@ func (r registrationResponse) Marshal() []byte {
 
 func (r *registrationResponse) Unmarshal(err []byte) {
 	json.Unmarshal(err, r)
+}
+
+func (rr RegistrationHandler) validateTrustedJWT(r *http.Request) (*packets.RegistrationJWT, error) {
+	tokenString := r.Header.Get("authorization")
+	if tokenString == "" {
+		return nil, errors.New("no authorization header")
+	}
+
+	tokenString = strings.TrimPrefix(tokenString, "Packet ")
+
+	if err := rr.RegistrationJWTService.Verify(tokenString); err != nil {
+		fmt.Println("Failed to verify token: ", err.Error())
+		return nil, errors.New("invalid token")
+	}
+
+	token, err := rr.RegistrationJWTService.Parse(tokenString)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
 func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -91,30 +121,59 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if r.Body == nil {
+	expectsTrustedJWT := strings.HasPrefix(r.Header.Get("authorization"), "Packet ")
+
+	if !expectsTrustedJWT && r.Body == nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		// handle the error
-		fmt.Println("Error reading request body:", err)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	var registrationReq registrationRequest
-	err = json.Unmarshal(body, &registrationReq)
 
-	if err != nil {
-		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(registrationResponse{
-			Error: "could not unmarshal",
-		}.Marshal())
-		return
+	if !expectsTrustedJWT {
+		// If no trusted JWT, read the request body as JSON
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			// handle the error
+			fmt.Println("Error reading request body:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		err = json.Unmarshal(body, &registrationReq)
+
+		if err != nil {
+			logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(registrationResponse{
+				Error: "could not unmarshal",
+			}.Marshal())
+			return
+		}
+	} else {
+		// use trusted jwt intead of registration body..
+		packet, err := rr.validateTrustedJWT(r)
+		if err != nil {
+			logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path+"?pkt")
+			w.WriteHeader(http.StatusBadRequest)
+			if err.Error() == "invalid token" {
+				w.Write(registrationResponse{
+					Error: "invalid packet",
+				}.Marshal())
+				return
+			}
+			w.Write(registrationResponse{
+				Error: "could not parse packet",
+			}.Marshal())
+			return
+		}
+
+		registrationReq = registrationRequest{
+			Username:           packet.Subject,
+			Email:              packet.Subject,
+			RestrictToOauthSrc: packet.OAuthSourceName,
+		}
 	}
 
 	if rr.DisablePublicRegistration && len(registrationReq.Code) == 0 {
@@ -184,7 +243,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Confirm Password Length Requirements
-	if rr.MinimumLengthRequirement != 0 && rr.MinimumLengthRequirement > len(registrationReq.Password) {
+	if registrationReq.RestrictToOauthSrc == "" && rr.MinimumLengthRequirement != 0 && rr.MinimumLengthRequirement > len(registrationReq.Password) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(registrationResponse{
 			Error: "password too short",
@@ -237,7 +296,7 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		invite, err = invitations.GetInviteFromCode(db, registrationReq.Code)
+		invite, err := invitations.GetInviteFromCode(db, registrationReq.Code)
 
 		if err != nil {
 			logger.LOGGER.Log(logger.INVITE_CODE_FAKE, logger.GetIPFromRequest(*r), registrationReq.Code)
@@ -303,13 +362,14 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	var lsu users.LocksmithUserInterface
 	lsu = users.LocksmithUser{
-		ID:               useID,
-		Username:         strings.ToLower(registrationReq.Username),
-		Email:            strings.ToLower(registrationReq.Email),
-		PasswordInfo:     password,
-		WebAuthnSessions: []webauthn.SessionData{},
-		PasswordSessions: []authentication.PasswordSession{},
-		Role:             useRole,
+		ID:                    useID,
+		Username:              strings.ToLower(registrationReq.Username),
+		Email:                 strings.ToLower(registrationReq.Email),
+		PasswordInfo:          password,
+		WebAuthnSessions:      []webauthn.SessionData{},
+		PasswordSessions:      []authentication.PasswordSession{},
+		Role:                  useRole,
+		OAuthRestrictedSource: registrationReq.RestrictToOauthSrc,
 	}
 
 	if rr.ConfigureCustomUser != nil {
@@ -353,6 +413,19 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.WriteHeader(http.StatusOK)
+
+	if rr.RegistrationJWTService != nil && expectsTrustedJWT {
+		method := "password"
+		if registrationReq.RestrictToOauthSrc != "" {
+			method = registrationReq.RestrictToOauthSrc
+		}
+		token, err := rr.RegistrationJWTService.CreateAutoLoginToken(method, useID)
+		if err != nil {
+			fmt.Println("Error creating auto login token:", err)
+		}
+		w.Write([]byte(fmt.Sprintf(`{"token":"%s"}`, token)))
+	}
+
 }
 
 type RegistrationPageHandler struct {
@@ -365,15 +438,30 @@ type RegistrationPageHandler struct {
 	InviteUsedRedirect        string
 	HIBPIntegrationOptions    hibp.HIBPSettings
 	MinimumLengthRequirement  int
+	OAuthProviders            oauth.OAuthProviders
 }
 
-func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http.Request, invite ...invitations.Invitation) {
+/*
+ * This is used to send a JWT-signed registration packet, useful for OAuth logins.
+ */
+func (rr RegistrationPageHandler) serveTrustedRegistrationHTML(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	tmpl, err := template.New("register.html").Parse(string(pages.RegisterPageHTML))
+	tmpl, err := template.New("register-trusted.html").Parse(string(pages.RegisterTrustedPageHTML))
 
 	if err != nil {
 		fmt.Println(err)
+	}
+
+	pktCookie, err := r.Cookie("registration_pkt")
+	if err != nil {
+		http.Error(w, "no registration packet cookie", http.StatusBadRequest)
+		return
+	}
+
+	if pktCookie.Value == "" {
+		http.Error(w, "no registration packet cookie", http.StatusBadRequest)
+		return
 	}
 
 	type TemplateData struct {
@@ -386,6 +474,7 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http
 		HIBPEnforcement       hibp.HIBPEnforcement
 		MinimumPasswordLength int
 		PasswordSecurityLink  string
+		RegistrationPacket    string
 	}
 	inv := TemplateData{
 		Title:                 rr.AppName,
@@ -395,6 +484,80 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http
 		HIBPEnforcement:       rr.HIBPIntegrationOptions.Enforcement,
 		MinimumPasswordLength: rr.MinimumLengthRequirement,
 		PasswordSecurityLink:  rr.HIBPIntegrationOptions.PasswordSecurityInfoLink,
+		RegistrationPacket:    pktCookie.Value,
+	}
+
+	if inv.Styling.SubmitColor == "" {
+		inv.Styling.SubmitColor = "#476ade"
+	}
+
+	if inv.Styling.StartGradient == "" {
+		inv.Styling.StartGradient = "#476ade"
+	}
+
+	if inv.Styling.EndGradient == "" {
+		inv.Styling.EndGradient = "#2744a3"
+	}
+
+	if inv.Title == "" {
+		inv.Title = "Locksmith"
+	}
+
+	// Delete registration packet cookie..
+	http.SetCookie(w, &http.Cookie{
+		Name:     "registration_pkt",
+		Value:    "",
+		Path:     "/register",
+		Expires:  time.Now(),
+		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		HttpOnly: true,
+	})
+
+	err = tmpl.Execute(w, inv)
+
+	if err != nil {
+		log.Println("Error executing template :", err)
+		return
+	}
+}
+
+func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http.Request, invite ...invitations.Invitation) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	tmpl, err := template.New("register.html").Parse(string(pages.RegisterPageHTML))
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	providers := ""
+
+	if rr.OAuthProviders != nil {
+		js, _ := json.Marshal(rr.OAuthProviders.GetNames())
+		providers = string(js)
+	}
+	type TemplateData struct {
+		HasInvite             bool
+		Invitation            invitations.Invitation
+		Title                 string
+		Styling               pages.LocksmithPageStyling
+		EmailAsUsername       bool
+		HasOnboarding         bool
+		HIBPEnforcement       hibp.HIBPEnforcement
+		MinimumPasswordLength int
+		PasswordSecurityLink  string
+		OAuthProviders        string
+	}
+	inv := TemplateData{
+		Title:                 rr.AppName,
+		Styling:               rr.Styling,
+		EmailAsUsername:       rr.EmailAsUsername,
+		HasOnboarding:         rr.HasOnboarding,
+		HIBPEnforcement:       rr.HIBPIntegrationOptions.Enforcement,
+		MinimumPasswordLength: rr.MinimumLengthRequirement,
+		PasswordSecurityLink:  rr.HIBPIntegrationOptions.PasswordSecurityInfoLink,
+		OAuthProviders:        providers,
 	}
 
 	if inv.Styling.SubmitColor == "" {
@@ -428,6 +591,16 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http
 
 func (rr RegistrationPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	db := r.Context().Value("database").(database.DatabaseAccessor)
+
+	pktCookie, err := r.Cookie("registration_pkt")
+	if err != nil {
+		pktCookie = nil
+	}
+
+	if pktCookie != nil && !rr.DisablePublicRegistration {
+		rr.serveTrustedRegistrationHTML(w, r)
+		return
+	}
 
 	myUrl, _ := url.Parse(r.RequestURI)
 	params, _ := url.ParseQuery(myUrl.RawQuery)

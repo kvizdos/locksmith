@@ -59,6 +59,7 @@ type LocksmithUserInterface interface {
 	GetEmail() string
 	GetID() string
 	GetPasswordInfo() authentication.PasswordInfo
+	Passwordless() bool
 	GetWebAuthnSessions() []webauthn.SessionData
 	GetPasswordSessions() []authentication.PasswordSession
 }
@@ -129,8 +130,13 @@ type LocksmithUser struct {
 	ImMagic                bool                            `json:"-" bson:"-"`
 	ImRegular              bool                            `json:"-" bson:"-"`
 	LastLogin              time.Time                       `json:"-" bson:"-"`
+	OAuthRestrictedSource  string                          `json:"oauth" bson:"-"`
 	EmailVerified          bool                            `json:"emailVerified" bson:"emailVerified"`
 	NeedsEmailVerification bool                            `json:"requiresEmailVerification" bson:"requiresEmailVerification"`
+}
+
+func (u LocksmithUser) Passwordless() bool {
+	return u.PasswordInfo.Passwordless
 }
 
 func (u LocksmithUser) GetLastLoginDate() time.Time {
@@ -182,6 +188,10 @@ func (u LocksmithUser) GetPasswordSessions() []authentication.PasswordSession {
 	return u.PasswordSessions
 }
 
+func (u LocksmithUser) GetOAuthRestrictedSource() string {
+	return u.OAuthRestrictedSource
+}
+
 func (u LocksmithUser) ToMap() map[string]interface{} {
 	out := make(map[string]interface{})
 
@@ -195,6 +205,7 @@ func (u LocksmithUser) ToMap() map[string]interface{} {
 	out["magic"] = u.Magics.ToMap()
 	out["emailVerified"] = u.EmailVerified
 	out["needsEmailVerification"] = u.NeedsEmailVerification
+	out["oauth"] = u.OAuthRestrictedSource
 
 	if u.GetLastLoginDate().IsZero() {
 		out["last_login"] = time.Now().UTC().Unix()
@@ -238,6 +249,11 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]interface{}))
 	}
 
+	oauthRestricted := ""
+	if user["oauth"] != nil {
+		oauthRestricted = user["oauth"].(string)
+	}
+
 	emailVerified := false
 	if user["emailVerified"] != nil {
 		emailVerified = user["emailVerified"].(bool)
@@ -277,6 +293,7 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		PasswordSessions:       sessions,
 		Magics:                 magics,
 		LastLogin:              loginTime,
+		OAuthRestrictedSource:  oauthRestricted,
 	}
 }
 

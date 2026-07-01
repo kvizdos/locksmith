@@ -26,6 +26,9 @@ var ErrorPageHTML []byte
 //go:embed register.html
 var RegisterPageHTML []byte
 
+//go:embed register-trusted.html
+var RegisterTrustedPageHTML []byte
+
 //go:embed verification.html
 var VerificationPageHTML []byte
 

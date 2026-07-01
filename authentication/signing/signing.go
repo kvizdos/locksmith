@@ -6,13 +6,21 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"math/big"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type SigningPackageInterface interface {
 	Sign(string) (string, error)
 	Validate(string, string) bool
 	MarshalPrivate() (string, error)
+
+	CreateJWT(jwt.Claims) (string, error)
+	ParseJWT(string, jwt.Claims, ...jwt.ParserOption) (*jwt.Token, error)
+	ValidateJWT(string, jwt.Claims) bool
 }
 
 type SigningPackage struct {
@@ -62,4 +70,36 @@ func (s SigningPackage) MarshalPrivate() (string, error) {
 	privKeyBase64 := base64.StdEncoding.EncodeToString(privKeyBytes)
 
 	return privKeyBase64, nil
+}
+
+func (sp SigningPackage) CreateJWT(claims jwt.Claims) (string, error) {
+	if sp.Private == nil {
+		return "", errors.New("private key is nil")
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	return token.SignedString(sp.Private)
+}
+
+func (sp SigningPackage) ParseJWT(
+	tokenString string,
+	claims jwt.Claims,
+	options ...jwt.ParserOption,
+) (*jwt.Token, error) {
+	if sp.Public == nil {
+		return nil, errors.New("public key is nil")
+	}
+
+	return jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if token.Method.Alg() != jwt.SigningMethodES256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: got %q expected %q", token.Method.Alg(), jwt.SigningMethodES256.Alg())
+		}
+
+		return sp.Public, nil
+	}, options...)
+}
+
+func (sp SigningPackage) ValidateJWT(tokenString string, claims jwt.Claims) bool {
+	token, err := sp.ParseJWT(tokenString, claims)
+	return err == nil && token.Valid
 }
