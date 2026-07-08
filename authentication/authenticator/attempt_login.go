@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/api_helpers"
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
@@ -43,7 +44,11 @@ func (a *authorizers) getUsernameNoun() string {
 }
 
 func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.Request, hint *authenticator_domain.RegistrationHint) {
+	now := time.Now()
 	hint.ID = uuid.NewString()
+	hint.IssuedAt = jwt.NewNumericDate(now)
+	hint.ExpiresAt = jwt.NewNumericDate(now.Add(60 * time.Second))
+	hint.Audience = jwt.ClaimStrings{"registration"}
 	token, err := a.sp.CreateJWT(hint)
 	if err != nil {
 		a.log.ErrorContext(r.Context(), "failed to create registration hint jwt", "err", err)
@@ -59,7 +64,6 @@ func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.
 		HttpOnly: true,
 		Secure:   true,
 		Path:     "/register",
-		MaxAge:   60,
 	}
 	http.SetCookie(w, &hintCookie)
 
