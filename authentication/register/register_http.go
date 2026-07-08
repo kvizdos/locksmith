@@ -296,7 +296,8 @@ func (rr RegistrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		invite, err := invitations.GetInviteFromCode(db, registrationReq.Code)
+		var err error
+		invite, err = invitations.GetInviteFromCode(db, registrationReq.Code)
 
 		if err != nil {
 			logger.LOGGER.Log(logger.INVITE_CODE_FAKE, logger.GetIPFromRequest(*r), registrationReq.Code)
