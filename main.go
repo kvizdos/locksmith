@@ -12,12 +12,16 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/kvizdos/locksmith/authentication/authorizer"
+	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_methods"
+	"github.com/kvizdos/locksmith/authentication/authorizer/tokens"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
@@ -130,7 +134,7 @@ func main() {
 		DB:                     db,
 		RegistrationJWTService: registrationSvc,
 		LoginInfoCallback: func(method string, user map[string]any) {
-			fmt.Printf("User logged in via Google: %+v", user)
+			fmt.Printf("User logged in via Google: %+v\n", user)
 		},
 	})
 	if err != nil {
@@ -174,11 +178,48 @@ func main() {
 	}).WithSigner(keyPEM)
 	// .WithUserDecoder(users.LocksmithUser{})
 
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	authorizer := authorizer.NewAuthorizer(
+		db,
+		// Setup Token Store
+		authorizer.WithTokenManager(tokens.NewCookieManager(db, "/app")),
+
+		// Helps prevent brute forcing by requiring a minimum response
+		authorizer.WithMinimumResponseTime(2*time.Second),
+
+		// Add signer for rostering
+		authorizer.WithSigningPackage(sp),
+
+		// This makes the UI highly verbose.
+		// authorizer.DisableUserEnumerationProtection(),
+
+		// Use email as username
+		authorizer.WithEmailAsUsername(),
+
+		// Setup Sign in / Reg methods..
+		authorizer.WithMethods(
+			authorizer.AllowMethodPassword(
+				authorizer_methods.RequireMinPasswordLength(8),
+			),
+			authorizer.AllowMethodOIDC(
+				authorizer_methods.WithOIDC(authorizer_methods.OIDConfig{
+					Issuer:       "https://accounts.google.com",
+					BaseURL:      "https://dev.kv.codes",
+					ProviderName: "google",
+					ClientID:     googleClientID,
+					ClientSecret: googleClientSecret,
+					Rosterable:   true, // If a user does not exist, create one
+				}),
+			),
+		),
+	)
+
 	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
 		AppName:                "Demo App",
 		UseEmailAsUsername:     true,
 		OnboardPath:            "/onboard",
 		InviteUsedRedirect:     "/app",
+		Authorizer:             authorizer,
 		RegistrationJWTService: registrationSvc,
 		RequiresEmailVerification: func(ctx context.Context, da database.DatabaseAccessor, lui users.LocksmithUserInterface, validationRes textvalidation.ValidationResultEvaluator) bool {
 			_, res := validationRes.Result(true)
@@ -229,7 +270,7 @@ func main() {
 				<div
 					id="g_id_onload"
 					data-client_id="%s"
-					data-login_uri="/api/auth/oauth/google/credential"
+					data-login_uri="/api/login/oidc-google"
 					data-auto_select="true"
 					data-use_fedcm_for_prompt="true"
 				    data-context="use"

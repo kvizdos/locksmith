@@ -8,6 +8,7 @@ import (
 
 	"github.com/kvizdos/locksmith/administration"
 	"github.com/kvizdos/locksmith/administration/invitations"
+	"github.com/kvizdos/locksmith/authentication/authorizer"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
@@ -67,6 +68,8 @@ type LocksmithRoutesOptions struct {
 	LoginSettings               *login.LoginOptions
 	LoginInfoCallback           func(method string, user map[string]any)
 	RequestLoginInfoCallback    func(r *http.Request, method string, user map[string]any)
+
+	Authorizer authorizer.AuthorizerHandler
 
 	WithErrors func(error_svc.ErrorService)
 }
@@ -148,16 +151,17 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
-		loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
-			HIBP:                     options.HIBPIntegrationOptions,
-			LockInactivityAfter:      lockAccountsAfter,
-			Options:                  *useLoginSettings,
-			SharedMemory:             useSharedMemory,
-			LoginInfoCallback:        options.LoginInfoCallback,
-			RequestLoginInfoCallback: options.RequestLoginInfoCallback,
-			RegistrationJWTService:   options.RegistrationJWTService,
-		}, db)
-		mux.Handle("/api/login", loginAPIHandler)
+		// loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
+		// 	HIBP:                     options.HIBPIntegrationOptions,
+		// 	LockInactivityAfter:      lockAccountsAfter,
+		// 	Options:                  *useLoginSettings,
+		// 	SharedMemory:             useSharedMemory,
+		// 	LoginInfoCallback:        options.LoginInfoCallback,
+		// 	RequestLoginInfoCallback: options.RequestLoginInfoCallback,
+		// 	RegistrationJWTService:   options.RegistrationJWTService,
+		// }, db)
+		mux.HandleFunc("/api/login", options.Authorizer.ServeLoginAPI)
+		mux.HandleFunc("/api/login/{provider}", options.Authorizer.ServeProviderStartAPI)
 
 		listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"users.list.all"},
