@@ -288,6 +288,19 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 		return nil, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
 	}
 
+	if user.RequiresEmailVerification() {
+		return nil, fmt.Errorf("account email not verified: %w", authenticator_domain.ErrPasswordlessRequired)
+	}
+
+	if lu, ok := user.(interface{ GetOAuthRestrictedSource() string }); ok {
+		if source := lu.GetOAuthRestrictedSource(); source != "" && source != handler.Name() {
+			a.log.WarnContext(ctx, "user attempted login via restricted provider", "allowed", source, "attempted", handler.Name(), "user", user.GetID())
+			return nil, &authenticator_domain.UserNotFoundError{
+				PresentedUsername: session.GetPresentedUser(),
+			}
+		}
+	}
+
 	// Confirm the user is authorized...
 	err := session.IsAuthorized(user)
 	if err != nil {

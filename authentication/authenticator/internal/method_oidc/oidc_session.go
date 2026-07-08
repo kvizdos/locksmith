@@ -1,8 +1,6 @@
 package method_oidc
 
 import (
-	"errors"
-
 	"github.com/coreos/go-oidc"
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
 	"github.com/kvizdos/locksmith/authentication/authenticator/internal/sessions"
@@ -38,16 +36,7 @@ type oidcValidationSession struct {
 	displayName        string
 }
 
-type oauthRestricted interface {
-	GetOAuthRestrictedSource() string
-}
-
-func (pv oidcValidationSession) IsAuthorized(user users.LocksmithUserInterface) error {
-	if lu, ok := user.(oauthRestricted); ok {
-		if source := lu.GetOAuthRestrictedSource(); source != "" && source != pv.options.ProviderName {
-			return errors.New("user is restricted to a different oauth provider")
-		}
-	}
-
+// Identity is authenticated via ResolveIdentity; nothing further to check here.
+func (pv oidcValidationSession) IsAuthorized(_ users.LocksmithUserInterface) error {
 	return nil
 }
