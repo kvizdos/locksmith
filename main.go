@@ -34,7 +34,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/tokens"
-	"github.com/kvizdos/locksmith/authentication/xsrf"
+
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/error_svc"
 	"github.com/kvizdos/locksmith/jwts"
@@ -425,8 +425,7 @@ func main() {
 		marshaledPK, err := pkg.MarshalPrivate() // use this output as the "DecodePrivateKey" variable
 	*/
 	magic.MagicSigningPackage = &sp
-	xsrf.XSRFSigningPackage.Anonymous = &sp
-	xsrf.XSRFSigningPackage.Authenticated = &sp
+
 	// _, err = users.LocksmithUser{
 	// 	ID: "41084e13-a40a-42e7-aac6-19cba36b1d68",
 	// }.CreateMagicAuthenticationCode(db, magic.MagicAuthenticationVariables{

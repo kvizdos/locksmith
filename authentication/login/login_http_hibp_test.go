@@ -7,11 +7,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/hibp"
-	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 )
 
@@ -42,31 +40,12 @@ func TestLoginNotFoundInHIBPSucceeds(t *testing.T) {
 			PasswordSecurityInfoLink: "#",
 		},
 	}
-	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
-
-	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "xsrf": "%s"}`, pass, xsrfToken)
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s"}`, pass)
 
 	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.AddCookie(&http.Cookie{
-		Name:     "sid",
-		Value:    "blah",
-		Path:     "/",
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
-
-	req.AddCookie(&http.Cookie{
-		Name:     "login_xsrf",
-		Value:    xsrfToken,
-		Path:     "/",
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
 
 	rr := httptest.NewRecorder()
 
@@ -105,31 +84,12 @@ func TestLoginFoundInHIBPDoesNotAuthenticateAndRedirects(t *testing.T) {
 			PasswordSecurityInfoLink: "#",
 		},
 	}
-	xsrfToken, _ := xsrf.GenerateXSRFForSession("blah", 15*time.Minute)
-
-	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "xsrf": "%s"}`, pass, xsrfToken)
+	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s"}`, pass)
 
 	req, err := http.NewRequest("POST", "/api/login", strings.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.AddCookie(&http.Cookie{
-		Name:     "sid",
-		Value:    "blah",
-		Path:     "/",
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
-
-	req.AddCookie(&http.Cookie{
-		Name:     "login_xsrf",
-		Value:    xsrfToken,
-		Path:     "/",
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
 
 	rr := httptest.NewRecorder()
 

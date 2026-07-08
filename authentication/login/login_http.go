@@ -42,7 +42,6 @@ type LoginOptions struct {
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	XSRF     string `json:"xsrf"`
 	PwnOK    bool   `json:"pwnok,omitempty"`
 }
 
@@ -119,19 +118,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "POST" {
-		// Make it more of a pain to detect this login_xsrf cookie
-		// if you aren't careful paying attention.
-		cookieXSRF := http.Cookie{
-			Name:     "login_xsrf",
-			Value:    "",
-			Expires:  time.Unix(0, 0),
-			HttpOnly: true,
-			Secure:   true,
-			Path:     "/api/login",
-			SameSite: http.SameSiteStrictMode,
-		}
-		http.SetCookie(w, &cookieXSRF)
-
 		observability.LoginFailures.WithLabelValues("bad_method").Inc()
 		failedLoginResponse.Error = "Incorrect HTTP method"
 		logger.LOGGER.Log(logger.INVALID_METHOD, logger.GetIPFromRequest(*r), r.URL.Path, "POST", r.Method)
@@ -153,14 +139,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(minDuration - elapsed)
 		}
 	}
-
-	// loginXSRFCookie, err := r.Cookie("login_xsrf")
-
-	// if err != nil {
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	observability.LoginFailures.WithLabelValues("bad_request").Inc()
-	// 	return
-	// }
 
 	if r.Body == nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
@@ -201,30 +179,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if lh.SharedMemory == nil {
 		lh.SharedMemory = providers.NewRamSharedMemoryProvider()
 	}
-
-	// if loginReq.XSRF != loginXSRFCookie.Value {
-	// 	fmt.Println("Bad XSRF!", loginReq.XSRF, loginXSRFCookie.Value)
-	// 	observability.LoginFailures.WithLabelValues("bad_xsrf").Inc()
-	// 	logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-
-	// sidCookie, err := r.Cookie("sid")
-
-	// if err != nil {
-	// 	fmt.Println("No SID present on login request")
-	// 	observability.LoginFailures.WithLabelValues("no_sid").Inc()
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-
-	// if !xsrf.Confirm(loginReq.XSRF, sidCookie.Value) {
-	// 	fmt.Println("bad xsrf used")
-	// 	observability.LoginFailures.WithLabelValues("xsrf_confirmation_error").Inc()
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
 
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 	hibpIsPwnedChan := make(chan bool)
@@ -400,9 +354,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	cookieValue := user.GenerateCookieValueFromSession(session)
 
-	// Expire Login XSRF cookie
-	cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login", SameSite: http.SameSiteStrictMode}
-
 	// Attach Session Cookie
 	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
 
@@ -413,7 +364,6 @@ func (lh LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 	http.SetCookie(w, &sessionExpiresAtCookie)
 	http.SetCookie(w, &oauthprovidercookie)
-	http.SetCookie(w, &cookieXSRF)
 
 	if lh.RequestLoginInfoCallback != nil {
 		lh.RequestLoginInfoCallback(r, "password", dbUser.(map[string]any))
@@ -437,13 +387,6 @@ type LoginPageHandler struct {
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	loginXSRF, ok := r.Context().Value("login_xsrf").(string)
-
-	if !ok || (ok && loginXSRF == "") {
-		w.Write([]byte("Login Handler must be wrapped in LoginPageMiddleware"))
-		return
-	}
-
 	tmpl, err := template.New("login.html").Parse(string(pages.LoginPageHTML))
 
 	if err != nil {
@@ -455,7 +398,6 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Styling                   pages.LocksmithPageStyling
 		EmailAsUsername           bool
 		OnboardingPath            string
-		LoginXSRF                 string
 		OAuthProviders            string
 		CaptchaProvider           captchaproviders.CAPTCHAProvider
 		DisablePublicRegistration bool
@@ -473,7 +415,6 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Styling:                   lr.Styling,
 		EmailAsUsername:           lr.EmailAsUsername,
 		OnboardingPath:            lr.OnboardingPath,
-		LoginXSRF:                 loginXSRF,
 		CaptchaProvider:           lr.CaptchaProvider,
 		OAuthProviders:            providers,
 		DisablePublicRegistration: lr.DisablePublicRegistration,

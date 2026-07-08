@@ -30,12 +30,6 @@ type LaunchpadHTTPHandler struct {
 
 func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	loginXSRF, ok := r.Context().Value("login_xsrf").(string)
-
-	if !ok || (ok && loginXSRF == "") {
-		w.Write([]byte("Launchpad Handler must be wrapped in LoginPageMiddleware"))
-		return
-	}
 
 	tmpl, err := template.New("launchpad.html").Parse(string(pages.LaunchpadPageHTML))
 
@@ -50,7 +44,6 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		AccessToken       string
 		Subtitle          string
 		RefreshButtonText string
-		XSRFToken         string
 	}
 
 	data := PageData{
@@ -60,7 +53,6 @@ func (lr LaunchpadHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		AccessToken:       lr.AccessToken,
 		Subtitle:          lr.Subtitle,
 		RefreshButtonText: lr.RefreshButtonText,
-		XSRFToken:         loginXSRF,
 	}
 
 	if data.Styling.SubmitColor == "" {

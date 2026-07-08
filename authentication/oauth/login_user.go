@@ -73,9 +73,6 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 
 	cookieValue := user.(users.LocksmithUser).GenerateCookieValueFromSession(session)
 
-	// Expire Login XSRF cookie
-	cookieXSRF := http.Cookie{Name: "login_xsrf", Value: "", Expires: time.Unix(0, 0), HttpOnly: true, Secure: true, Path: "/api/login", SameSite: http.SameSiteStrictMode}
-
 	// Attach Session Cookie
 	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(session.ExpiresAt, 0), HttpOnly: true, Secure: true, Path: "/"}
 
@@ -86,7 +83,6 @@ func LoginUser(db database.DatabaseAccessor, user users.LocksmithUserInterface, 
 	oauthhint := http.Cookie{Name: "ls_oauth_hint", Value: user.GetEmail(), Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: true, Secure: true, Path: "/"}
 
 	http.SetCookie(w, &cookie)
-	http.SetCookie(w, &cookieXSRF)
 	http.SetCookie(w, &oauthhint)
 	http.SetCookie(w, &sessionExpiresAtCookie)
 	http.SetCookie(w, &oauthprovidercookie)

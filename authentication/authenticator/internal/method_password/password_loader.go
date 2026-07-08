@@ -27,6 +27,7 @@ func (pv *passwordValidatorSession) LoadRequest(r *http.Request) error {
 		out := fmt.Errorf("failed to decode login request: %w", err)
 		return errors.Join(out, authenticator_domain.ErrFailedToParse)
 	}
+
 	pv.presentedPassword = loginRequest.Password
 	pv.BaseSession = sessions.NewBaseSession(
 		sessions.WithUserID(loginRequest.Username),
