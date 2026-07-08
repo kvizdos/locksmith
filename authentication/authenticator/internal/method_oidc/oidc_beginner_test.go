@@ -103,18 +103,6 @@ func TestBeginSetsCookiesAndRedirects(t *testing.T) {
 		cookies[c.Name] = c
 	}
 
-	stateCookie := cookies["ls_oidc_state"]
-	if stateCookie == nil {
-		t.Fatal("expected ls_oidc_state cookie to be set")
-	}
-	if stateCookie.Value == "" {
-		t.Error("expected non-empty state cookie value")
-	}
-	if stateCookie.Value != query.Get("state") {
-		t.Fatalf("expected state cookie to match auth URL state, got cookie %q and query %q", stateCookie.Value, query.Get("state"))
-	}
-	assertOIDCCookie(t, stateCookie, false)
-
 	pkceCookie := cookies["ls_oidc_pkce"]
 	if pkceCookie == nil {
 		t.Fatal("expected ls_oidc_pkce cookie to be set")
@@ -126,6 +114,87 @@ func TestBeginSetsCookiesAndRedirects(t *testing.T) {
 		t.Fatal("expected code_challenge to be derived from pkce verifier cookie")
 	}
 	assertOIDCCookie(t, pkceCookie, false)
+}
+
+func TestBeginUsesPageParamAsOAuthState(t *testing.T) {
+	t.Parallel()
+
+	h := oidcHandler{options: authenticator_methods.OIDCValidatorOptions{
+		ProviderName: "google",
+		OauthConfig: &oauth2.Config{
+			ClientID:    "client-id",
+			RedirectURL: "https://example.com/api/login",
+			Endpoint: oauth2.Endpoint{
+				AuthURL: "https://provider.example.com/auth",
+			},
+		},
+	}}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/start/google?page=/dashboard", nil)
+	rr := httptest.NewRecorder()
+	ctx := context.WithValue(context.Background(), "log", slog.Default())
+
+	if err := h.Begin(ctx, rr, req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	location, err := url.Parse(rr.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("expected valid redirect location: %v", err)
+	}
+	if got := location.Query().Get("state"); got != "/dashboard" {
+		t.Fatalf("expected state '/dashboard', got %q", got)
+	}
+}
+
+func TestBeginOmitsStateWhenPageMissingOrUnsafe(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		page string
+	}{
+		{name: "no page param", page: ""},
+		{name: "absolute url", page: "https://evil.example.com/phish"},
+		{name: "protocol-relative url", page: "//evil.example.com/phish"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := oidcHandler{options: authenticator_methods.OIDCValidatorOptions{
+				ProviderName: "google",
+				OauthConfig: &oauth2.Config{
+					ClientID:    "client-id",
+					RedirectURL: "https://example.com/api/login",
+					Endpoint: oauth2.Endpoint{
+						AuthURL: "https://provider.example.com/auth",
+					},
+				},
+			}}
+
+			reqURL := "/api/start/google"
+			if tt.page != "" {
+				reqURL += "?page=" + url.QueryEscape(tt.page)
+			}
+			req := httptest.NewRequest(http.MethodGet, reqURL, nil)
+			rr := httptest.NewRecorder()
+			ctx := context.WithValue(context.Background(), "log", slog.Default())
+
+			if err := h.Begin(ctx, rr, req); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			location, err := url.Parse(rr.Header().Get("Location"))
+			if err != nil {
+				t.Fatalf("expected valid redirect location: %v", err)
+			}
+			if got := location.Query().Get("state"); got != "" {
+				t.Fatalf("expected empty state, got %q", got)
+			}
+		})
+	}
 }
 
 func TestBeginSetsSecureCookiesForTLSRequest(t *testing.T) {
@@ -152,13 +221,10 @@ func TestBeginSetsSecureCookiesForTLSRequest(t *testing.T) {
 
 	seenSecureCookies := map[string]bool{}
 	for _, c := range rr.Result().Cookies() {
-		if c.Name == "ls_oidc_state" || c.Name == "ls_oidc_pkce" {
+		if c.Name == "ls_oidc_pkce" {
 			assertOIDCCookie(t, c, true)
 			seenSecureCookies[c.Name] = true
 		}
-	}
-	if !seenSecureCookies["ls_oidc_state"] {
-		t.Fatal("expected ls_oidc_state cookie to be set")
 	}
 	if !seenSecureCookies["ls_oidc_pkce"] {
 		t.Fatal("expected ls_oidc_pkce cookie to be set")

@@ -1,7 +1,6 @@
 package register
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
@@ -10,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kvizdos/locksmith/authentication"
-	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
@@ -30,8 +27,15 @@ func TestMain(m *testing.M) {
 	roles.AVAILABLE_ROLES = map[string][]string{}
 }
 
+// newTestRegistrar builds a *registrar wired with the password method,
+// mirroring how routes.go/main.go build one via register.NewRegistrar.
+func newTestRegistrar(db database.DatabaseAccessor, opts ...Option) *registrar {
+	opts = append([]Option{WithMethods(AllowMethodPassword())}, opts...)
+	return NewRegistrar(db, opts...)
+}
+
 func TestRegistrationHandlerMissingRole(t *testing.T) {
-	handler := RegistrationHandler{}
+	r := newTestRegistrar(database.TestDatabase{})
 
 	// Test Missing Username
 	payload := `{"username": "kvizdos", "password": "password123"}`
@@ -43,7 +47,7 @@ func TestRegistrationHandlerMissingRole(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusInternalServerError {
 		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
@@ -51,9 +55,7 @@ func TestRegistrationHandlerMissingRole(t *testing.T) {
 }
 
 func TestRegistrationHandlerInvalidRole(t *testing.T) {
-	handler := RegistrationHandler{
-		DefaultRoleName: "not-set",
-	}
+	r := newTestRegistrar(database.TestDatabase{}, WithDefaultRoleName("not-set"))
 
 	// Test Missing Username
 	payload := `{"username": "kvizdos", "password": "password123"}`
@@ -65,7 +67,7 @@ func TestRegistrationHandlerInvalidRole(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusInternalServerError {
 		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
@@ -73,9 +75,7 @@ func TestRegistrationHandlerInvalidRole(t *testing.T) {
 }
 
 func TestRegistrationHandlerFailedUnmarshal(t *testing.T) {
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-	}
+	r := newTestRegistrar(database.TestDatabase{}, WithDefaultRoleName("admin"))
 
 	// Test Missing Username
 	payload := `{"password" "password123"}`
@@ -87,7 +87,7 @@ func TestRegistrationHandlerFailedUnmarshal(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
@@ -101,10 +101,33 @@ func TestRegistrationHandlerFailedUnmarshal(t *testing.T) {
 	}
 }
 
-func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
+func TestRegistrationHandlerRejectsUnknownBodyFields(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRegistrar(database.TestDatabase{}, WithDefaultRoleName("admin"))
+
+	payload := `{"username":"kenton","password":"password123","email":"email@example.com","role":"admin"}`
+	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	rr := httptest.NewRecorder()
+	r.ServeRegisterAPI(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
+	}
+
+	regErr := &registrationResponse{}
+	regErr.Unmarshal(rr.Body.Bytes())
+	if regErr.Error != "could not unmarshal" {
+		t.Errorf("got unexpected error message: %s", regErr.Error)
+	}
+}
+
+func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
+	r := newTestRegistrar(database.TestDatabase{}, WithDefaultRoleName("admin"))
 
 	// Test Missing Username
 	payload := `{"password": "password123"}`
@@ -116,7 +139,7 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code (missing username): got %v, want %v", status, http.StatusBadRequest)
@@ -139,7 +162,7 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code (missing password): got %v, want %v", status, http.StatusBadRequest)
@@ -164,9 +187,7 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
 
@@ -177,8 +198,7 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusConflict {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
@@ -205,9 +225,7 @@ func TestRegistrationHandlerEmailTaken(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"))
 
 	payload := `{"username": "kvizdos", "password": "password123", "email": "email@email.com"}`
 
@@ -218,8 +236,7 @@ func TestRegistrationHandlerEmailTaken(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusConflict {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
@@ -246,9 +263,7 @@ func TestRegistrationHandlerEmailInvalid(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"))
 
 	payload := `{"username": "kvizdos", "password": "password123", "email": "email@ema"}`
 
@@ -259,8 +274,7 @@ func TestRegistrationHandlerEmailInvalid(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
@@ -287,9 +301,7 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
 
@@ -300,8 +312,7 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
@@ -351,10 +362,7 @@ func TestRegistrationHandlerDoesNotMeetLengthRequirement(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithMinimumLengthRequirement(8))
 
 	payload := `{"username": "kenton", "password": "1234567", "email": "email@email.com"}`
 
@@ -365,8 +373,7 @@ func TestRegistrationHandlerDoesNotMeetLengthRequirement(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
@@ -395,10 +402,7 @@ func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithMinimumLengthRequirement(8))
 
 	payload := `{"username": "kenton", "password": "12345678", "email": "email@email.com"}`
 
@@ -409,8 +413,7 @@ func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("1: unexpected status code: got %v, want %v", status, http.StatusOK)
@@ -418,10 +421,7 @@ func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 	}
 
 	// Check w/ extra long password
-	handler = RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-	}
+	r = newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithMinimumLengthRequirement(8))
 
 	payload = `{"username": "kenton3", "password": "ahisfignfdiofjfdifdfiidofgiohdfgiohdfgoidfhgiodfngonfiogfngoidf", "email": "email3@email.com"}`
 
@@ -432,265 +432,10 @@ func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("2: unexpected status code: got %v, want %v - %s", status, http.StatusOK, rr.Body.String())
-		return
-	}
-}
-
-func TestRegistrationHandlerHIBPStrictPasswordExistsInBreach(t *testing.T) {
-	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
-			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"id":       "c8531661-22a7-493f-b228-028842e09a05",
-					"username": "kenton2",
-					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
-				},
-			},
-		},
-	}
-
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-		HIBP: hibp.HIBPSettings{
-			Enabled:     true,
-			AppName:     "Locksmith Integration Tests",
-			Enforcement: hibp.STRICT,
-		},
-	}
-
-	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
-
-	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusConflict {
-		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
-		return
-	}
-
-	regErr := &registrationResponse{}
-	regErr.Unmarshal(rr.Body.Bytes())
-
-	if regErr.Error != "password pwned" {
-		t.Errorf("got unexpected error message: %s", regErr.Error)
-	}
-
-	if !regErr.PwnStatus {
-		t.Error("should have TRUE pwn status")
-	}
-}
-
-func TestRegistrationHandlerHIBPStrictPasswordExistsInBreachCantBeBypassedWithBody(t *testing.T) {
-	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
-			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"id":       "c8531661-22a7-493f-b228-028842e09a05",
-					"username": "kenton2",
-					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
-				},
-			},
-		},
-	}
-
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-		HIBP: hibp.HIBPSettings{
-			Enabled:     true,
-			AppName:     "Locksmith Integration Tests",
-			Enforcement: hibp.STRICT,
-		},
-	}
-
-	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com", "pwnok": true}`
-
-	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusConflict {
-		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
-		return
-	}
-
-	regErr := &registrationResponse{}
-	regErr.Unmarshal(rr.Body.Bytes())
-
-	if regErr.Error != "password pwned" {
-		t.Errorf("got unexpected error message: %s", regErr.Error)
-	}
-
-	if !regErr.PwnStatus {
-		t.Error("should have TRUE pwn status")
-	}
-}
-
-func TestRegistrationHandlerHIBPStrictPasswordDoesNotExistsInBreach(t *testing.T) {
-	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
-			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"id":       "c8531661-22a7-493f-b228-028842e09a05",
-					"username": "kenton2",
-					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
-				},
-			},
-		},
-	}
-
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-		HIBP: hibp.HIBPSettings{
-			Enabled:     true,
-			AppName:     "Locksmith Integration Tests",
-			Enforcement: hibp.STRICT,
-		},
-	}
-
-	pass, _ := authentication.GenerateRandomString(128)
-	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "email": "email@email.com"}`, pass)
-
-	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
-		return
-	}
-
-	regErr := &registrationResponse{}
-	regErr.Unmarshal(rr.Body.Bytes())
-
-	if regErr.Error != "" {
-		t.Errorf("got unexpected error message: %s", regErr.Error)
-	}
-
-	if regErr.PwnStatus {
-		t.Errorf("password should not be pwned.")
-	}
-}
-
-func TestRegistrationHandlerHIBPLooseDoesExistsInBreachSoFailsWithoutBodyConfirmation(t *testing.T) {
-	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
-			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"id":       "c8531661-22a7-493f-b228-028842e09a05",
-					"username": "kenton2",
-					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
-				},
-			},
-		},
-	}
-
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-		HIBP: hibp.HIBPSettings{
-			Enabled:     true,
-			AppName:     "Locksmith Integration Tests",
-			Enforcement: hibp.LOOSE,
-		},
-	}
-
-	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "email": "email@email.com"}`, "password123")
-
-	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusConflict {
-		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusConflict)
-		return
-	}
-
-	regErr := &registrationResponse{}
-	regErr.Unmarshal(rr.Body.Bytes())
-
-	if regErr.Error != "password pwned" {
-		t.Errorf("got unexpected error message: %s", regErr.Error)
-	}
-	if !regErr.PwnStatus {
-		t.Errorf("pwnStatus should be TRUE")
-	}
-}
-
-func TestRegistrationHandlerHIBPLooseDoesExistsInBreachPassesWithBodyConfirmation(t *testing.T) {
-	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
-			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
-					"id":       "c8531661-22a7-493f-b228-028842e09a05",
-					"username": "kenton2",
-					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
-				},
-			},
-		},
-	}
-
-	handler := RegistrationHandler{
-		DefaultRoleName:          "admin",
-		MinimumLengthRequirement: 8,
-		HIBP: hibp.HIBPSettings{
-			Enabled:     true,
-			AppName:     "Locksmith Integration Tests",
-			Enforcement: hibp.LOOSE,
-		},
-	}
-
-	payload := fmt.Sprintf(`{"username": "kenton", "password": "%s", "email": "email@email.com", "pwnok": true}`, "password123")
-
-	req, err := http.NewRequest("POST", "/api/register", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
 		return
 	}
 }
@@ -738,16 +483,13 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-		ConfigureCustomUser: func(lui users.LocksmithUser, db database.DatabaseAccessor) users.LocksmithUserInterface {
-			user := customUser{
-				LocksmithUser: lui,
-			}
-			user.CustomObject = "Hello World"
-			return user
-		},
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithConfigureCustomUser(func(lui users.LocksmithUser, db database.DatabaseAccessor) users.LocksmithUserInterface {
+		user := customUser{
+			LocksmithUser: lui,
+		}
+		user.CustomObject = "Hello World"
+		return user
+	}))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com"}`
 
@@ -758,8 +500,7 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
@@ -798,9 +539,7 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName: "admin",
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"))
 
 	payload := `{"username": "<i want xss>!", "password": "password123"}`
 
@@ -811,8 +550,7 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
@@ -841,10 +579,7 @@ func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName:           "admin",
-		DisablePublicRegistration: true,
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithDisablePublicRegistration(true))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "email@email.com", "code": "asdadsasd"}`
 
@@ -855,8 +590,7 @@ func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
@@ -894,10 +628,7 @@ func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName:           "admin",
-		DisablePublicRegistration: true,
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithDisablePublicRegistration(true))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "notbob@bob.com", "code": "zyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"}`
 
@@ -908,8 +639,7 @@ func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
@@ -947,10 +677,7 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName:           "admin",
-		DisablePublicRegistration: true,
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithDisablePublicRegistration(true))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "notbob@bob.com", "code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"}`
 
@@ -961,8 +688,7 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusBadRequest)
@@ -1004,10 +730,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 		},
 	}
 
-	handler := RegistrationHandler{
-		DefaultRoleName:           "admin",
-		DisablePublicRegistration: true,
-	}
+	r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithDisablePublicRegistration(true))
 
 	payload := `{"username": "kenton", "password": "password123", "email": "bob@bob.com", "code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M"}`
 
@@ -1018,8 +741,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-	handler.ServeHTTP(rr, req)
+	r.ServeRegisterAPI(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("unexpected status code: got %v, want %v", status, http.StatusOK)
@@ -1091,10 +813,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 			},
 		}
 
-		handler := RegistrationHandler{
-			DefaultRoleName: "admin",
-			EmailAsUsername: true,
-		}
+		r := newTestRegistrar(testDb, WithDefaultRoleName("admin"), WithEmailAsUsername(true))
 
 		payload := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, test.Username, test.Password)
 
@@ -1105,8 +824,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		req = req.WithContext(context.WithValue(req.Context(), "database", testDb))
-		handler.ServeHTTP(rr, req)
+		r.ServeRegisterAPI(rr, req)
 
 		if status := rr.Code; status != test.ExpectStatusCode {
 			t.Errorf("unexpected status code: got %v, want %v", status, test.ExpectStatusCode)

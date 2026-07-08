@@ -30,6 +30,8 @@ type oidcValidationSession struct {
 	untrustedParsedCode      string
 	pkceVerifier             string
 	untrustedCredentialToken string
+	selectBy                 string
+	redirectTarget           string
 
 	// Authorization Context
 	authoritativeToken *oidc.IDToken

@@ -3,6 +3,7 @@ package method_oidc
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -170,6 +171,52 @@ func TestLoadRequestFlowCodeSuccess(t *testing.T) {
 	if session.flow != flowCode {
 		t.Fatalf("expected flow flowCode, got %v", session.flow)
 	}
+	if session.redirectTarget != "" {
+		t.Fatalf("expected empty redirectTarget for unsafe/absent state, got %q", session.redirectTarget)
+	}
+}
+
+func TestLoadRequestFlowCodeCapturesRedirectFromState(t *testing.T) {
+	t.Parallel()
+
+	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/login?state=%2Fdashboard&code=xyz", nil)
+	req.AddCookie(&http.Cookie{Name: "ls_oidc_pkce", Value: "verifier-value"})
+
+	if err := session.LoadRequest(req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if session.redirectTarget != "/dashboard" {
+		t.Fatalf("expected redirectTarget '/dashboard', got %q", session.redirectTarget)
+	}
+	if got := session.GetRedirectTarget(); got != "/dashboard" {
+		t.Fatalf("expected GetRedirectTarget() '/dashboard', got %q", got)
+	}
+}
+
+func TestLoadRequestFlowCodeIgnoresUnsafeState(t *testing.T) {
+	t.Parallel()
+
+	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/login?state=https%3A%2F%2Fevil.example.com%2Fphish&code=xyz", nil)
+	req.AddCookie(&http.Cookie{Name: "ls_oidc_pkce", Value: "verifier-value"})
+
+	if err := session.LoadRequest(req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if session.redirectTarget != "" {
+		t.Fatalf("expected empty redirectTarget for unsafe state value, got %q", session.redirectTarget)
+	}
+}
+
+func newCredentialFormRequest(form url.Values) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	return req
 }
 
 func TestLoadRequestFlowCredentialSuccess(t *testing.T) {
@@ -177,8 +224,16 @@ func TestLoadRequestFlowCredentialSuccess(t *testing.T) {
 
 	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
 
-	body := `{"credential":"some-jwt-token"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(body))
+	// Google Identity Services' HTML API delivers the credential via a
+	// native browser form POST (application/x-www-form-urlencoded), not
+	// JSON, along with a "select_by" field. "state" is our own addition,
+	// mirroring the code flow's use of state to carry the post-login
+	// redirect target.
+	req := newCredentialFormRequest(url.Values{
+		"credential": {"some-jwt-token"},
+		"select_by":  {"btn"},
+		"state":      {"/dashboard"},
+	})
 
 	if err := session.LoadRequest(req); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -187,8 +242,33 @@ func TestLoadRequestFlowCredentialSuccess(t *testing.T) {
 	if session.untrustedCredentialToken != "some-jwt-token" {
 		t.Fatalf("expected untrustedCredentialToken 'some-jwt-token', got %s", session.untrustedCredentialToken)
 	}
+	if session.selectBy != "btn" {
+		t.Fatalf("expected selectBy 'btn', got %s", session.selectBy)
+	}
+	if session.redirectTarget != "/dashboard" {
+		t.Fatalf("expected redirectTarget '/dashboard', got %q", session.redirectTarget)
+	}
 	if session.flow != flowCredential {
 		t.Fatalf("expected flow flowCredential, got %v", session.flow)
+	}
+}
+
+func TestLoadRequestFlowCredentialIgnoresUnsafeState(t *testing.T) {
+	t.Parallel()
+
+	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
+
+	req := newCredentialFormRequest(url.Values{
+		"credential": {"some-jwt-token"},
+		"state":      {"https://evil.example.com/phish"},
+	})
+
+	if err := session.LoadRequest(req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if session.redirectTarget != "" {
+		t.Fatalf("expected empty redirectTarget for unsafe state value, got %q", session.redirectTarget)
 	}
 }
 
@@ -197,8 +277,7 @@ func TestLoadRequestFlowCredentialMissingField(t *testing.T) {
 
 	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
 
-	body := `{}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(body))
+	req := newCredentialFormRequest(url.Values{})
 
 	err := session.LoadRequest(req)
 	if err == nil {
@@ -206,17 +285,19 @@ func TestLoadRequestFlowCredentialMissingField(t *testing.T) {
 	}
 }
 
-func TestLoadRequestFlowCredentialMalformedJSON(t *testing.T) {
+func TestLoadRequestFlowCredentialMalformedForm(t *testing.T) {
 	t.Parallel()
 
 	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
 
-	body := `not-json`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(body))
+	// Invalid percent-encoding causes url.ParseQuery (used by ParseForm) to
+	// fail.
+	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader("credential=%"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	err := session.LoadRequest(req)
 	if err == nil {
-		t.Fatal("expected error for malformed JSON")
+		t.Fatal("expected error for malformed form body")
 	}
 }
 

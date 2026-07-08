@@ -15,7 +15,8 @@ func federatedAttemptLogin(t *testing.T, a *authorizers, sess *mockFederatedSess
 	t.Helper()
 	handler := mockFederatedHandlerFull{session: sess}
 	req := httptest.NewRequest("GET", "/", nil)
-	return a.attemptLogin(context.Background(), handler, req)
+	token, _, err := a.attemptLogin(context.Background(), handler, req)
+	return token, err
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

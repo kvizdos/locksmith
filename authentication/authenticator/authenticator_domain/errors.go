@@ -3,7 +3,7 @@ package authenticator_domain
 import (
 	"errors"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/kvizdos/locksmith/authentication/registrationhints"
 )
 
 var (
@@ -23,15 +23,7 @@ var ErrUserNotFound = &UserNotFoundError{}
 
 type UserNotFoundError struct {
 	PresentedUsername string
-	RegistrationHint  *RegistrationHint
-}
-
-type RegistrationHint struct {
-	jwt.RegisteredClaims
-	ProviderName string
-	Email        string
-	DisplayName  string
-	Rosterable   bool
+	RegistrationHint  *registrationhints.Hint
 }
 
 func (e *UserNotFoundError) Error() string {

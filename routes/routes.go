@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/kvizdos/locksmith/authentication/httphandlers"
 	"github.com/kvizdos/locksmith/authentication/management"
 	"github.com/kvizdos/locksmith/authentication/oauth"
-	"github.com/kvizdos/locksmith/authentication/packets"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/reset"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_config"
@@ -43,14 +41,10 @@ type LocksmithRoutesOptions struct {
 	DisablePublicRegistration bool
 	DisableLocksmithPage      bool
 	UseEmailAsUsername        bool
-	DefaultUserRole           string
 	OnboardPath               string
 	InviteUsedRedirect        string
-	CustomUserRegistration    register.RegisterCustomUserFunc
-	RequiresEmailVerification func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
 	AccountVerifier           verificationcodes.Verifier
 	EmailValidation           textvalidation.EmailValidator
-	RegistrationJWTService    packets.RegistrationJWTServiceInterface
 	LaunchpadSettings         launchpad.LocksmithLaunchpadOptions
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
@@ -59,15 +53,19 @@ type LocksmithRoutesOptions struct {
 	SAMLConfig                *saml_config.IdPConfig
 	// map[roleName]time.Duration
 	// Use "default" as a catch-all
-	InactivityLockDuration      map[string]time.Duration
-	MinimumPasswordLength       int
-	NewRegistrationEvent        func(user users.LocksmithUserInterface)
-	RequestNewRegistrationEvent func(r *http.Request, user users.LocksmithUserInterface)
-	SharedMemory                sharedmemory.MemoryProvider
-	LoginInfoCallback           func(method string, user map[string]any)
-	RequestLoginInfoCallback    func(r *http.Request, method string, user map[string]any)
+	InactivityLockDuration   map[string]time.Duration
+	MinimumPasswordLength    int
+	SharedMemory             sharedmemory.MemoryProvider
+	LoginInfoCallback        func(method string, user map[string]any)
+	RequestLoginInfoCallback func(r *http.Request, method string, user map[string]any)
 
+	// Authorizer handles /api/login and /api/login/{provider}. Build one via
+	// authenticator.NewAuthorizer(db, opts...).
 	Authorizer authenticator.AuthorizerHandler
+
+	// Registrar handles /api/register. Build one via
+	// register.NewRegistrar(db, opts...).
+	Registrar register.RegistrarHandler
 
 	WithErrors func(error_svc.ErrorService)
 }
@@ -109,25 +107,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			lockAccountsAfter = options.InactivityLockDuration
 		}
 
-		defaultUserRole := "user"
-		if options.DefaultUserRole != "" {
-			defaultUserRole = options.DefaultUserRole
-		}
-		registrationAPIHandler := httpHelpers.InjectDatabaseIntoContext(register.RegistrationHandler{
-			DefaultRoleName:             defaultUserRole,
-			DisablePublicRegistration:   options.DisablePublicRegistration,
-			ConfigureCustomUser:         options.CustomUserRegistration,
-			RequiresEmailVerification:   options.RequiresEmailVerification,
-			AccountVerifier:             options.AccountVerifier,
-			EmailAsUsername:             options.UseEmailAsUsername,
-			HIBP:                        options.HIBPIntegrationOptions,
-			MinimumLengthRequirement:    options.MinimumPasswordLength,
-			NewRegistrationEvent:        options.NewRegistrationEvent,
-			RequestNewRegistrationEvent: options.RequestNewRegistrationEvent,
-			EmailValidation:             options.EmailValidation,
-			RegistrationJWTService:      options.RegistrationJWTService,
-		}, db)
-		mux.Handle("/api/register", registrationAPIHandler)
+		mux.HandleFunc("/api/register", options.Registrar.ServeRegisterAPI)
 
 		mux.HandleFunc("/api/login", options.Authorizer.ServeLoginAPI)
 		mux.HandleFunc("/api/login/{provider}", options.Authorizer.ServeProviderStartAPI)
@@ -227,7 +207,6 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			EmailAsUsername:           options.UseEmailAsUsername,
 			HasOnboarding:             len(options.OnboardPath) > 0,
 			InviteUsedRedirect:        options.InviteUsedRedirect,
-			HIBPIntegrationOptions:    options.HIBPIntegrationOptions,
 			MinimumLengthRequirement:  options.MinimumPasswordLength,
 			OAuthProviders:            options.OAuthProviders,
 		}

@@ -22,17 +22,22 @@ import (
 	"github.com/kvizdos/locksmith/authentication/authenticator"
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
 	"github.com/kvizdos/locksmith/authentication/packets"
+	"github.com/kvizdos/locksmith/authentication/register"
+	"github.com/kvizdos/locksmith/authentication/register/register_methods"
+	"github.com/kvizdos/locksmith/authentication/registrationhints"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_discovery"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_entities"
 	"github.com/kvizdos/locksmith/authentication/saml/saml_init"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/tokens"
+	"github.com/kvizdos/locksmith/authentication/verificationcodes"
 
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/error_svc"
@@ -75,8 +80,40 @@ func printResetToken(token string, user users.LocksmithUserInterface) {
 	fmt.Println(user.GetID(), token)
 }
 
-func sendWelcomeEmailExample(u users.LocksmithUserInterface) {
-	fmt.Printf("Sending welcome email to %s\n", u.GetEmail())
+func sendWelcomeEmailExampleByEmail(email string) {
+	fmt.Printf("Sending welcome email to %s\n", email)
+}
+
+// subscribePrettyPrintedAuthEvents wires a simple console logger to every
+// registration/login/roster event published on the given bus. This is a
+// demo-only example of consuming authentication/events; real applications
+// would forward these to their own logging/analytics/notification systems.
+func subscribePrettyPrintedAuthEvents(bus *events.MemoryBus) {
+	logEvent := func(name events.EventName) events.Handler {
+		return func(ctx context.Context, envelope events.Envelope) error {
+			fmt.Printf("[event] %s :: %+v\n", name, envelope.Payload)
+			return nil
+		}
+	}
+
+	for _, name := range []events.EventName{
+		events.EventRegistrationRequested,
+		events.EventRegistrationSucceeded,
+		events.EventRegistrationFailed,
+
+		events.EventLoginRequested,
+		events.EventLoginSucceeded,
+		events.EventLoginFailed,
+
+		events.EventRosterStarted,
+		events.EventRosterSucceeded,
+		events.EventRosterFailed,
+
+		events.EventAccountLinked,
+		events.EventEmailVerificationSent,
+	} {
+		bus.Subscribe(name, logEvent(name))
+	}
 }
 
 func main() {
@@ -178,10 +215,17 @@ func main() {
 	// .WithUserDecoder(users.LocksmithUser{})
 
 	slog.SetLogLoggerLevel(slog.LevelDebug)
+
+	authEvents := events.NewMemoryBus()
+	subscribePrettyPrintedAuthEvents(authEvents)
+
 	authorizer := authenticator.NewAuthorizer(
 		db,
 		// Setup Token Store
 		authenticator.WithTokenManager(tokens.NewCookieManager(db, "/app")),
+
+		// Publish login/roster/account-link events for logging and downstream consumers
+		authenticator.WithEventBus(authEvents),
 
 		// Helps prevent brute forcing by requiring a minimum response
 		authenticator.WithMinimumResponseTime(2*time.Second),
@@ -213,23 +257,50 @@ func main() {
 		),
 	)
 
-	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
-		AppName:                "Demo App",
-		UseEmailAsUsername:     true,
-		OnboardPath:            "/onboard",
-		InviteUsedRedirect:     "/app",
-		Authorizer:             authorizer,
-		RegistrationJWTService: registrationSvc,
-		RequiresEmailVerification: func(ctx context.Context, da database.DatabaseAccessor, lui users.LocksmithUserInterface, validationRes textvalidation.ValidationResultEvaluator) bool {
-			_, res := validationRes.Result(true)
-			if res != textvalidation.ValidationResult_VALID {
-				fmt.Println("Since validation was skipped, we're going to require an email-based verification to be completed.")
-				return true
-			}
+	authEvents.Subscribe(events.EventRegistrationSucceeded, func(ctx context.Context, envelope events.Envelope) error {
+		payload, ok := envelope.Payload.(events.RegistrationSucceededPayload)
+		if !ok {
+			return nil
+		}
+		sendWelcomeEmailExampleByEmail(payload.Email)
+		return nil
+	})
 
-			fmt.Println("No verification required, email likely exits")
-			return false
-		},
+	requiresEmailVerification := func(ctx context.Context, da database.DatabaseAccessor, lui users.LocksmithUserInterface, validationRes textvalidation.ValidationResultEvaluator) bool {
+		_, res := validationRes.Result(true)
+		if res != textvalidation.ValidationResult_VALID {
+			fmt.Println("Since validation was skipped, we're going to require an email-based verification to be completed.")
+			return true
+		}
+
+		fmt.Println("No verification required, email likely exits")
+		return false
+	}
+
+	registrar := register.NewRegistrar(
+		db,
+		register.WithDefaultRoleName("user"),
+		register.WithEmailAsUsername(true),
+		register.WithMinimumLengthRequirement(8),
+		register.WithRequiresEmailVerification(requiresEmailVerification),
+		register.WithAccountVerifier(verificationcodes.NewVerifier(db, nil)),
+		register.WithEventBus(authEvents),
+		register.WithTokenManager(tokens.NewCookieManager(db, "/app")),
+		register.WithMethods(
+			// Same signing package used by the authorizer's rostering flow, so
+			// registration hints it issues can be verified here.
+			register.AllowMethodHint(register_methods.WithHintService(registrationhints.Service{Signer: sp})),
+			register.AllowMethodPassword(),
+		),
+	)
+
+	routes.InitializeLocksmithRoutes(mux, db, routes.LocksmithRoutesOptions{
+		AppName:            "Demo App",
+		UseEmailAsUsername: true,
+		OnboardPath:        "/onboard",
+		InviteUsedRedirect: "/app",
+		Authorizer:         authorizer,
+		Registrar:          registrar,
 		LoginInfoCallback: func(method string, user map[string]any) {
 			fmt.Printf("User logged in via username / password: %+v\n", user)
 		},
@@ -259,12 +330,13 @@ func main() {
 				<div
 					id="g_id_onload"
 					data-client_id="%s"
-					data-login_uri="/api/login/oidc-google"
+					data-login_uri="/api/login?provider=oidc-google"
 					data-auto_select="true"
 					data-use_fedcm_for_prompt="true"
 				    data-context="use"
 					data-color_scheme="light"
-					data-itp_support="false">
+					data-itp_support="false"
+					data-state="test">
 				</div>`, googleClientID,
 			)),
 		},
@@ -280,7 +352,6 @@ func main() {
 			HTTPClient:               &http.Client{},
 			PasswordSecurityInfoLink: "https://github.com/kvizdos",
 		},
-		NewRegistrationEvent: sendWelcomeEmailExample,
 		LaunchpadSettings: launchpad.LocksmithLaunchpadOptions{
 			Enabled:                       true,
 			IsEarlyDevelopmentEnvironment: false,

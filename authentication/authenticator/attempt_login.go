@@ -7,13 +7,31 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/api_helpers"
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/events"
+	"github.com/kvizdos/locksmith/authentication/registrationhints"
+	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/users"
 )
+
+func (a *authorizers) publishAuthEvent(ctx context.Context, name events.EventName, payload any) {
+	if a.eventBus == nil {
+		return
+	}
+	envelope := events.EnrichEnvelope(ctx, events.Envelope{
+		ID:         uuid.New().String(),
+		Name:       name,
+		OccurredAt: time.Now(),
+		Source:     "authentication/authenticator",
+		Payload:    payload,
+	})
+	if err := a.eventBus.Publish(ctx, envelope); err != nil {
+		a.log.WarnContext(ctx, "auth event publish failed", "event", string(name), "error", err)
+	}
+}
 
 func (a *authorizers) writeAuthError(minCtx func(), w http.ResponseWriter, protectionDisabled string) {
 	if minCtx != nil {
@@ -43,33 +61,24 @@ func (a *authorizers) getUsernameNoun() string {
 	return "Username"
 }
 
-func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.Request, hint *authenticator_domain.RegistrationHint) {
-	now := time.Now()
-	hint.ID = uuid.NewString()
-	hint.IssuedAt = jwt.NewNumericDate(now)
-	hint.ExpiresAt = jwt.NewNumericDate(now.Add(60 * time.Second))
-	hint.Audience = jwt.ClaimStrings{"registration"}
-	token, err := a.sp.CreateJWT(hint)
+func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.Request, hint *registrationhints.Hint) {
+	token, err := registrationhints.Service{Signer: a.sp}.Create(*hint)
 	if err != nil {
-		a.log.ErrorContext(r.Context(), "failed to create registration hint jwt", "err", err)
+		a.log.ErrorContext(r.Context(), "failed to create registration hint")
 		api_helpers.WriteResponse(w, api_helpers.APIResponseError{
-			Reason: "Failed to create JWT.",
+			Reason: "Failed to start registration.",
 		}, http.StatusInternalServerError)
 		return
 	}
 
-	hintCookie := http.Cookie{
-		Name:     "registration_hint",
-		Value:    token,
-		HttpOnly: true,
-		Secure:   true,
-		Path:     "/register",
-	}
-	http.SetCookie(w, &hintCookie)
+	registrationhints.SetCookie(w, token)
 
-	api_helpers.WriteResponse(w, map[string]any{
-		"mode": "roster",
-	}, http.StatusAccepted)
+	a.publishAuthEvent(r.Context(), events.EventRosterStarted, events.RosterStartedPayload{Provider: hint.ProviderName, SelectBy: hint.SelectBy})
+
+	http.Redirect(w, r, "/api/register?hinted", http.StatusSeeOther)
+	// api_helpers.WriteResponse(w, map[string]any{
+	// 	"mode": "roster",
+	// }, http.StatusAccepted)
 }
 
 func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +114,7 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, "login_handler", handler.Name())
 	ctx = context.WithValue(ctx, "login_passwordless", handler.Passwordless())
 
-	token, err := a.attemptLogin(ctx, handler, r)
+	token, lastSelectBy, err := a.attemptLogin(ctx, handler, r)
 	if err != nil {
 		var (
 			invalidPassword *authenticator_domain.InvalidPasswordError
@@ -119,13 +128,27 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			a.log.InfoContext(ctx, "user not found", "presented_user_id", invalidUser.PresentedUsername)
+			a.publishAuthEvent(ctx, events.EventLoginFailed, events.LoginFailedPayload{
+				PresentedUsername: invalidUser.PresentedUsername,
+				Method:            handler.Name(),
+				Reason:            "user_not_found",
+			})
 			a.writeAuthError(waitMinimum, w, fmt.Sprintf("%s not found.", a.getUsernameNoun()))
 			return
 		case errors.As(err, &invalidPassword):
 			a.log.InfoContext(ctx, "invalid password presented", "user", invalidPassword.Username)
+			a.publishAuthEvent(ctx, events.EventLoginFailed, events.LoginFailedPayload{
+				PresentedUsername: invalidPassword.Username,
+				Method:            handler.Name(),
+				Reason:            "invalid_password",
+			})
 			a.writeAuthError(waitMinimum, w, "Password is incorrect.")
 			return
 		case errors.Is(err, authenticator_domain.ErrPasswordlessRequired):
+			a.publishAuthEvent(ctx, events.EventLoginFailed, events.LoginFailedPayload{
+				Method: handler.Name(),
+				Reason: "passwordless_required",
+			})
 			a.writeAuthError(waitMinimum, w, "Passwordless login required.")
 			return
 		case errors.Is(err, authenticator_domain.ErrFailedToParse):
@@ -154,6 +177,12 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := handler.(authenticator_domain.Beginnable); ok {
+		a.log.DebugContext(ctx, "setting oauth hints")
+		token.OAuthHint = token.User.Email
+		token.OAuthProvider = handler.Name()
+	}
+
 	// Some Locksmith functionality requires specific cookies
 	// to be set..
 	if err := a.setBaseCookies(w, token); err != nil {
@@ -172,10 +201,22 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID := ""
+	if token.User != nil {
+		userID = token.User.GetID()
+	}
+	a.publishAuthEvent(ctx, events.EventLoginSucceeded, events.LoginSucceededPayload{
+		UserID:       userID,
+		Method:       handler.Name(),
+		Provider:     token.OAuthProvider,
+		Passwordless: handler.Passwordless(),
+		SelectBy:     lastSelectBy,
+	})
+
 	// Pass to client is expected to finish.
 }
 
-func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_domain.Handler, r *http.Request) (*authenticator_domain.Token, error) {
+func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_domain.Handler, r *http.Request) (*authenticator_domain.Token, string, error) {
 	// Next, create a session for this handler.
 	// This session will include handler-specific state.
 	session := handler.Session(a.db)
@@ -183,7 +224,15 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 	// Load the request into the session to initialize it.
 	// This will parse the request and set any handler-specific state.
 	if err := session.LoadRequest(r); err != nil {
-		return nil, fmt.Errorf("failed to create session: %w", err)
+		return nil, "", fmt.Errorf("failed to create session: %w", err)
+	}
+
+	// If the session can identify which UI surface produced the
+	// credential (e.g. Google Identity Services' "select_by"), capture it
+	// now so every return path below can report it.
+	selectBy := ""
+	if fs, ok := session.(authenticator_domain.FlowSource); ok {
+		selectBy = fs.GetSelectBy()
 	}
 
 	// If required, resolve the identity of the user
@@ -191,7 +240,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 	// useful for OAuth login scenarios.
 	if resolver, ok := session.(authenticator_domain.IdentityResolver); ok {
 		if err := resolver.ResolveIdentity(ctx); err != nil {
-			return nil, fmt.Errorf("resolve identity: %w", err)
+			return nil, selectBy, fmt.Errorf("resolve identity: %w", err)
 		}
 	}
 
@@ -224,7 +273,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 
 			if linkedIdentity.Issuer != fi.GetIssuer() {
 				a.log.WarnContext(ctx, "linked identity issuer does not match session issuer", "issuer", linkedIdentity.Issuer, "session_issuer", fi.GetIssuer())
-				return nil, &authenticator_domain.UserNotFoundError{
+				return nil, selectBy, &authenticator_domain.UserNotFoundError{
 					PresentedUsername: session.GetPresentedUser(),
 				}
 			}
@@ -273,33 +322,33 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 		if r, ok := session.(authenticator_domain.Rosterable); ok {
 			err.RegistrationHint = r.RegistrationHint()
 		}
-		return nil, err
+		return nil, selectBy, err
 	}
 
 	rawMap, ok := rawUser.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("invalid user result type %T", rawUser)
+		return nil, selectBy, fmt.Errorf("invalid user result type %T", rawUser)
 	}
 
 	var user users.LocksmithUserInterface
 	users.LocksmithUser{}.ReadFromMap(&user, rawMap)
 	if user == nil {
-		return nil, errors.New("failed to read user from map")
+		return nil, selectBy, errors.New("failed to read user from map")
 	}
 
 	// Confirm the user is authorized to use this handler.
 	if user.Passwordless() && !handler.Passwordless() {
-		return nil, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
+		return nil, selectBy, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
 	}
 
 	if user.RequiresEmailVerification() {
-		return nil, fmt.Errorf("account email not verified: %w", authenticator_domain.ErrPasswordlessRequired)
+		return nil, selectBy, fmt.Errorf("account email not verified: %w", authenticator_domain.ErrPasswordlessRequired)
 	}
 
 	if lu, ok := user.(interface{ GetOAuthRestrictedSource() string }); ok {
 		if source := lu.GetOAuthRestrictedSource(); source != "" && source != handler.Name() {
 			a.log.WarnContext(ctx, "user attempted login via restricted provider", "allowed", source, "attempted", handler.Name(), "user", user.GetID())
-			return nil, &authenticator_domain.UserNotFoundError{
+			return nil, selectBy, &authenticator_domain.UserNotFoundError{
 				PresentedUsername: session.GetPresentedUser(),
 			}
 		}
@@ -309,41 +358,36 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 	err := session.IsAuthorized(user)
 	if err != nil {
 		if errors.Is(err, authenticator_domain.ErrInvalidPassword) {
-			return nil, &authenticator_domain.InvalidPasswordError{
+			return nil, selectBy, &authenticator_domain.InvalidPasswordError{
 				Username: user.GetUsername(),
 				UserID:   user.GetID(),
 			}
 		}
-		return nil, fmt.Errorf("failed to validate: %w", err)
+		return nil, selectBy, fmt.Errorf("failed to validate: %w", err)
 	}
 
 	// User is authorized, create the token.
 	// This can be a cookie, a JWT, or any other method supported by the token manager.
 	token, err := a.tm.CreateAuthToken(user)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create auth token: %w", err)
+		return nil, selectBy, fmt.Errorf("failed to create auth token: %w", err)
+	}
+
+	// If the session carries a caller-supplied "return to this page after
+	// login" target, hand it to the TokenManager so it can redirect there
+	// instead of its configured default.
+	if rs, ok := session.(authenticator_domain.RedirectSource); ok {
+		if redirectTarget := rs.GetRedirectTarget(); redirectTarget != "" {
+			token.RedirectPath = redirectTarget
+		}
 	}
 
 	a.log.InfoContext(ctx, "user logged in", "lookup", lookup, "id", id, "handler", handler.Name(), "user", user.GetID())
 
-	return token, nil
+	return token, selectBy, nil
 }
 
 func (a *authorizers) setBaseCookies(w http.ResponseWriter, token *authenticator_domain.Token) error {
-	sessionExpiresAtCookie := http.Cookie{Name: "ls_expires_at", Value: fmt.Sprintf("%d", token.ExpiresAt.Unix()), Expires: time.Unix(token.ExpiresAt.Unix(), 0), HttpOnly: false, Secure: true, Path: "/"}
-
-	if token.OAuthProvider == "" {
-		oauthProviderCookie := http.Cookie{Name: "ls_oauth_provider", Value: token.OAuthProvider, Expires: time.Unix(0, 0), HttpOnly: false, Secure: true, Path: "/"}
-		http.SetCookie(w, &oauthProviderCookie)
-	} else {
-		// For OAuth to auto-login after expiration, we need to
-		// set a few things..
-		oauthProviderCookie := http.Cookie{Name: "ls_oauth_provider", Value: token.OAuthProvider, Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: false, Secure: true, Path: "/"}
-		oauthHintCookie := http.Cookie{Name: "ls_oauth_hint", Value: token.OAuthHint, Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: true, Secure: true, Path: "/"}
-		http.SetCookie(w, &oauthProviderCookie)
-		http.SetCookie(w, &oauthHintCookie)
-	}
-
-	http.SetCookie(w, &sessionExpiresAtCookie)
+	tokens.SetBaseCookies(w, token)
 	return nil
 }

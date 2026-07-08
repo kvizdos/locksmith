@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/database"
@@ -14,9 +15,10 @@ type authorizers struct {
 	db  database.DatabaseAccessor
 	log *slog.Logger
 
-	methods []authenticator_domain.Handler
-	tm      tokens.TokenManager
-	sp      signing.SigningPackageInterface
+	methods  []authenticator_domain.Handler
+	tm       tokens.TokenManager
+	sp       signing.SigningPackageInterface
+	eventBus events.Bus
 
 	// Options
 	redirectPath                     string
@@ -33,6 +35,7 @@ func NewAuthorizer(db database.DatabaseAccessor, opts ...Option) *authorizers {
 		log:                 slog.Default(),
 		redirectPath:        "/app",
 		minimumResponseTime: 0, // defaults
+		eventBus:            events.NoopBus{},
 	}
 
 	for _, opt := range opts {
@@ -81,6 +84,14 @@ func WithTokenManager(tm tokens.TokenManager) Option {
 func WithMethods(methods ...authenticator_domain.Handler) Option {
 	return func(a *authorizers) {
 		a.methods = append(a.methods, methods...)
+	}
+}
+
+func WithEventBus(bus events.Bus) Option {
+	return func(a *authorizers) {
+		if bus != nil {
+			a.eventBus = bus
+		}
 	}
 }
 

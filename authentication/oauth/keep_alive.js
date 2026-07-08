@@ -36,7 +36,7 @@
 			redirectTriggered = true;
 			if (provider) {
 				console.debug("[LS] Redirecting to OAuth keep alive endpoint.");
-				window.location.href = `/api/auth/oauth/${provider}?page=${fullPath}`;
+				window.location.href = `/api/login/${provider}?page=${fullPath}`;
 			} else {
 				console.debug("[LS] No OAuth provider set. Redirecting to /login.");
 				window.location.href = "/login";

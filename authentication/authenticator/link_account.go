@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/events"
 )
 
 func (a authorizers) LinkAccount(
@@ -20,5 +21,15 @@ func (a authorizers) LinkAccount(
 		UserID:   userID,
 		LinkedAt: time.Now().UTC(),
 	}.ToMap())
-	return err
+	if err != nil {
+		return err
+	}
+
+	a.publishAuthEvent(ctx, events.EventAccountLinked, events.AccountLinkedPayload{
+		UserID:   userID,
+		Provider: provider,
+		Issuer:   issuer,
+		Subject:  providerSubjectID,
+	})
+	return nil
 }

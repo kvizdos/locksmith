@@ -47,6 +47,22 @@ func (c *cookieManager) CreateAuthToken(user users.LocksmithUserInterface) (*aut
 	}, nil
 }
 
+func SetBaseCookies(w http.ResponseWriter, token *authenticator_domain.Token) {
+	sessionExpiresAtCookie := http.Cookie{Name: "ls_expires_at", Value: fmt.Sprintf("%d", token.ExpiresAt.Unix()), Expires: time.Unix(token.ExpiresAt.Unix(), 0), HttpOnly: false, Secure: true, Path: "/"}
+
+	if token.OAuthProvider == "" {
+		oauthProviderCookie := http.Cookie{Name: "ls_oauth_provider", Value: token.OAuthProvider, Expires: time.Unix(0, 0), HttpOnly: false, Secure: true, Path: "/"}
+		http.SetCookie(w, &oauthProviderCookie)
+	} else {
+		oauthProviderCookie := http.Cookie{Name: "ls_oauth_provider", Value: token.OAuthProvider, Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: false, Secure: true, Path: "/"}
+		oauthHintCookie := http.Cookie{Name: "ls_oauth_hint", Value: token.OAuthHint, Expires: time.Now().UTC().AddDate(10, 0, 0), HttpOnly: true, Secure: true, Path: "/"}
+		http.SetCookie(w, &oauthProviderCookie)
+		http.SetCookie(w, &oauthHintCookie)
+	}
+
+	http.SetCookie(w, &sessionExpiresAtCookie)
+}
+
 func (c *cookieManager) PassToClient(w http.ResponseWriter, r *http.Request, token *authenticator_domain.Token) error {
 	cookieValue := token.User.GenerateCookieValueFromSession(authentication.PasswordSession{
 		Token:     token.AuthToken,
@@ -57,6 +73,11 @@ func (c *cookieManager) PassToClient(w http.ResponseWriter, r *http.Request, tok
 
 	http.SetCookie(w, &cookie)
 
-	http.Redirect(w, r, c.redirectPath, http.StatusSeeOther)
+	redirectPath := c.redirectPath
+	if token.RedirectPath != "" {
+		redirectPath = token.RedirectPath
+	}
+
+	http.Redirect(w, r, redirectPath, http.StatusSeeOther)
 	return nil
 }

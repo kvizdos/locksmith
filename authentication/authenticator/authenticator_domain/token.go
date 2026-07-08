@@ -16,6 +16,10 @@ type Token struct {
 	OAuthProvider string
 	OAuthHint     string
 
+	// RedirectPath, if set, overrides the TokenManager's default post-login
+	// redirect target (see RedirectSource) for this specific login.
+	RedirectPath string
+
 	// Optional..
 	User *users.LocksmithUser
 }

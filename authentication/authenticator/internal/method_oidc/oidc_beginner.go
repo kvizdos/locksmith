@@ -34,10 +34,12 @@ func (pv oidcHandler) Begin(ctx context.Context, w http.ResponseWriter, r *http.
 		"method", r.Method,
 	)
 
-	state, err := randomURLSafe(32)
-	if err != nil {
-		return fmt.Errorf("generate state: %w", err)
-	}
+	// The OAuth2 "state" parameter carries the "return to this page after
+	// login" target (the same concept as the legacy oauth/oidc package's
+	// "page"/"state" query parameter), not a CSRF nonce — the provider
+	// echoes it back verbatim on the callback, so no separate cookie is
+	// needed to carry it across the redirect round trip.
+	state := sanitizeRedirectPath(r.URL.Query().Get("page"))
 
 	verifier, err := randomURLSafe(64)
 	if err != nil {
@@ -46,19 +48,7 @@ func (pv oidcHandler) Begin(ctx context.Context, w http.ResponseWriter, r *http.
 
 	challenge := pkceChallenge(verifier)
 
-	log.DebugContext(ctx, "generated oidc state and pkce challenge")
-
-	// TODO: ideally store these server-side in your token/session store.
-	// Cookie is okay if signed/encrypted elsewhere; otherwise prefer server-side.
-	http.SetCookie(w, &http.Cookie{
-		Name:     "ls_oidc_state",
-		Value:    state,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   r.TLS != nil,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int((10 * time.Minute).Seconds()),
-	})
+	log.DebugContext(ctx, "generated oidc pkce challenge")
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "ls_oidc_pkce",

@@ -1,6 +1,8 @@
 package method_oidc
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type oidcFlow int
 

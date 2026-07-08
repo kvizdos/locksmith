@@ -1,6 +1,7 @@
 package authenticator
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
@@ -25,11 +26,15 @@ func (a *authorizers) getHandler(r *http.Request) (authenticator_domain.Handler,
 	providerMatch := r.PathValue("provider")
 	handlerHint := r.Header.Get("X-Handler-Hint")
 
+	if providerMatch == "" && r.URL.Query().Get("provider") != "" {
+		providerMatch = r.URL.Query().Get("provider")
+	}
 	if providerMatch == "" && handlerHint != "" {
 		providerMatch = handlerHint
 	}
 
 	for _, method := range a.methods {
+		fmt.Println(providerMatch, method.Name())
 		if providerMatch != "" && method.Name() == providerMatch {
 			return method, nil
 		}

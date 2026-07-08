@@ -7,6 +7,7 @@ import (
 
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/registrationhints"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/database"
@@ -152,14 +153,16 @@ func (s *mockFederatedSession) GetEmail() string    { return s.email }
 func (s *mockFederatedSession) EmailVerified() bool { return s.emailVerified }
 
 // Rosterable
-func (s *mockFederatedSession) RegistrationHint() *authenticator_domain.RegistrationHint {
+func (s *mockFederatedSession) RegistrationHint() *registrationhints.Hint {
 	if !s.rosterable {
 		return nil
 	}
-	return &authenticator_domain.RegistrationHint{
+	return &registrationhints.Hint{
 		ProviderName: s.provider,
 		Email:        s.email,
 		DisplayName:  s.displayName,
+		Issuer:       s.issuer,
+		Subject:      s.subject,
 		Rosterable:   true,
 	}
 }

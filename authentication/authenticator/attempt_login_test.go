@@ -245,7 +245,7 @@ func TestAttemptLogin_EmailAsUsername_UsernameLookupFails(t *testing.T) {
 
 // ── beginRegistrationRostering via ServeLoginAPI (federated + rosterable) ─────
 
-func TestServeLoginAPI_RosterableFederated_Returns202WithRosterMode(t *testing.T) {
+func TestServeLoginAPI_RosterableFederated_RedirectsToHintedRegistration(t *testing.T) {
 	t.Parallel()
 	db := newTestDB(map[string]map[string]interface{}{
 		"users":      {},
@@ -276,13 +276,12 @@ func TestServeLoginAPI_RosterableFederated_Returns202WithRosterMode(t *testing.T
 
 	a2.ServeLoginAPI(rr, req)
 
-	if rr.Code != http.StatusAccepted {
-		t.Fatalf("expected 202 Accepted for roster mode, got %d — body: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 See Other redirect to hinted registration, got %d — body: %s", rr.Code, rr.Body.String())
 	}
 
-	body := rr.Body.String()
-	if !containsAll(body, `"mode"`, `"roster"`) {
-		t.Errorf("expected body to contain roster mode, got: %s", body)
+	if got := rr.Result().Header.Get("Location"); got != "/api/register?hinted" {
+		t.Errorf("expected redirect to /api/register?hinted, got %q", got)
 	}
 
 	var found bool
@@ -413,7 +412,7 @@ func TestAttemptLogin_FederatedSuccess_LogsUserID(t *testing.T) {
 	}}
 	req := httptest.NewRequest("GET", "/", nil)
 
-	token, err := a.attemptLogin(context.Background(), handler, req)
+	token, _, err := a.attemptLogin(context.Background(), handler, req)
 	if err != nil {
 		t.Fatalf("expected success, got: %v", err)
 	}
@@ -430,7 +429,7 @@ func TestAttemptLogin_LoadRequestError_Wrapped(t *testing.T) {
 	handler := AllowMethodPassword()
 	req := httptest.NewRequest(http.MethodGet, "/api/login", nil) // GET fails password's LoadRequest
 
-	_, err := a.attemptLogin(context.Background(), handler, req)
+	_, _, err := a.attemptLogin(context.Background(), handler, req)
 	if err == nil {
 		t.Fatal("expected error from LoadRequest failure")
 	}
