@@ -10,6 +10,36 @@ import (
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 )
 
+func (a *authorizers) ServeProviderLogoAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := a.enrichCtx(r)
+	handler, err := a.getHandler(r)
+	if err != nil {
+		a.log.ErrorContext(ctx, "no handler supports this request", "error", err)
+		api_helpers.WriteResponse(w, api_helpers.APIResponseError{
+			Reason: "no handler supports this request",
+		}, http.StatusInternalServerError)
+		return
+	}
+
+	iconHandler, ok := handler.(authenticator_domain.Iconable)
+	if !ok {
+		a.log.ErrorContext(ctx, "handler does not support icon", "handler", handler.Name())
+		api_helpers.WriteResponse(w, api_helpers.APIResponseError{
+			Reason: "handler does not support icon",
+		}, http.StatusInternalServerError)
+		return
+	}
+
+	iconBytes := iconHandler.GetIconBytes()
+
+	// Only SVGs..
+	w.Header().Set("Content-Type", "image/svg+xml")
+	_, err = w.Write(iconBytes)
+	if err != nil {
+		a.log.ErrorContext(ctx, "failed to write icon", "error", err)
+	}
+}
+
 func (a *authorizers) ServeProviderStartAPI(w http.ResponseWriter, r *http.Request) {
 	ctx := a.enrichCtx(r)
 

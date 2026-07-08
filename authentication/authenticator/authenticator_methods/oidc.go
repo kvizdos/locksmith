@@ -15,12 +15,14 @@ type OIDConfig struct {
 	ClientID     string
 	ClientSecret string
 	Rosterable   bool
+	LogoBytes    []byte
 }
 type OIDCValidatorOptions struct {
 	ProviderName string
 	Rosterable   bool
 	Verifier     *oidc.IDTokenVerifier
 	OauthConfig  *oauth2.Config
+	LogoBytes    []byte
 }
 
 type OIDCValidatorOption func(*OIDCValidatorOptions)
@@ -47,5 +49,6 @@ func WithOIDC(c OIDConfig) OIDCValidatorOption {
 		opts.Rosterable = c.Rosterable
 		opts.Verifier = verifier
 		opts.OauthConfig = &config
+		opts.LogoBytes = c.LogoBytes
 	}
 }

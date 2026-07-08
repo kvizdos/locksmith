@@ -15,7 +15,6 @@ const (
 func detectFlow(r *http.Request) oidcFlow {
 	// Authorization Code Flow
 	if r.Method == http.MethodGet &&
-		r.URL.Query().Has("state") &&
 		r.URL.Query().Has("code") {
 		return flowCode
 	}

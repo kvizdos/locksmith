@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/kvizdos/locksmith/authentication/oauth"
 	captchaproviders "github.com/kvizdos/locksmith/captcha-providers"
 	"github.com/kvizdos/locksmith/pages"
 )
@@ -27,7 +26,7 @@ type LoginPageHandler struct {
 	EmailAsUsername           bool
 	OnboardingPath            string
 	CaptchaProvider           captchaproviders.CAPTCHAProvider
-	OAuthProviders            oauth.OAuthProviders
+	OAuthProviders            []string
 }
 
 func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +49,7 @@ func (lr LoginPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	providers := ""
 	if lr.OAuthProviders != nil {
-		js, _ := json.Marshal(lr.OAuthProviders.GetNames())
+		js, _ := json.Marshal(lr.OAuthProviders)
 		providers = string(js)
 	}
 

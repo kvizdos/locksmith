@@ -56,11 +56,6 @@ func (r *registrar) ServeRegisterAPI(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if result.RequiresEmailVerification || r.tm == nil {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
 	token, err := r.tm.CreateAuthToken(result.User)
 	if err != nil {
 		r.log.ErrorContext(req.Context(), "failed to create registration auth token", "error", err)

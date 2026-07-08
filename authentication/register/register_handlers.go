@@ -1,7 +1,6 @@
 package register
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/register/internal/method_hint"
@@ -30,7 +29,6 @@ func AllowMethodHint(opts ...register_methods.HintOption) register_domain.Handle
 // broader fallbacks (e.g. "any POST") via WithMethods.
 func (r *registrar) getHandler(req *http.Request) (register_domain.Handler, error) {
 	for _, method := range r.methods {
-		fmt.Println(method.Name(), method.CanHandle(req))
 		if method.CanHandle(req) {
 			return method, nil
 		}

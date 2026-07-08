@@ -9,7 +9,6 @@ import (
 	"net/url"
 
 	"github.com/kvizdos/locksmith/administration/invitations"
-	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/pages"
@@ -24,7 +23,7 @@ type RegistrationPageHandler struct {
 	HasOnboarding             bool
 	InviteUsedRedirect        string
 	MinimumLengthRequirement  int
-	OAuthProviders            oauth.OAuthProviders
+	OAuthProviders            []string
 }
 
 func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http.Request, invite ...invitations.Invitation) {
@@ -39,7 +38,7 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http
 	providers := ""
 
 	if rr.OAuthProviders != nil {
-		js, _ := json.Marshal(rr.OAuthProviders.GetNames())
+		js, _ := json.Marshal(rr.OAuthProviders)
 		providers = string(js)
 	}
 	type TemplateData struct {

@@ -93,8 +93,8 @@ func TestOidcHandlerNameAndPasswordless(t *testing.T) {
 
 	h := oidcHandler{options: authenticator_methods.OIDCValidatorOptions{ProviderName: "google"}}
 
-	if h.Name() != "oidc-google" {
-		t.Fatalf("expected name 'oidc-google', got %s", h.Name())
+	if h.Name() != "google" {
+		t.Fatalf("expected name 'google', got %s", h.Name())
 	}
 	if !h.Passwordless() {
 		t.Fatal("expected Passwordless to be true")
@@ -121,7 +121,7 @@ func TestNewOIDCValidatorAppliesOptions(t *testing.T) {
 		opts.Rosterable = true
 	})
 
-	if h.Name() != "oidc-google" {
+	if h.Name() != "google" {
 		t.Fatalf("expected option-provided name, got %s", h.Name())
 	}
 }

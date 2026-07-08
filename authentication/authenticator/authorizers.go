@@ -1,7 +1,6 @@
 package authenticator
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
@@ -12,7 +11,9 @@ import (
 
 type AuthorizerHandler interface {
 	ServeLoginAPI(w http.ResponseWriter, r *http.Request)
+	GetAdditionalLoginMethods() []string
 	ServeProviderStartAPI(w http.ResponseWriter, r *http.Request)
+	ServeProviderLogoAPI(w http.ResponseWriter, r *http.Request)
 }
 
 func AllowMethodPassword(opts ...authenticator_methods.PasswordValidatorOption) authenticator_domain.Handler {
@@ -34,7 +35,6 @@ func (a *authorizers) getHandler(r *http.Request) (authenticator_domain.Handler,
 	}
 
 	for _, method := range a.methods {
-		fmt.Println(providerMatch, method.Name())
 		if providerMatch != "" && method.Name() == providerMatch {
 			return method, nil
 		}

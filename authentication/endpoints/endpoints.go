@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication"
-	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/authentication/validation"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -221,9 +220,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 			redirectURL := fmt.Sprintf("/login?b=%s&utm_source=locksmith&utm_campaign=session_expired", encodedState)
 
 			if oauthProviderCookie, err := r.Cookie("ls_oauth_provider"); err == nil {
-				if oauth.IsOauthProviderEnabled(oauthProviderCookie.Value) {
-					redirectURL = fmt.Sprintf("/api/auth/oauth/%s?page=%s", oauthProviderCookie.Value, encodedState)
-				}
+				redirectURL = fmt.Sprintf("/api/login/%s?page=%s", oauthProviderCookie.Value, encodedState)
 			}
 
 			c := &http.Cookie{

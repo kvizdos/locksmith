@@ -49,7 +49,6 @@ type LocksmithRoutesOptions struct {
 	Styling                   pages.LocksmithPageStyling
 	ResetPasswordOptions      ResetPasswordOptions
 	HIBPIntegrationOptions    hibp.HIBPSettings
-	OAuthProviders            []oauth.OAuthProvider
 	SAMLConfig                *saml_config.IdPConfig
 	// map[roleName]time.Duration
 	// Use "default" as a catch-all
@@ -89,11 +88,6 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 
 	InitializeLaunchpad(mux, db, options)
 
-	for _, oauthProvider := range options.OAuthProviders {
-		oauthProvider.RegisterRoutes(mux)
-		oauth.EnableOauthProvider(oauthProvider.GetName())
-	}
-
 	if !options.DisableAPI {
 		mux.Handle("/api/auth/oauth/keep-alive.js", oauth.KeepAliveJSRoute{})
 
@@ -111,6 +105,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 
 		mux.HandleFunc("/api/login", options.Authorizer.ServeLoginAPI)
 		mux.HandleFunc("/api/login/{provider}", options.Authorizer.ServeProviderStartAPI)
+		mux.HandleFunc("/api/login/{provider}/logo", options.Authorizer.ServeProviderLogoAPI)
 
 		listUsersAdminAPIHandler := endpoints.SecureEndpointHTTPMiddleware(administration.AdministrationListUsersHandler{}, db, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"users.list.all"},
@@ -181,6 +176,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			AppName: options.AppName,
 			Styling: options.Styling,
 		})
+
 		mux.Handle("/login", httphandlers.LoginPageMiddleware{
 			Next: httphandlers.LoginPageHandler{
 				AppName:                   options.AppName,
@@ -188,7 +184,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 				EmailAsUsername:           options.UseEmailAsUsername,
 				OnboardingPath:            options.OnboardPath,
 				CaptchaProvider:           captchaproviders.UseProvider,
-				OAuthProviders:            options.OAuthProviders,
+				OAuthProviders:            options.Authorizer.GetAdditionalLoginMethods(),
 				DisablePublicRegistration: options.DisablePublicRegistration,
 			},
 		})
@@ -208,7 +204,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			HasOnboarding:             len(options.OnboardPath) > 0,
 			InviteUsedRedirect:        options.InviteUsedRedirect,
 			MinimumLengthRequirement:  options.MinimumPasswordLength,
-			OAuthProviders:            options.OAuthProviders,
+			OAuthProviders:            options.Authorizer.GetAdditionalLoginMethods(),
 		}
 		mux.Handle("/register", httpHelpers.InjectDatabaseIntoContext(reg, db))
 		mux.Handle("/reset-password", httpHelpers.InjectDatabaseIntoContext(reset.ResetPasswordPageHandler{

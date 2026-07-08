@@ -1,7 +1,6 @@
 package method_oidc
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
@@ -30,8 +29,12 @@ func (pv oidcHandler) CanHandle(r *http.Request) bool {
 	return detectFlow(r) != flowNone
 }
 
+func (pv oidcHandler) GetIconBytes() []byte {
+	return pv.options.LogoBytes
+}
+
 func (pv oidcHandler) Name() string {
-	return fmt.Sprintf("oidc-%s", pv.options.ProviderName)
+	return pv.options.ProviderName
 }
 
 func (pv oidcHandler) Passwordless() bool {

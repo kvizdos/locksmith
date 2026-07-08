@@ -25,9 +25,6 @@ import (
 	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/magic"
-	"github.com/kvizdos/locksmith/authentication/oauth"
-	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
-	"github.com/kvizdos/locksmith/authentication/packets"
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/register/register_methods"
 	"github.com/kvizdos/locksmith/authentication/registrationhints"
@@ -38,6 +35,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/authentication/verificationcodes"
+	google_icon "github.com/kvizdos/locksmith/oidc-icons/oidc-google"
 
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/error_svc"
@@ -158,25 +156,6 @@ func main() {
 
 	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
 
-	regAutoLogin := packets.NewRegistrationAutoLoginJWTService(sp, "oauth-reg-auto-login-svc", 30*time.Second)
-	registrationSvc := packets.NewRegistrationJWTService(sp, "oauth-reg-svc", 1*time.Minute, regAutoLogin)
-
-	googleOIDC, err := oauth_google_oidc.NewOIDCConnection(context.Background(), oauth_google_oidc.OIDCConnectionParams{
-		Issuer:                 "https://accounts.google.com",
-		ClientID:               googleClientID,
-		ClientSecret:           googleClientSecret,
-		BaseURL:                "https://dev.kv.codes",
-		ProviderName:           "google", // for the UI & a few backend things; make sure its unique!
-		DB:                     db,
-		RegistrationJWTService: registrationSvc,
-		LoginInfoCallback: func(method string, user map[string]any) {
-			fmt.Printf("User logged in via Google: %+v\n", user)
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
 	samlProvider, err := saml_init.LoadServiceProviderFromMetadata("buzz", []byte(os.Getenv("saml_demo")))
 	if err != nil {
 		panic(err)
@@ -219,10 +198,11 @@ func main() {
 	authEvents := events.NewMemoryBus()
 	subscribePrettyPrintedAuthEvents(authEvents)
 
+	tm := tokens.NewCookieManager(db, "/app")
 	authorizer := authenticator.NewAuthorizer(
 		db,
 		// Setup Token Store
-		authenticator.WithTokenManager(tokens.NewCookieManager(db, "/app")),
+		authenticator.WithTokenManager(tm),
 
 		// Publish login/roster/account-link events for logging and downstream consumers
 		authenticator.WithEventBus(authEvents),
@@ -251,6 +231,7 @@ func main() {
 					ProviderName: "google",
 					ClientID:     googleClientID,
 					ClientSecret: googleClientSecret,
+					LogoBytes:    google_icon.GoogleIcon,
 					Rosterable:   true, // If a user does not exist, create one
 				}),
 			),
@@ -285,7 +266,7 @@ func main() {
 		register.WithRequiresEmailVerification(requiresEmailVerification),
 		register.WithAccountVerifier(verificationcodes.NewVerifier(db, nil)),
 		register.WithEventBus(authEvents),
-		register.WithTokenManager(tokens.NewCookieManager(db, "/app")),
+		register.WithTokenManager(tm),
 		register.WithMethods(
 			// Same signing package used by the authorizer's rostering flow, so
 			// registration hints it issues can be verified here.
@@ -311,9 +292,6 @@ func main() {
 				Description: "If you are a student, make sure you are logging in with your student account. Parents can view progress by clicking 'Return to App'",
 			})
 		},
-		OAuthProviders: []oauth.OAuthProvider{
-			googleOIDC,
-		},
 		InactivityLockDuration: map[string]time.Duration{
 			"default": 100 * 365 * 24 * time.Hour, // If not set, defaults to 100 years.
 			"admin":   100 * 365 * 24 * time.Hour,
@@ -330,7 +308,7 @@ func main() {
 				<div
 					id="g_id_onload"
 					data-client_id="%s"
-					data-login_uri="/api/login?provider=oidc-google"
+					data-login_uri="/api/login?provider=google"
 					data-auto_select="true"
 					data-use_fedcm_for_prompt="true"
 				    data-context="use"

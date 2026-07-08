@@ -9,6 +9,10 @@ import (
 	"github.com/kvizdos/locksmith/users"
 )
 
+type Iconable interface {
+	GetIconBytes() []byte
+}
+
 type Handler interface {
 	CanHandle(r *http.Request) bool
 	Name() string

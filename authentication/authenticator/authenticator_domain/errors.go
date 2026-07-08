@@ -10,6 +10,8 @@ var (
 	ErrUnhandleableRequest  = errors.New("unhandleable request")
 	ErrPasswordlessRequired = errors.New("passwordless required")
 
+	ErrVerificationRequired = errors.New("verification required")
+
 	ErrIDNotPresent = errors.New("id not present")
 
 	ErrMethodNotSupported = errors.New("method not supported")

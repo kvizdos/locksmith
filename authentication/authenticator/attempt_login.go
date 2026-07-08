@@ -81,6 +81,16 @@ func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.
 	// }, http.StatusAccepted)
 }
 
+func (a *authorizers) GetAdditionalLoginMethods() []string {
+	var methods []string
+	for _, method := range a.methods {
+		if method.Passwordless() {
+			methods = append(methods, method.Name())
+		}
+	}
+	return methods
+}
+
 func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 	ctx := a.enrichCtx(r)
 	var waitMinimum func()
@@ -339,10 +349,6 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 	// Confirm the user is authorized to use this handler.
 	if user.Passwordless() && !handler.Passwordless() {
 		return nil, selectBy, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
-	}
-
-	if user.RequiresEmailVerification() {
-		return nil, selectBy, fmt.Errorf("account email not verified: %w", authenticator_domain.ErrPasswordlessRequired)
 	}
 
 	if lu, ok := user.(interface{ GetOAuthRestrictedSource() string }); ok {
