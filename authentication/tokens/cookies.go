@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/kvizdos/locksmith/authentication"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -20,11 +20,11 @@ func NewCookieManager(db database.DatabaseAccessor, redirectPath string) *cookie
 	return &cookieManager{db: db, redirectPath: redirectPath}
 }
 
-func (c *cookieManager) Read(r *http.Request) (*authorizer_domain.Token, error) {
+func (c *cookieManager) Read(r *http.Request) (*authenticator_domain.Token, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
-func (c *cookieManager) CreateAuthToken(user users.LocksmithUserInterface) (*authorizer_domain.Token, error) {
+func (c *cookieManager) CreateAuthToken(user users.LocksmithUserInterface) (*authenticator_domain.Token, error) {
 	token, err := user.GeneratePasswordSession()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate password session: %w", err)
@@ -40,14 +40,14 @@ func (c *cookieManager) CreateAuthToken(user users.LocksmithUserInterface) (*aut
 		return nil, fmt.Errorf("failed to save password session: %w", err)
 	}
 
-	return &authorizer_domain.Token{
+	return &authenticator_domain.Token{
 		User:      u,
 		AuthToken: token.Token,
 		ExpiresAt: time.Unix(token.ExpiresAt, 0).UTC(),
 	}, nil
 }
 
-func (c *cookieManager) PassToClient(w http.ResponseWriter, r *http.Request, token *authorizer_domain.Token) error {
+func (c *cookieManager) PassToClient(w http.ResponseWriter, r *http.Request, token *authenticator_domain.Token) error {
 	cookieValue := token.User.GenerateCookieValueFromSession(authentication.PasswordSession{
 		Token:     token.AuthToken,
 		ExpiresAt: token.ExpiresAt.Unix(),

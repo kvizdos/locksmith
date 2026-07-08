@@ -1,9 +1,9 @@
 package sessions
 
-import "github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+import "github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 
-var _ authorizer_domain.FederatedIdentity = LinkedSession{}
-var _ authorizer_domain.VerifiedContact = LinkedSession{}
+var _ authenticator_domain.FederatedIdentity = LinkedSession{}
+var _ authenticator_domain.VerifiedContact = LinkedSession{}
 
 type LinkedSession struct {
 	BaseSession

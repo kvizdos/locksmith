@@ -1,4 +1,4 @@
-package authorizer_domain
+package authenticator_domain
 
 import (
 	"errors"

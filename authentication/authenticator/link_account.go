@@ -1,10 +1,10 @@
-package authorizer
+package authenticator
 
 import (
 	"context"
 	"time"
 
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 )
 
 func (a authorizers) LinkAccount(
@@ -13,7 +13,7 @@ func (a authorizers) LinkAccount(
 	provider string,
 	issuer string,
 	providerSubjectID string) error {
-	_, err := a.db.InsertOne("auth_links", authorizer_domain.LinkedIdentity{
+	_, err := a.db.InsertOne("auth_links", authenticator_domain.LinkedIdentity{
 		Provider: provider,
 		Issuer:   issuer,
 		Subject:  providerSubjectID,

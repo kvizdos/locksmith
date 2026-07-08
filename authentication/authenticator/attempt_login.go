@@ -1,4 +1,4 @@
-package authorizer
+package authenticator
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/api_helpers"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -42,7 +42,7 @@ func (a *authorizers) getUsernameNoun() string {
 	return "Username"
 }
 
-func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.Request, hint *authorizer_domain.RegistrationHint) {
+func (a *authorizers) beginRegistrationRostering(w http.ResponseWriter, r *http.Request, hint *authenticator_domain.RegistrationHint) {
 	hint.ID = uuid.NewString()
 	token, err := a.sp.CreateJWT(hint)
 	if err != nil {
@@ -104,8 +104,8 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 	token, err := a.attemptLogin(ctx, handler, r)
 	if err != nil {
 		var (
-			invalidPassword *authorizer_domain.InvalidPasswordError
-			invalidUser     *authorizer_domain.UserNotFoundError
+			invalidPassword *authenticator_domain.InvalidPasswordError
+			invalidUser     *authenticator_domain.UserNotFoundError
 		)
 		switch {
 		case errors.As(err, &invalidUser):
@@ -121,16 +121,16 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 			a.log.InfoContext(ctx, "invalid password presented", "user", invalidPassword.Username)
 			a.writeAuthError(waitMinimum, w, "Password is incorrect.")
 			return
-		case errors.Is(err, authorizer_domain.ErrPasswordlessRequired):
+		case errors.Is(err, authenticator_domain.ErrPasswordlessRequired):
 			a.writeAuthError(waitMinimum, w, "Passwordless login required.")
 			return
-		case errors.Is(err, authorizer_domain.ErrFailedToParse):
+		case errors.Is(err, authenticator_domain.ErrFailedToParse):
 			a.log.DebugContext(ctx, "invalid request", "err", err)
 			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
 				Reason: "invalid request body",
 			}, http.StatusBadRequest)
 			return
-		case errors.Is(err, authorizer_domain.ErrMethodNotSupported):
+		case errors.Is(err, authenticator_domain.ErrMethodNotSupported):
 			a.log.DebugContext(ctx, "unsupported method", "error", err, "stage", "attempt_login", "handler", fmt.Sprintf("%T", handler))
 			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
 				Reason: "unsupported method",
@@ -171,7 +171,7 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 	// Pass to client is expected to finish.
 }
 
-func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domain.Handler, r *http.Request) (*authorizer_domain.Token, error) {
+func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_domain.Handler, r *http.Request) (*authenticator_domain.Token, error) {
 	// Next, create a session for this handler.
 	// This session will include handler-specific state.
 	session := handler.Session(a.db)
@@ -185,7 +185,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domai
 	// If required, resolve the identity of the user
 	// from the session. This is particularly
 	// useful for OAuth login scenarios.
-	if resolver, ok := session.(authorizer_domain.IdentityResolver); ok {
+	if resolver, ok := session.(authenticator_domain.IdentityResolver); ok {
 		if err := resolver.ResolveIdentity(ctx); err != nil {
 			return nil, fmt.Errorf("resolve identity: %w", err)
 		}
@@ -203,7 +203,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domai
 	}
 	id := session.GetPresentedUser()
 
-	if fi, ok := session.(authorizer_domain.FederatedIdentity); ok {
+	if fi, ok := session.(authenticator_domain.FederatedIdentity); ok {
 		provider := fi.GetProvider()
 		subject := fi.GetSubject()
 
@@ -215,19 +215,19 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domai
 		})
 
 		if found {
-			linkedIdentity := authorizer_domain.LinkedIdentityFromMap(rawUser.(map[string]any))
+			linkedIdentity := authenticator_domain.LinkedIdentityFromMap(rawUser.(map[string]any))
 			a.log.DebugContext(ctx, "linked identity found", "issuer", linkedIdentity.Issuer, "subject", linkedIdentity.Subject, "user_id", linkedIdentity.UserID)
 
 			if linkedIdentity.Issuer != fi.GetIssuer() {
 				a.log.WarnContext(ctx, "linked identity issuer does not match session issuer", "issuer", linkedIdentity.Issuer, "session_issuer", fi.GetIssuer())
-				return nil, &authorizer_domain.UserNotFoundError{
+				return nil, &authenticator_domain.UserNotFoundError{
 					PresentedUsername: session.GetPresentedUser(),
 				}
 			}
 
 			lookup = "id"
 			id = linkedIdentity.UserID
-		} else if vc, ok := session.(authorizer_domain.VerifiedContact); ok && vc.EmailVerified() {
+		} else if vc, ok := session.(authenticator_domain.VerifiedContact); ok && vc.EmailVerified() {
 			// No existing link, but a verified contact point is available —
 			// attempt to auto-link to an existing user account.
 			email := vc.GetEmail()
@@ -263,10 +263,10 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domai
 
 	if !found {
 		a.log.DebugContext(ctx, "user not found", "lookup", lookup, "id", id)
-		err := &authorizer_domain.UserNotFoundError{
+		err := &authenticator_domain.UserNotFoundError{
 			PresentedUsername: session.GetPresentedUser(),
 		}
-		if r, ok := session.(authorizer_domain.Rosterable); ok {
+		if r, ok := session.(authenticator_domain.Rosterable); ok {
 			err.RegistrationHint = r.RegistrationHint()
 		}
 		return nil, err
@@ -285,14 +285,14 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domai
 
 	// Confirm the user is authorized to use this handler.
 	if user.Passwordless() && !handler.Passwordless() {
-		return nil, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authorizer_domain.ErrPasswordlessRequired)
+		return nil, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
 	}
 
 	// Confirm the user is authorized...
 	err := session.IsAuthorized(user)
 	if err != nil {
-		if errors.Is(err, authorizer_domain.ErrInvalidPassword) {
-			return nil, &authorizer_domain.InvalidPasswordError{
+		if errors.Is(err, authenticator_domain.ErrInvalidPassword) {
+			return nil, &authenticator_domain.InvalidPasswordError{
 				Username: user.GetUsername(),
 				UserID:   user.GetID(),
 			}
@@ -312,7 +312,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authorizer_domai
 	return token, nil
 }
 
-func (a *authorizers) setBaseCookies(w http.ResponseWriter, token *authorizer_domain.Token) error {
+func (a *authorizers) setBaseCookies(w http.ResponseWriter, token *authenticator_domain.Token) error {
 	sessionExpiresAtCookie := http.Cookie{Name: "ls_expires_at", Value: fmt.Sprintf("%d", token.ExpiresAt.Unix()), Expires: time.Unix(token.ExpiresAt.Unix(), 0), HttpOnly: false, Secure: true, Path: "/"}
 
 	if token.OAuthProvider == "" {

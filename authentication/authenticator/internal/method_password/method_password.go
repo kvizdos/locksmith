@@ -3,12 +3,12 @@ package method_password
 import (
 	"net/http"
 
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_methods"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
 	"github.com/kvizdos/locksmith/database"
 )
 
-func NewPasswordValidator(opts ...authorizer_methods.PasswordValidatorOption) authorizer_domain.Handler {
+func NewPasswordValidator(opts ...authenticator_methods.PasswordValidatorOption) authenticator_domain.Handler {
 	pv := passwordValidator{}
 	for _, opt := range opts {
 		opt(&pv.options)
@@ -17,7 +17,7 @@ func NewPasswordValidator(opts ...authorizer_methods.PasswordValidatorOption) au
 }
 
 type passwordValidator struct {
-	options authorizer_methods.PasswordValidatorOptions
+	options authenticator_methods.PasswordValidatorOptions
 }
 
 func (pv passwordValidator) CanHandle(r *http.Request) bool {
@@ -32,6 +32,6 @@ func (pv passwordValidator) Passwordless() bool {
 	return false
 }
 
-func (pv passwordValidator) Session(db database.DatabaseAccessor) authorizer_domain.Session {
+func (pv passwordValidator) Session(db database.DatabaseAccessor) authenticator_domain.Session {
 	return newPasswordValidatorSession(db, pv.options)
 }

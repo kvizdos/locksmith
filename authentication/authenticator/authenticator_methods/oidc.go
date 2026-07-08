@@ -1,4 +1,4 @@
-package authorizer_methods
+package authenticator_methods
 
 import (
 	"context"

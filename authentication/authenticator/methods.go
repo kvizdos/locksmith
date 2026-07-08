@@ -1,12 +1,12 @@
-package authorizer
+package authenticator
 
 import (
 	"log/slog"
 	"time"
 
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
-	"github.com/kvizdos/locksmith/authentication/authorizer/tokens"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 	"github.com/kvizdos/locksmith/authentication/signing"
+	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/database"
 )
 
@@ -14,7 +14,7 @@ type authorizers struct {
 	db  database.DatabaseAccessor
 	log *slog.Logger
 
-	methods []authorizer_domain.Handler
+	methods []authenticator_domain.Handler
 	tm      tokens.TokenManager
 	sp      signing.SigningPackageInterface
 
@@ -78,7 +78,7 @@ func WithTokenManager(tm tokens.TokenManager) Option {
 	}
 }
 
-func WithMethods(methods ...authorizer_domain.Handler) Option {
+func WithMethods(methods ...authenticator_domain.Handler) Option {
 	return func(a *authorizers) {
 		a.methods = append(a.methods, methods...)
 	}

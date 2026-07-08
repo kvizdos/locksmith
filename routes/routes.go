@@ -8,7 +8,7 @@ import (
 
 	"github.com/kvizdos/locksmith/administration"
 	"github.com/kvizdos/locksmith/administration/invitations"
-	"github.com/kvizdos/locksmith/authentication/authorizer"
+	"github.com/kvizdos/locksmith/authentication/authenticator"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
@@ -69,7 +69,7 @@ type LocksmithRoutesOptions struct {
 	LoginInfoCallback           func(method string, user map[string]any)
 	RequestLoginInfoCallback    func(r *http.Request, method string, user map[string]any)
 
-	Authorizer authorizer.AuthorizerHandler
+	Authorizer authenticator.AuthorizerHandler
 
 	WithErrors func(error_svc.ErrorService)
 }

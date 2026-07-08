@@ -2,13 +2,13 @@ package method_oidc
 
 import (
 	"github.com/coreos/go-oidc"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_methods"
-	"github.com/kvizdos/locksmith/authentication/authorizer/internal/sessions"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
+	"github.com/kvizdos/locksmith/authentication/authenticator/internal/sessions"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
 
-func newOIDCValidationSession(db database.DatabaseAccessor, opts authorizer_methods.OIDCValidatorOptions) *oidcValidationSession {
+func newOIDCValidationSession(db database.DatabaseAccessor, opts authenticator_methods.OIDCValidatorOptions) *oidcValidationSession {
 	return &oidcValidationSession{
 		db: db,
 		LinkedSession: sessions.NewLinkedSession(
@@ -23,7 +23,7 @@ type oidcValidationSession struct {
 
 	// Common
 	db      database.DatabaseAccessor
-	options authorizer_methods.OIDCValidatorOptions
+	options authenticator_methods.OIDCValidatorOptions
 
 	// Identity Resolution Context
 	flow                     oidcFlow

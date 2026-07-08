@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_methods"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
 	"github.com/kvizdos/locksmith/database"
 )
 
-func NewOIDCValidator(opts ...authorizer_methods.OIDCValidatorOption) authorizer_domain.Handler {
+func NewOIDCValidator(opts ...authenticator_methods.OIDCValidatorOption) authenticator_domain.Handler {
 	pv := oidcHandler{}
 	for _, opt := range opts {
 		opt(&pv.options)
@@ -23,7 +23,7 @@ func NewOIDCValidator(opts ...authorizer_methods.OIDCValidatorOption) authorizer
 }
 
 type oidcHandler struct {
-	options authorizer_methods.OIDCValidatorOptions
+	options authenticator_methods.OIDCValidatorOptions
 }
 
 func (pv oidcHandler) CanHandle(r *http.Request) bool {
@@ -38,6 +38,6 @@ func (pv oidcHandler) Passwordless() bool {
 	return true
 }
 
-func (pv oidcHandler) Session(db database.DatabaseAccessor) authorizer_domain.Session {
+func (pv oidcHandler) Session(db database.DatabaseAccessor) authenticator_domain.Session {
 	return newOIDCValidationSession(db, pv.options)
 }

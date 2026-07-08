@@ -1,4 +1,4 @@
-package authorizer
+package authenticator
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/kvizdos/locksmith/api_helpers"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 )
 
 func (a *authorizers) ServeProviderStartAPI(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func (a *authorizers) ServeProviderStartAPI(w http.ResponseWriter, r *http.Reque
 	ctx = context.WithValue(ctx, "login_passwordless", handler.Passwordless())
 	ctx = context.WithValue(ctx, "log", a.log)
 
-	b, ok := handler.(authorizer_domain.Beginnable)
+	b, ok := handler.(authenticator_domain.Beginnable)
 
 	if !ok {
 		a.log.ErrorContext(ctx, "handler does not support begin", "handler", handler.Name(), "handler_type", fmt.Sprintf("%T", handler))
@@ -41,7 +41,7 @@ func (a *authorizers) ServeProviderStartAPI(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := b.Begin(ctx, w, r); err != nil {
-		if errors.Is(err, authorizer_domain.ErrMethodNotSupported) {
+		if errors.Is(err, authenticator_domain.ErrMethodNotSupported) {
 			a.log.DebugContext(ctx, "method not supported", "error", err, "stage", "begin")
 			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
 				Reason: "method not supported",

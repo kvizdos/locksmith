@@ -1,6 +1,6 @@
 package sessions
 
-import "github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+import "github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 
 type BaseSession struct {
 	userID string
@@ -42,7 +42,7 @@ func NewBaseSession(opts ...optsFunc) BaseSession {
 
 func (b BaseSession) FindUserAggregate() (string, []map[string]any, error) {
 	if b.userID == "" {
-		return "", nil, authorizer_domain.ErrIDNotPresent
+		return "", nil, authenticator_domain.ErrIDNotPresent
 	}
 
 	if b.aggregate == nil {

@@ -19,9 +19,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/kvizdos/locksmith/authentication/authorizer"
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_methods"
-	"github.com/kvizdos/locksmith/authentication/authorizer/tokens"
+	"github.com/kvizdos/locksmith/authentication/authenticator"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/login"
@@ -34,6 +33,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/saml/saml_init"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
+	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/authentication/xsrf"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/error_svc"
@@ -179,30 +179,30 @@ func main() {
 	// .WithUserDecoder(users.LocksmithUser{})
 
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	authorizer := authorizer.NewAuthorizer(
+	authorizer := authenticator.NewAuthorizer(
 		db,
 		// Setup Token Store
-		authorizer.WithTokenManager(tokens.NewCookieManager(db, "/app")),
+		authenticator.WithTokenManager(tokens.NewCookieManager(db, "/app")),
 
 		// Helps prevent brute forcing by requiring a minimum response
-		authorizer.WithMinimumResponseTime(2*time.Second),
+		authenticator.WithMinimumResponseTime(2*time.Second),
 
 		// Add signer for rostering
-		authorizer.WithSigningPackage(sp),
+		authenticator.WithSigningPackage(sp),
 
 		// This makes the UI highly verbose.
-		// authorizer.DisableUserEnumerationProtection(),
+		// authenticator.DisableUserEnumerationProtection(),
 
 		// Use email as username
-		authorizer.WithEmailAsUsername(),
+		authenticator.WithEmailAsUsername(),
 
 		// Setup Sign in / Reg methods..
-		authorizer.WithMethods(
-			authorizer.AllowMethodPassword(
-				authorizer_methods.RequireMinPasswordLength(8),
+		authenticator.WithMethods(
+			authenticator.AllowMethodPassword(
+				authenticator_methods.RequireMinPasswordLength(8),
 			),
-			authorizer.AllowMethodOIDC(
-				authorizer_methods.WithOIDC(authorizer_methods.OIDConfig{
+			authenticator.AllowMethodOIDC(
+				authenticator_methods.WithOIDC(authenticator_methods.OIDConfig{
 					Issuer:       "https://accounts.google.com",
 					BaseURL:      "https://dev.kv.codes",
 					ProviderName: "google",

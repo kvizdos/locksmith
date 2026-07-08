@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kvizdos/locksmith/authentication/authorizer/authorizer_domain"
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 	"golang.org/x/oauth2"
 )
 
@@ -19,7 +19,7 @@ func (pv oidcHandler) Begin(ctx context.Context, w http.ResponseWriter, r *http.
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		return errors.Join(
 			fmt.Errorf("unsupported method: %s", r.Method),
-			authorizer_domain.ErrMethodNotSupported,
+			authenticator_domain.ErrMethodNotSupported,
 		)
 	}
 
