@@ -1,4 +1,4 @@
-package login
+package httphandlers
 
 import (
 	"fmt"
@@ -18,7 +18,6 @@ func (lr ProfileHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	tmpl, err := template.New("profile.html").Parse(string(pages.ProfilePageHTML))
-
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -36,23 +35,17 @@ func (lr ProfileHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if data.Styling.SubmitColor == "" {
 		data.Styling.SubmitColor = "#476ade"
 	}
-
 	if data.Styling.StartGradient == "" {
 		data.Styling.StartGradient = "#476ade"
 	}
-
 	if data.Styling.EndGradient == "" {
 		data.Styling.EndGradient = "#2744a3"
 	}
-
 	if data.Title == "" {
 		data.Title = "Locksmith"
 	}
 
-	err = tmpl.Execute(w, data)
-
-	if err != nil {
-		log.Println("Error executing template :", err)
-		return
+	if err = tmpl.Execute(w, data); err != nil {
+		log.Println("Error executing template:", err)
 	}
 }

@@ -23,7 +23,6 @@ import (
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
-	"github.com/kvizdos/locksmith/authentication/login"
 	"github.com/kvizdos/locksmith/authentication/magic"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	oauth_google_oidc "github.com/kvizdos/locksmith/authentication/oauth/oidc"
@@ -243,16 +242,6 @@ func main() {
 		},
 		OAuthProviders: []oauth.OAuthProvider{
 			googleOIDC,
-		},
-		LoginSettings: &login.LoginOptions{
-			LockoutPolicy: login.LockoutPolicy{
-				CaptchaAfter: 2,
-				LockoutAfter: 10,
-				ResetAfter:   time.Duration(24 * time.Hour),
-				OnLockout: func(username string) {
-					fmt.Println(username, "locked out")
-				},
-			},
 		},
 		InactivityLockDuration: map[string]time.Duration{
 			"default": 100 * 365 * 24 * time.Hour, // If not set, defaults to 100 years.

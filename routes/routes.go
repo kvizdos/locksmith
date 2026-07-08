@@ -11,7 +11,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/authenticator"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
 	"github.com/kvizdos/locksmith/authentication/hibp"
-	"github.com/kvizdos/locksmith/authentication/login"
+	"github.com/kvizdos/locksmith/authentication/httphandlers"
 	"github.com/kvizdos/locksmith/authentication/management"
 	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/authentication/packets"
@@ -31,7 +31,6 @@ import (
 	"github.com/kvizdos/locksmith/launchpad"
 	"github.com/kvizdos/locksmith/pages"
 	sharedmemory "github.com/kvizdos/locksmith/shared-memory"
-	"github.com/kvizdos/locksmith/shared-memory/providers"
 	"github.com/kvizdos/locksmith/users"
 )
 
@@ -65,7 +64,6 @@ type LocksmithRoutesOptions struct {
 	NewRegistrationEvent        func(user users.LocksmithUserInterface)
 	RequestNewRegistrationEvent func(r *http.Request, user users.LocksmithUserInterface)
 	SharedMemory                sharedmemory.MemoryProvider
-	LoginSettings               *login.LoginOptions
 	LoginInfoCallback           func(method string, user map[string]any)
 	RequestLoginInfoCallback    func(r *http.Request, method string, user map[string]any)
 
@@ -90,26 +88,6 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 	if options.EmailValidation == nil {
 		options.EmailValidation = textvalidation.NewEmailValidator(textvalidation.EmailValidatorOptions{})
 	}
-
-	useSharedMemory := options.SharedMemory
-	if useSharedMemory == nil {
-		useSharedMemory = providers.NewRamSharedMemoryProvider()
-	}
-
-	useLoginSettings := options.LoginSettings
-	if useLoginSettings == nil {
-		useLoginSettings = &login.LoginOptions{
-			LockoutPolicy: login.LockoutPolicy{
-				CaptchaAfter: 3,
-				LockoutAfter: 10,
-				ResetAfter:   24 * time.Hour,
-				OnLockout: func(username string) {
-					fmt.Println(username, "locked due to too many incorrect passwords")
-				},
-			},
-		}
-	}
-	useLoginSettings.CaptchaProvider = captchaproviders.UseProvider
 
 	InitializeLaunchpad(mux, db, options)
 
@@ -151,15 +129,6 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		}, db)
 		mux.Handle("/api/register", registrationAPIHandler)
 
-		// loginAPIHandler := httpHelpers.InjectDatabaseIntoContext(login.LoginHandler{
-		// 	HIBP:                     options.HIBPIntegrationOptions,
-		// 	LockInactivityAfter:      lockAccountsAfter,
-		// 	Options:                  *useLoginSettings,
-		// 	SharedMemory:             useSharedMemory,
-		// 	LoginInfoCallback:        options.LoginInfoCallback,
-		// 	RequestLoginInfoCallback: options.RequestLoginInfoCallback,
-		// 	RegistrationJWTService:   options.RegistrationJWTService,
-		// }, db)
 		mux.HandleFunc("/api/login", options.Authorizer.ServeLoginAPI)
 		mux.HandleFunc("/api/login/{provider}", options.Authorizer.ServeProviderStartAPI)
 
@@ -228,12 +197,12 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		}
 
 		mux.Handle("/sign-out", sign_out.SignOutHTTP{})
-		mux.Handle("/profile", login.ProfileHTTP{
+		mux.Handle("/profile", httphandlers.ProfileHTTP{
 			AppName: options.AppName,
 			Styling: options.Styling,
 		})
-		mux.Handle("/login", login.LoginPageMiddleware{
-			Next: login.LoginPageHandler{
+		mux.Handle("/login", httphandlers.LoginPageMiddleware{
+			Next: httphandlers.LoginPageHandler{
 				AppName:                   options.AppName,
 				Styling:                   options.Styling,
 				EmailAsUsername:           options.UseEmailAsUsername,

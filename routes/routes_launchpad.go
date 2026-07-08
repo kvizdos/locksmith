@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/endpoints"
-	"github.com/kvizdos/locksmith/authentication/login"
+	"github.com/kvizdos/locksmith/authentication/httphandlers"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/launchpad"
 )
@@ -19,7 +19,7 @@ func InitializeLaunchpad(mux *http.ServeMux, db database.DatabaseAccessor, optio
 		options.LaunchpadSettings.BootstrapDatabase(db)
 		launchpad.BootstrapUsers(db, options.LaunchpadSettings.AccessToken, options.LaunchpadSettings.Users)
 
-		launchpadHandler := login.LoginPageMiddleware{
+		launchpadHandler := httphandlers.LoginPageMiddleware{
 			Next: endpoints.SecureEndpointHTTPMiddleware(launchpad.LaunchpadHTTPHandler{
 				AppName:                       options.AppName,
 				Styling:                       options.Styling,
