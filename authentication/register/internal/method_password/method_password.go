@@ -2,9 +2,12 @@ package method_password
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 	"github.com/kvizdos/locksmith/authentication/register/register_domain"
 	"github.com/kvizdos/locksmith/authentication/register/register_methods"
 	"github.com/kvizdos/locksmith/database"
@@ -53,7 +56,16 @@ func (prs *passwordRegistrationSession) LoadRequest(r *http.Request) error {
 	decoder := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&dto); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return fmt.Errorf("%w: max %d bytes", authenticator_domain.ErrRequestTooLarge, maxBytesErr.Limit)
+		}
+
 		return err
+	}
+
+	if prs.options.MinimumLength > 0 && len(dto.Password) < prs.options.MinimumLength {
+		return fmt.Errorf("password must be at least %d characters: %w", prs.options.MinimumLength, register_domain.ErrRegistrationPasswordTooShort)
 	}
 
 	prs.request = register_domain.Request{

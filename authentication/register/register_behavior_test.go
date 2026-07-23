@@ -70,7 +70,9 @@ func newTestRegistrarWithHint(db database.DatabaseAccessor, hints registrationhi
 	base := []Option{WithMethods(
 		AllowMethodHint(register_methods.WithHintService(hints)),
 		AllowMethodPassword(),
-	)}
+	),
+		WithTokenManager(&recordingTokenManager{}),
+	}
 	return NewRegistrar(db, append(base, opts...)...)
 }
 
@@ -483,7 +485,7 @@ func TestRegistrationHandlerAutoLoginIssuedWhenNoVerificationRequired(t *testing
 	}
 }
 
-func TestRegistrationHandlerNoAutoLoginWhenEmailVerificationRequired(t *testing.T) {
+func TestRegistrationHandlerAutoLoginWhenEmailVerificationRequired(t *testing.T) {
 	t.Parallel()
 
 	sender := &recordingVerificationSender{}
@@ -503,16 +505,11 @@ func TestRegistrationHandlerNoAutoLoginWhenEmailVerificationRequired(t *testing.
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if tm.createCalls != 0 {
-		t.Fatalf("CreateAuthToken calls = %d, want 0", tm.createCalls)
+	if tm.createCalls != 1 {
+		t.Fatalf("CreateAuthToken calls = %d, want 1", tm.createCalls)
 	}
-	if tm.passCalls != 0 {
-		t.Fatalf("PassToClient calls = %d, want 0", tm.passCalls)
-	}
-	for _, cookie := range rr.Result().Cookies() {
-		if cookie.Name == "token" {
-			t.Fatal("token cookie should not be set when email verification is required")
-		}
+	if tm.passCalls != 1 {
+		t.Fatalf("PassToClient calls = %d, want 1", tm.passCalls)
 	}
 }
 
@@ -520,11 +517,16 @@ func TestRegistrationHandlerBackwardCompatibleWithoutTokenManager(t *testing.T) 
 	t.Parallel()
 
 	db := newRegistrationTestDB(nil)
-	r := newTestRegistrar(db, WithDefaultRoleName("admin"))
+	opts := []Option{
+		WithMethods(AllowMethodPassword()),
+		WithDefaultRoleName("admin"),
+	}
+
+	r := NewRegistrar(db, opts...)
 	rr := performRegistrationRequest(t, r, `{"username":"kenton","password":"password123","email":"email@example.com"}`)
 
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, rr.Body.String())
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusInternalServerError, rr.Body.String())
 	}
 	for _, cookie := range rr.Result().Cookies() {
 		if cookie.Name == "token" {

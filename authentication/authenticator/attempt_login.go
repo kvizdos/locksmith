@@ -13,6 +13,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/registrationhints"
 	"github.com/kvizdos/locksmith/authentication/tokens"
+	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -92,6 +93,8 @@ func (a *authorizers) GetAdditionalLoginMethods() []string {
 }
 
 func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	ctx := a.enrichCtx(r)
 	var waitMinimum func()
 
@@ -154,12 +157,21 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 			})
 			a.writeAuthError(waitMinimum, w, "Password is incorrect.")
 			return
+		case errors.Is(err, authenticator_domain.ErrPasswordTooShort):
+			a.writeAuthError(waitMinimum, w, "Password is too short.")
+			return
 		case errors.Is(err, authenticator_domain.ErrPasswordlessRequired):
 			a.publishAuthEvent(ctx, events.EventLoginFailed, events.LoginFailedPayload{
 				Method: handler.Name(),
 				Reason: "passwordless_required",
 			})
 			a.writeAuthError(waitMinimum, w, "Passwordless login required.")
+			return
+		case errors.Is(err, authenticator_domain.ErrRequestTooLarge):
+			a.log.DebugContext(ctx, "invalid request", "err", err)
+			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
+				Reason: "too large",
+			}, http.StatusRequestEntityTooLarge)
 			return
 		case errors.Is(err, authenticator_domain.ErrFailedToParse):
 			a.log.DebugContext(ctx, "invalid request", "err", err)
@@ -386,6 +398,25 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 		if redirectTarget := rs.GetRedirectTarget(); redirectTarget != "" {
 			token.RedirectPath = redirectTarget
 		}
+	}
+
+	if handler.Passwordless() && user.RequiresEmailVerification() {
+		a.publishAuthEvent(ctx, events.EventEmailVerified, events.AccountVerifiedPayload{
+			LoginOrRegister: "registration",
+			Method:          "login",
+			Provider:        handler.Name(),
+			SelectBy:        selectBy,
+		})
+
+		_, err = a.db.UpdateOne("users", map[string]any{
+			"id": user.GetID(),
+		}, map[database.DatabaseUpdateActions]map[string]interface{}{
+			database.SET: {
+				"emailVerified":           true,
+				"emailVerificationMethod": fmt.Sprintf("login-hint-%s", handler.Name()),
+				"needsEmailVerification":  false,
+			},
+		})
 	}
 
 	a.log.InfoContext(ctx, "user logged in", "lookup", lookup, "id", id, "handler", handler.Name(), "user", user.GetID())

@@ -68,13 +68,13 @@ func TestOidcHandlerCanHandle(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "get without callback params",
-			req:  httptest.NewRequest(http.MethodGet, "/api/login", nil),
-			want: false,
-		},
-		{
 			name: "get with only code",
 			req:  httptest.NewRequest(http.MethodGet, "/api/login?code=xyz", nil),
+			want: true,
+		},
+		{
+			name: "get without callback params",
+			req:  httptest.NewRequest(http.MethodGet, "/api/login", nil),
 			want: false,
 		},
 	}
@@ -82,7 +82,7 @@ func TestOidcHandlerCanHandle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := h.CanHandle(tt.req); got != tt.want {
-				t.Fatalf("CanHandle() = %v, want %v", got, tt.want)
+				t.Fatalf("%s ) CanHandle() = %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}

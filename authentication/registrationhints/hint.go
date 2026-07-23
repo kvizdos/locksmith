@@ -10,9 +10,10 @@ const (
 type Hint struct {
 	jwt.RegisteredClaims
 
-	ProviderName string `json:"provider_name"`
-	Email        string `json:"email"`
-	DisplayName  string `json:"display_name,omitempty"`
+	ProviderName  string `json:"provider_name"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	DisplayName   string `json:"display_name,omitempty"`
 
 	// Required for creating an auth_links row during hinted registration.
 	Issuer  string `json:"issuer,omitempty"`

@@ -16,6 +16,9 @@ var (
 
 	ErrMethodNotSupported = errors.New("method not supported")
 	ErrFailedToParse      = errors.New("failed to parse request")
+	ErrRequestTooLarge    = errors.New("request too large")
+
+	ErrPasswordTooShort = errors.New("password too short")
 )
 
 /*

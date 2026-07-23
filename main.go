@@ -109,6 +109,9 @@ func subscribePrettyPrintedAuthEvents(bus *events.MemoryBus) {
 
 		events.EventAccountLinked,
 		events.EventEmailVerificationSent,
+		events.EventEmailVerified,
+
+		events.EventSignOut,
 	} {
 		bus.Subscribe(name, logEvent(name))
 	}
@@ -137,7 +140,7 @@ func main() {
 	fmt.Println("DB", os.Getenv("database"))
 	dbUri := os.Getenv("dburi")
 	if dbUri == "" {
-		dbUri = "mongodb://localhost:27017"
+		dbUri = "mongodb://localhost:53174/?directConnection=true"
 	}
 	err := db.Initialize(dbUri, os.Getenv("database"))
 
@@ -249,6 +252,7 @@ func main() {
 
 	requiresEmailVerification := func(ctx context.Context, da database.DatabaseAccessor, lui users.LocksmithUserInterface, validationRes textvalidation.ValidationResultEvaluator) bool {
 		_, res := validationRes.Result(true)
+		fmt.Println("User verified coming into requires verification (e.g. via hinted oauth registration)? ", !lui.RequiresEmailVerification())
 		if res != textvalidation.ValidationResult_VALID {
 			fmt.Println("Since validation was skipped, we're going to require an email-based verification to be completed.")
 			return true
@@ -282,10 +286,8 @@ func main() {
 		InviteUsedRedirect: "/app",
 		Authorizer:         authorizer,
 		Registrar:          registrar,
-		LoginInfoCallback: func(method string, user map[string]any) {
-			fmt.Printf("User logged in via username / password: %+v\n", user)
-		},
-		SAMLConfig: samlCfg,
+		Bus:                authEvents,
+		SAMLConfig:         samlCfg,
 		WithErrors: func(es error_svc.ErrorService) {
 			es.RegisterError("J0YUT", error_svc.Error{
 				Header:      "You are not authorized to access the LMS.",
@@ -303,19 +305,9 @@ func main() {
 					console.log("Loaded page.")
 				</script>
 
-				<script src="https://accounts.google.com/gsi/client" async defer></script>
-
-				<div
-					id="g_id_onload"
-					data-client_id="%s"
-					data-login_uri="/api/login?provider=google"
-					data-auto_select="true"
-					data-use_fedcm_for_prompt="true"
-				    data-context="use"
-					data-color_scheme="light"
-					data-itp_support="false"
-					data-state="test">
-				</div>`, googleClientID,
+				<script src="/api/auth/oauth/google_fcm.js?client_id=%s" async defer></script>
+			`,
+				googleClientID,
 			)),
 		},
 		ResetPasswordOptions: routes.ResetPasswordOptions{

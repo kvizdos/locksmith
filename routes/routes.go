@@ -9,6 +9,7 @@ import (
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication/authenticator"
 	"github.com/kvizdos/locksmith/authentication/endpoints"
+	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/hibp"
 	"github.com/kvizdos/locksmith/authentication/httphandlers"
 	"github.com/kvizdos/locksmith/authentication/management"
@@ -58,6 +59,7 @@ type LocksmithRoutesOptions struct {
 	LoginInfoCallback        func(method string, user map[string]any)
 	RequestLoginInfoCallback func(r *http.Request, method string, user map[string]any)
 
+	Bus events.Bus
 	// Authorizer handles /api/login and /api/login/{provider}. Build one via
 	// authenticator.NewAuthorizer(db, opts...).
 	Authorizer authenticator.AuthorizerHandler
@@ -90,6 +92,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 
 	if !options.DisableAPI {
 		mux.Handle("/api/auth/oauth/keep-alive.js", oauth.KeepAliveJSRoute{})
+		mux.Handle("/api/auth/oauth/google_fcm.js", oauth.GoogleFCMJSRoute{})
 
 		var lockAccountsAfter map[string]time.Duration
 
@@ -171,7 +174,11 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			mux.Handle("/err", es.HandleHTTP(options.AppName, options.Styling))
 		}
 
-		mux.Handle("/sign-out", sign_out.SignOutHTTP{})
+		mux.Handle("/sign-out", endpoints.SecureEndpointHTTPMiddleware(sign_out.SignOutHTTP{
+			EventBus: options.Bus,
+		}, db, endpoints.EndpointSecurityOptions{
+			MinimalPermissions: []string{"human"},
+		}))
 		mux.Handle("/profile", httphandlers.ProfileHTTP{
 			AppName: options.AppName,
 			Styling: options.Styling,

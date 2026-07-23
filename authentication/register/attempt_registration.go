@@ -18,6 +18,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/tokens"
 	"github.com/kvizdos/locksmith/authentication/verificationcodes"
+	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
 	"github.com/kvizdos/locksmith/roles"
 	"github.com/kvizdos/locksmith/users"
@@ -53,6 +54,12 @@ func (r *registrar) ServeRegisterAPI(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*req), req.URL.Path)
 		r.writeRegistrationError(w, err)
+		return
+	}
+
+	if r.tm == nil {
+		r.log.ErrorContext(req.Context(), "no token manager set")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -210,7 +217,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		if inviteErr != nil {
 			return nil, register_domain.ErrRegistrationInvalidInviteCode
 		}
-		if invite.Email != req.Email {
+		if !strings.EqualFold(invite.Email, req.Email) {
 			return nil, register_domain.ErrRegistrationInvalidEmail
 		}
 		useRole = invite.Role
@@ -235,6 +242,11 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		oauthRestriction = req.Hint.ProviderName
 	}
 
+	verified := false
+	if req.Hint != nil {
+		verified = req.Hint.EmailVerified
+	}
+
 	var lsu users.LocksmithUserInterface = users.LocksmithUser{
 		ID:                    useID,
 		Username:              strings.ToLower(req.Username),
@@ -244,12 +256,13 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		PasswordSessions:      []authentication.PasswordSession{},
 		Role:                  useRole,
 		OAuthRestrictedSource: oauthRestriction,
+		EmailVerified:         verified,
 	}
 
 	if r.configureCustomUser != nil {
 		lsu = r.configureCustomUser(lsu.(users.LocksmithUser), r.db)
 	}
-	if r.requiresEmailVerification != nil && req.Hint == nil {
+	if r.requiresEmailVerification != nil {
 		// Always hand the callback a non-nil evaluator, even if no
 		// EmailValidator is configured, so callbacks can safely call its
 		// methods without a nil check. A zero-value EmailValidationResult
@@ -283,6 +296,24 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		})
 		if err != nil {
 			return nil, fmt.Errorf("insert auth link: %w", err)
+		}
+
+		if req.Hint.EmailVerified {
+			r.publishRegistrationEvent(ctx, events.EventEmailVerified, events.AccountVerifiedPayload{
+				LoginOrRegister: "registration",
+				Method:          method,
+				Provider:        provider,
+				SelectBy:        selectBy,
+			})
+			_, err = r.db.UpdateOne("users", map[string]any{
+				"id": lsu.GetID(),
+			}, map[database.DatabaseUpdateActions]map[string]interface{}{
+				database.SET: {
+					"emailVerified":           true,
+					"emailVerificationMethod": fmt.Sprintf("hint-%s-%s", req.Hint.ProviderName, selectBy),
+					"needsEmailVerification":  false,
+				},
+			})
 		}
 		createdAuthLink = true
 	}

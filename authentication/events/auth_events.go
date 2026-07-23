@@ -34,3 +34,15 @@ type AccountLinkedPayload struct {
 	Issuer   string
 	Subject  string
 }
+
+type AccountVerifiedPayload struct {
+	UserID          string
+	LoginOrRegister string
+	Method          string
+	Provider        string
+	SelectBy        string
+}
+
+type SignOutPayload struct {
+	UserID string
+}

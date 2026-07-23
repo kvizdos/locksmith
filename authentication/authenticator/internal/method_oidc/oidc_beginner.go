@@ -55,13 +55,13 @@ func (pv oidcHandler) Begin(ctx context.Context, w http.ResponseWriter, r *http.
 		Value:    verifier,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int((10 * time.Minute).Seconds()),
 	})
 
 	log.DebugContext(ctx, "stored oidc cookies",
-		"secure", r.TLS != nil,
+		"secure", true,
 		"same_site", http.SameSiteLaxMode,
 	)
 

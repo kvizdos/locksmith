@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
 )
 
 func (pv *oidcValidationSession) LoadRequest(r *http.Request) error {
@@ -34,6 +36,11 @@ func (pv *oidcValidationSession) LoadRequest(r *http.Request) error {
 		// "btn_confirm" for a rendered button click vs "auto", "fedcm",
 		// "fedcm_auto" for an automatic One Tap/FedCM sign-in).
 		if err := r.ParseForm(); err != nil {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				return fmt.Errorf("%w: max %d bytes", authenticator_domain.ErrRequestTooLarge, maxBytesErr.Limit)
+			}
+
 			return fmt.Errorf("failed to parse credential form body: %w", err)
 		}
 		credential := r.PostFormValue("credential")

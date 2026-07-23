@@ -23,9 +23,22 @@ func (pv *passwordValidatorSession) LoadRequest(r *http.Request) error {
 		)
 	}
 	var loginRequest loginRequestHTTP
-	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&loginRequest); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return fmt.Errorf("%w: max %d bytes", authenticator_domain.ErrRequestTooLarge, maxBytesErr.Limit)
+		}
+
 		out := fmt.Errorf("failed to decode login request: %w", err)
 		return errors.Join(out, authenticator_domain.ErrFailedToParse)
+	}
+
+	if pv.options.MinPasswordLength > 0 && len(loginRequest.Password) < pv.options.MinPasswordLength {
+		return fmt.Errorf("password must be at least %d characters: %w", pv.options.MinPasswordLength, authenticator_domain.ErrPasswordTooShort)
 	}
 
 	pv.presentedPassword = loginRequest.Password

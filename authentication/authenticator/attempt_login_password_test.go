@@ -128,8 +128,13 @@ func TestPassword_EmailNotVerified(t *testing.T) {
 	rr := httptest.NewRecorder()
 	a.ServeLoginAPI(rr, postLoginReq(`{"username":"kenton","password":"hunter2"}`))
 
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401 for unverified email, got %d", rr.Code)
+	if rr.Code != http.StatusSeeOther {
+		t.Errorf("expected 303 for unverified email, got %d", rr.Code)
+	}
+
+	// verify the new location is /verify..
+	if location := rr.Header().Get("Location"); location != "/app" {
+		t.Errorf("expected /app location, got %s", location)
 	}
 }
 

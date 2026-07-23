@@ -30,7 +30,10 @@ func TestMain(m *testing.M) {
 // newTestRegistrar builds a *registrar wired with the password method,
 // mirroring how routes.go/main.go build one via register.NewRegistrar.
 func newTestRegistrar(db database.DatabaseAccessor, opts ...Option) *registrar {
-	opts = append([]Option{WithMethods(AllowMethodPassword())}, opts...)
+	opts = append([]Option{
+		WithMethods(AllowMethodPassword()),
+		WithTokenManager(&recordingTokenManager{}),
+	}, opts...)
 	return NewRegistrar(db, opts...)
 }
 

@@ -12,12 +12,13 @@ func (r *oidcValidationSession) RegistrationHint() *registrationhints.Hint {
 		return nil
 	}
 	return &registrationhints.Hint{
-		ProviderName: r.options.ProviderName,
-		Email:        r.GetEmail(),
-		DisplayName:  r.displayName,
-		Issuer:       r.GetIssuer(),
-		Subject:      r.GetSubject(),
-		Rosterable:   true,
-		SelectBy:     r.selectBy,
+		ProviderName:  r.options.ProviderName,
+		Email:         r.GetEmail(),
+		DisplayName:   r.displayName,
+		Issuer:        r.GetIssuer(),
+		Subject:       r.GetSubject(),
+		Rosterable:    true,
+		SelectBy:      r.selectBy,
+		EmailVerified: r.EmailVerified(),
 	}
 }

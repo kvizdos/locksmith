@@ -19,6 +19,9 @@ const (
 
 	EventAccountLinked         EventName = "auth.account_linked"
 	EventEmailVerificationSent EventName = "auth.email_verification.sent"
+	EventEmailVerified         EventName = "auth.email_verification.verified"
+
+	EventSignOut EventName = "auth.sign_out"
 )
 
 type Envelope struct {
