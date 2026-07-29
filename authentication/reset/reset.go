@@ -81,6 +81,20 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 		var lsUser users.LocksmithUserInterface
 		users.LocksmithUser{}.ReadFromMap(&lsUser, user.(map[string]any))
+
+		// Passwordless-restricted accounts don't have (and shouldn't gain) a
+		// real password: CompileLocksmithPassword always sets Passwordless=false
+		// once a non-empty password is set, which would silently strip this
+		// restriction off the account. Skip issuing a reset token entirely so
+		// these users keep using their normal passwordless login method, and
+		// respond identically to the "not found" path to avoid leaking
+		// account state.
+		if lsUser.Passwordless() {
+			delayIfNeeded()
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		token, err := lsUser.CreateMagicAuthenticationCode(h.Database, magic.MagicAuthenticationVariables{
 			ForUserID:          lsUser.GetID(),
 			AllowedPermissions: []string{"magic.reset.password"},

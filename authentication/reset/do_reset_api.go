@@ -47,6 +47,19 @@ func (h ResetPasswordAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	authUser := r.Context().Value("authUser").(users.LocksmithUser)
 	db := r.Context().Value("database").(database.DatabaseAccessor)
 
+	// Defense-in-depth: Passwordless-restricted accounts must never be
+	// given a real password through this flow, since doing so would
+	// silently strip their passwordless-only restriction (see reset.go,
+	// which should already prevent a reset token from being issued for
+	// these accounts in the first place).
+	if authUser.Passwordless() {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write(resetResponse{
+			Error: "password reset is not available for this account",
+		}.Marshal())
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		// handle the error
@@ -61,7 +74,7 @@ func (h ResetPasswordAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	var resetReq resetPasswordRequest
 	err = json.Unmarshal(body, &resetReq)
 
-	if err != nil || (err == nil && !resetReq.HasRequiredFields()) {
+	if err != nil || !resetReq.HasRequiredFields() {
 		logger.LOGGER.Log(logger.BAD_REQUEST, logger.GetIPFromRequest(*r), r.URL.Path)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(resetResponse{

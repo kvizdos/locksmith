@@ -179,6 +179,12 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 				Reason: "invalid request body",
 			}, http.StatusBadRequest)
 			return
+		case errors.Is(err, authenticator_domain.ErrInvalidContentType):
+			a.log.DebugContext(ctx, "invalid content type", "err", err)
+			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
+				Reason: "invalid content type",
+			}, http.StatusBadRequest)
+			return
 		case errors.Is(err, authenticator_domain.ErrMethodNotSupported):
 			a.log.DebugContext(ctx, "unsupported method", "error", err, "stage", "attempt_login", "handler", fmt.Sprintf("%T", handler))
 			api_helpers.WriteResponse(w, api_helpers.APIResponseError{
@@ -246,7 +252,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 	// Load the request into the session to initialize it.
 	// This will parse the request and set any handler-specific state.
 	if err := session.LoadRequest(r); err != nil {
-		return nil, "", fmt.Errorf("failed to create session: %w", err)
+		return nil, "", errors.Join(fmt.Errorf("failed to create session: %w", err))
 	}
 
 	// If the session can identify which UI surface produced the

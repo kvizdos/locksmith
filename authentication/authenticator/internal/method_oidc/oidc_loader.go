@@ -31,7 +31,7 @@ func (pv *oidcValidationSession) LoadRequest(r *http.Request) error {
 	case flowCredential:
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/x-www-form-urlencoded" {
-			return fmt.Errorf("unsupported content type: %s", contentType)
+			return fmt.Errorf("unsupported content type: %w", authenticator_domain.ErrInvalidContentType)
 		}
 		// Google Identity Services' HTML API (data-login_uri) delivers the
 		// credential via a native browser form POST, encoded as

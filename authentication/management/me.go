@@ -14,6 +14,7 @@ type meEndpointHTTP struct{}
 func (m meEndpointHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value("authUser").(users.LocksmithUserInterface)
 
+	w.Header().Set("Cache-Control", "no-store")
 	if !ok {
 		api_helpers.WriteResponse(w, api_helpers.APIResponseError{
 			Reason: "failed",
