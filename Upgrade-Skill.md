@@ -88,6 +88,16 @@ Do not use this skill for unrelated Locksmith bugs on an already-migrated
    - Is `NewRegistrationEvent`/`LoginInfoCallback` doing anything beyond
      logging (e.g., sending real emails, writing to a real analytics
      system)? Preserve the call, just relocate it to an event subscriber.
+   - Does `RequestLoginInfoCallback` (or any other old callback) read data
+     off the `*http.Request` itself (headers, cookies, IP, a tenant/app ID
+     header)? (→ Step 7 must use `events.RequestFromContext`/
+     `events.WithMiddleware`, not just a bare `events.Bus.Subscribe`, or
+     that data silently disappears in the new wiring.)
+   - Is the **same** piece of request-derived data read in more than one of
+     the old callbacks (e.g. a tenant ID header used in both the login and
+     registration callbacks)? (→ that's a signal to use
+     `events.WithMiddleware` once on the shared bus instead of duplicating
+     the lookup in multiple `Subscribe` handlers — see Step 4a.)
 
 ### Step 2 — Confirm module version
 
@@ -115,6 +125,18 @@ Follow `Upgrade.md` §3.2–3.7 in order:
    (only required if any OIDC method is `Rosterable: true`, or the app
    uses Magic Tokens — check for `magic.MagicSigningPackage` usage).
 2. Build (or reuse) an `events.Bus`.
+   - **If Step 1 flagged request-derived data used across more than one
+     old callback** (or used in `RequestLoginInfoCallback`), wrap the bus
+     with `events.WithMiddleware(...)` here, per `Upgrade.md` §3.3/§3.8,
+     *before* passing it to anything else. This is the one and only place
+     that middleware gets constructed — do not build a second wrapped bus
+     later for the registrar; the whole point is one shared instance.
+   - Confirm the **exact same** `events.Bus` value (wrapped or not) is
+     later passed to `authenticator.WithEventBus`, `register.WithEventBus`,
+     and `routes.LocksmithRoutesOptions.Bus`. If any of those three ends up
+     with a different, unwrapped, or separately-wrapped bus, your
+     middleware will silently only cover a subset of events — this is easy
+     to get wrong and easy to miss because it still compiles.
 3. Build a `tokens.TokenManager`.
 4. Build `authenticator.NewAuthorizer(...)` with every method the user had
    before (password + each OAuth/OIDC provider). For non-Google custom
@@ -174,6 +196,25 @@ matching `events.Event*` constant and payload struct (`Upgrade.md` §3.8).
 Preserve the exact external behavior (same email content, same analytics
 event name/fields) — only the wiring mechanism should change.
 
+If Step 1 found `RequestLoginInfoCallback` (or any callback) reading data
+off the `*http.Request`, you have two valid replacements — pick based on
+scope, don't default to one blindly:
+
+- **Used by exactly one subscriber**: call `events.RequestFromContext(ctx)`
+  directly inside that `Subscribe` handler (`Upgrade.md` §3.8). No extra
+  wiring needed — the authorizer/registrar/sign-out handler already stash
+  the request onto the context before publishing.
+- **Used by more than one old callback, or should apply to events that
+  didn't have an old equivalent at all** (rostering, account linking,
+  sign-out): use the `events.WithMiddleware(...)`-wrapped bus built in Step
+  4's substep, so the enrichment happens once and appears on every event
+  automatically, rather than copy-pasting the same `RequestFromContext`
+  lookup into every `Subscribe` handler (`Upgrade.md` §3.3).
+
+Either way, confirm the field/value your middleware or subscriber produces
+matches what the old callback actually read — don't assume, check the old
+code's exact header/cookie name.
+
 ### Step 8 — Sync password length settings
 
 Grep for every place minimum password length is configured
@@ -204,6 +245,13 @@ perform yourself; call it out as a manual action item.
    actually created somewhere in the app's startup path
    (`roles.CreatePermissionSet`/`AddPermissionsToRole`), not just assumed
    to exist.
+4. If you used `events.WithMiddleware` in Step 4, grep for every
+   `authenticator.WithEventBus(...)`, `register.WithEventBus(...)`, and
+   `routes.LocksmithRoutesOptions{Bus: ...}` site you touched and confirm
+   they all reference the **same** wrapped bus variable. A mismatch here
+   compiles and runs fine — it just silently drops the enrichment on
+   whichever orchestrator got the wrong (or unwrapped) bus, which is easy
+   to miss without explicitly checking.
 
 ### Step 11 — Report to the user
 
@@ -215,6 +263,10 @@ In your final summary, explicitly list:
 - Any custom OAuth provider that still needs a hand-written
   `authenticator_domain.Handler` (if you couldn't fully migrate it
   automatically).
+- Whether `RequestLoginInfoCallback`/per-callback request data was migrated
+  to a plain `Subscribe` + `events.RequestFromContext`, or to
+  `events.WithMiddleware` — and why (single vs. multi-event usage), so the
+  user understands the tradeoff without re-deriving it from the diff.
 - The full checklist from `Upgrade.md` §7, marked as done/not-done/not
   -applicable, and which items still require **manual** testing (OAuth
   flows, FedCM, email delivery) that you could not execute yourself.
@@ -235,3 +287,13 @@ In your final summary, explicitly list:
 - Do not assume `map[string]interface{}` → `map[string]any` needs to
   happen; it's purely cosmetic and out of scope unless the user asks for
   general modernization.
+- Do not build a separate `events.WithMiddleware(...)`-wrapped bus per
+  orchestrator (one for the authorizer, a different one for the
+  registrar). Build it once and pass that single instance everywhere a
+  `events.Bus` is expected — separately wrapped buses silently only
+  enrich their own orchestrator's events, which defeats the reason to use
+  middleware over per-callback logic in the first place.
+- Do not reach for `events.WithMiddleware` when a single `Subscribe`
+  handler calling `events.RequestFromContext(ctx)` would do — middleware
+  is for enrichment shared across multiple event types/subscribers, not a
+  default replacement for every `RequestLoginInfoCallback` migration.

@@ -266,11 +266,11 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 
 	var magics []magic.MagicAuthentication
 	if magicValue, ok := user["magic"]; ok {
-		switch magicValue.(type) {
+		switch t := magicValue.(type) {
 		case []magic.MagicAuthentication:
-			magics = magicValue.([]magic.MagicAuthentication)
+			magics = t
 		case []any:
-			magics = magic.MagicsFromMap(magicValue.([]any))
+			magics = magic.MagicsFromMap(t)
 		}
 	}
 

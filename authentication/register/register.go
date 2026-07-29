@@ -3,7 +3,6 @@ package register
 import (
 	"context"
 	"log/slog"
-	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/register/register_domain"
@@ -37,8 +36,6 @@ type registrar struct {
 	emailValidation           textvalidation.EmailValidator
 	emailAsUsername           bool
 	minimumLengthRequirement  int
-
-	requestEventMetadata func(*http.Request) events.ContextMetadata
 }
 
 type Option func(*registrar)
@@ -113,8 +110,4 @@ func WithEmailAsUsername(enabled bool) Option {
 
 func WithMinimumLengthRequirement(length int) Option {
 	return func(r *registrar) { r.minimumLengthRequirement = length }
-}
-
-func WithRequestEventMetadata(fn func(*http.Request) events.ContextMetadata) Option {
-	return func(r *registrar) { r.requestEventMetadata = fn }
 }

@@ -52,7 +52,12 @@ func (a *authorizers) writeAuthError(minCtx func(), w http.ResponseWriter, prote
 
 func (a *authorizers) enrichCtx(r *http.Request) context.Context {
 	ctx := r.Context()
-	return context.WithValue(ctx, "ip", logger.GetIPFromRequest(*r))
+	ctx = context.WithValue(ctx, "ip", logger.GetIPFromRequest(*r))
+	// Stash the request so any events.Middleware registered on the bus (see
+	// events.WithMiddleware) can look up headers/cookies/etc. when a login
+	// event fires below, without every call site having to build its own
+	// events.ContextMetadata.
+	return events.WithRequest(ctx, r)
 }
 
 func (a *authorizers) getUsernameNoun() string {

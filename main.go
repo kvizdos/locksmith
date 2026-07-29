@@ -86,10 +86,10 @@ func sendWelcomeEmailExampleByEmail(email string) {
 // registration/login/roster event published on the given bus. This is a
 // demo-only example of consuming authentication/events; real applications
 // would forward these to their own logging/analytics/notification systems.
-func subscribePrettyPrintedAuthEvents(bus *events.MemoryBus) {
+func subscribePrettyPrintedAuthEvents(bus events.Bus) {
 	logEvent := func(name events.EventName) events.Handler {
 		return func(ctx context.Context, envelope events.Envelope) error {
-			fmt.Printf("[event] %s :: %+v\n", name, envelope.Payload)
+			fmt.Printf("[event] %s :: %+v - %+v\n", name, envelope.Payload, envelope.Metadata)
 			return nil
 		}
 	}
@@ -198,7 +198,28 @@ func main() {
 
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 
-	authEvents := events.NewMemoryBus()
+	// events.WithMiddleware wraps the bus once so this middleware runs for
+	// EVERY event published on it -- login, registration, sign-out,
+	// rostering, account linking, etc -- regardless of which package fires
+	// it, instead of wiring a callback into each orchestrator individually.
+	//
+	// Middleware receives the ctx that was active when Publish was called,
+	// which includes the original *http.Request (see events.WithRequest,
+	// wired in by authenticator/register/sign_out_http) via
+	// events.RequestFromContext -- use it to look up whatever you need from
+	// the request and map it onto the Envelope.
+	authEvents := events.WithMiddleware(events.NewMemoryBus(),
+		func(ctx context.Context, e events.Envelope) events.Envelope {
+			if req, ok := events.RequestFromContext(ctx); ok {
+				if e.Metadata == nil {
+					e.Metadata = map[string]string{}
+				}
+				e.Metadata["user_agent"] = req.UserAgent()
+				e.Metadata["a_custom_fetch_header"] = req.Header.Get("X-Fetch-Header")
+			}
+			return e
+		},
+	)
 	subscribePrettyPrintedAuthEvents(authEvents)
 
 	tm := tokens.NewCookieManager(db, "/app")
@@ -306,6 +327,21 @@ func main() {
 				</script>
 
 				<script src="/api/auth/oauth/google_fcm.js?client_id=%s" async defer></script>
+
+				<script>
+				const og = window.fetch;
+
+				window.fetch = function (input, init = {}) {
+				    const headers = new Headers(init.headers);
+
+				    headers.set("X-Fetch-Header", "my-value");
+
+				    return og.call(this, input, {
+				        ...init,
+				        headers,
+				    });
+				};
+				</script>
 			`,
 				googleClientID,
 			)),

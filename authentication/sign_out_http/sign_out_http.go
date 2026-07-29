@@ -27,7 +27,10 @@ func (m SignOutHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if m.EventBus != nil {
 		if authUser, ok := r.Context().Value("authUser").(users.LocksmithUserInterface); ok {
-			envelope := events.EnrichEnvelope(r.Context(), events.Envelope{
+			// Stash the request so any events.Middleware registered on the bus
+			// (see events.WithMiddleware) can look it up, same as login/register.
+			ctx := events.WithRequest(r.Context(), r)
+			envelope := events.EnrichEnvelope(ctx, events.Envelope{
 				ID:         uuid.New().String(),
 				Name:       events.EventSignOut,
 				OccurredAt: time.Now(),
@@ -36,7 +39,7 @@ func (m SignOutHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					UserID: authUser.GetID(),
 				},
 			})
-			m.EventBus.Publish(r.Context(), envelope)
+			m.EventBus.Publish(ctx, envelope)
 		}
 	}
 

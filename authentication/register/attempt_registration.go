@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"regexp"
 	"strings"
@@ -407,6 +406,10 @@ func (r *registrar) publishRegistrationEvent(ctx context.Context, name events.Ev
 func (r *registrar) registrationEventContext(req *http.Request) context.Context {
 	ip := logger.GetIPFromRequest(*req)
 	ctx := context.WithValue(req.Context(), "ip_address", ip)
+	// Stash the request so any events.Middleware registered on the bus (see
+	// events.WithMiddleware) can look it up directly, in addition to the
+	// ContextMetadata built below.
+	ctx = events.WithRequest(ctx, req)
 	metadata := events.ContextMetadata{
 		RequestID: firstHeader(req, "X-Request-Id", "X-Request-ID", "X-Correlation-Id"),
 		TraceID:   traceIDFromRequest(req),
@@ -416,29 +419,7 @@ func (r *registrar) registrationEventContext(req *http.Request) context.Context 
 			"user_agent": req.UserAgent(),
 		},
 	}
-	if r.requestEventMetadata != nil {
-		metadata = mergeContextMetadata(metadata, r.requestEventMetadata(req))
-	}
 	return events.WithContextMetadata(ctx, metadata)
-}
-
-func mergeContextMetadata(base, app events.ContextMetadata) events.ContextMetadata {
-	if app.RequestID != "" {
-		base.RequestID = app.RequestID
-	}
-	if app.TraceID != "" {
-		base.TraceID = app.TraceID
-	}
-	if app.Source != "" {
-		base.Source = app.Source
-	}
-	if len(app.Values) > 0 {
-		if base.Values == nil {
-			base.Values = map[string]string{}
-		}
-		maps.Copy(base.Values, app.Values)
-	}
-	return base
 }
 
 func firstHeader(r *http.Request, names ...string) string {

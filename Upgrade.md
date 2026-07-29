@@ -30,9 +30,11 @@ protection, CSRF, user enumeration). Read it before you ship.
 | `routes.LocksmithRoutesOptions.RequiresEmailVerification func(...)` | Moved to `register.WithRequiresEmailVerification(...)` on the registrar. |
 | `routes.LocksmithRoutesOptions.NewRegistrationEvent func(users.LocksmithUserInterface)` | Replaced by subscribing to `events.EventRegistrationSucceeded` on an `events.Bus`. |
 | `routes.LocksmithRoutesOptions.LoginInfoCallback func(method string, user map[string]any)` | Replaced by subscribing to `events.EventLoginSucceeded` / `EventLoginFailed`. (Field still exists on the options struct for back-compat, but the new orchestrators don't call it — don't rely on it.) |
+| `routes.LocksmithRoutesOptions.RequestLoginInfoCallback func(*http.Request, string, map[string]any)` | Same as above, but note it had direct `*http.Request` access. Replace with a subscriber that calls `events.RequestFromContext(ctx)` — see [§3.8](#38-replace-the-newregistrationevent-welcome-email-hook-with-an-event-subscriber). |
 | *(nothing — new concept)* | `routes.LocksmithRoutesOptions.Authorizer authenticator.AuthorizerHandler` — **required** |
 | *(nothing — new concept)* | `routes.LocksmithRoutesOptions.Registrar register.RegistrarHandler` — **required** |
 | *(nothing — new concept)* | `routes.LocksmithRoutesOptions.Bus events.Bus` |
+| *(nothing — new concept)* | `events.WithMiddleware(bus, ...)` — wraps a Bus so every published event (from every orchestrator) is enriched the same way. See [§2](#2-new-concepts-glossary) and [§3.8](#38-replace-the-newregistrationevent-welcome-email-hook-with-an-event-subscriber). |
 | `sendWelcomeEmailExample(u users.LocksmithUserInterface)` pattern | `events.EventRegistrationSucceeded` payload carries `Email`/`Username`/`UserID` directly — no DB round-trip needed |
 
 If your `main.go` still compiles against current `main` without touching
@@ -82,6 +84,24 @@ at first request**, not a graceful no-op.
 - **Method options packages** — `authenticator_methods` and
   `register_methods` hold the `With*`/`Allow*`-style functional options for
   each authentication method (password length, OIDC config, hint service).
+- **`events.Middleware` / `events.WithMiddleware(bus, ...)`** (`authentication/events`) —
+  a hook that runs against **every** `Envelope` before it reaches subscribers,
+  no matter which orchestrator published it (login, registration, sign-out,
+  rostering, account linking). Build the wrapped bus **once** and hand that
+  same instance to `authenticator.WithEventBus`, `register.WithEventBus`,
+  and `routes.LocksmithRoutesOptions.Bus` so enrichment (request IDs, trace
+  IDs, tenant IDs, whatever your old `RequestLoginInfoCallback`/custom
+  per-callback logic did) applies consistently everywhere, instead of
+  wiring the same logic into each orchestrator by hand. This is the
+  replacement for "I need this piece of request context on every event,"
+  not something you had in `alpha-ui2-v1.2.0` at all — see
+  [§3.8](#38-replace-the-newregistrationevent-welcome-email-hook-with-an-event-subscriber).
+- **`events.WithRequest(ctx, r)` / `events.RequestFromContext(ctx)`**
+  (`authentication/events`) — the authorizer, registrar, and sign-out
+  handler all stash the inbound `*http.Request` onto the context before
+  publishing, so **any** subscriber (with or without middleware) can
+  recover it via `events.RequestFromContext(ctx)` — this is how you get back
+  the `*http.Request` access your old `RequestLoginInfoCallback` had.
 
 ---
 
@@ -159,6 +179,33 @@ both orchestrators default to a no-op bus) — but you lose the only
 replacement for the old `LoginInfoCallback`/`NewRegistrationEvent` hooks, so
 most consumers should wire at least one real subscriber (e.g. your welcome
 email, your analytics pipeline).
+
+If your old `RequestLoginInfoCallback`/`LoginInfoCallback` pulled data out of
+the `*http.Request` (headers, cookies, IP) and attached it to every login
+you logged/analyzed, don't rebuild that per-callback — wrap the bus **once**
+with `events.WithMiddleware` so it applies to every event from every
+orchestrator (login, registration, sign-out, rostering):
+
+```go
+authEvents := events.WithMiddleware(events.NewMemoryBus(),
+	func(ctx context.Context, e events.Envelope) events.Envelope {
+		if req, ok := events.RequestFromContext(ctx); ok {
+			if e.Metadata == nil {
+				e.Metadata = map[string]string{}
+			}
+			e.Metadata["tenant_id"] = req.Header.Get("X-Tenant-Id")
+		}
+		return e
+	},
+)
+```
+
+Pass this same `authEvents` value to `authenticator.WithEventBus`,
+`register.WithEventBus`, and `routes.LocksmithRoutesOptions.Bus` — same as
+you would without middleware, `events.WithMiddleware` just returns another
+`events.Bus`. Don't build a separate wrapped bus per orchestrator; that
+defeats the point (each orchestrator would only enrich its own events, which
+is exactly the per-callback duplication this replaces).
 
 ### 3.4 Build the token manager
 
@@ -316,6 +363,29 @@ to `events.EventLoginSucceeded` / `events.EventLoginFailed` the same way.
 Also consider `events.EventRosterStarted/Succeeded/Failed` (OIDC
 auto-registration), `events.EventAccountLinked`, and `events.EventSignOut`
 — these didn't have equivalents in the old callback-based API at all.
+
+If you relied on `RequestLoginInfoCallback func(*http.Request, string, map[string]any)`
+specifically for its `*http.Request` access (reading a header, a cookie, the
+client IP), recover it inside the subscriber with `events.RequestFromContext`
+— the authorizer/registrar/sign-out handler already stash the request onto
+the context before publishing, so this works with **no** extra wiring:
+
+```go
+authEvents.Subscribe(events.EventLoginSucceeded, func(ctx context.Context, envelope events.Envelope) error {
+	req, ok := events.RequestFromContext(ctx)
+	if !ok {
+		return nil
+	}
+	logAuditEvent(req.Header.Get("X-Forwarded-For"), envelope.Payload)
+	return nil
+})
+```
+
+If that same piece of request context needs to show up on **every** event
+type (not just the one you're subscribing to here), don't repeat this lookup
+in every subscriber — wrap the bus once with `events.WithMiddleware` instead
+(see [§3.3](#33-stand-up-an-event-bus-and-optionally-a-logger)) so it's
+attached to the `Envelope` before any subscriber runs.
 
 ### 3.9 Update the `routes.InitializeLocksmithRoutes` call
 
@@ -532,6 +602,10 @@ verification will always fail.
 - `map[string]interface{}` → `map[string]any` in the launchpad `Custom`
   fields — purely cosmetic (Go 1.18+ alias), no behavior change; update if
   you want to match upstream style, not required.
+- `events.WithMiddleware` — even if you had no `RequestLoginInfoCallback` to
+  migrate, this is worth adopting any time you want the same piece of data
+  (request ID, tenant ID, trace ID) attached to every event without writing
+  the same lookup in every `Subscribe` handler.
 
 ---
 
@@ -569,3 +643,9 @@ verification will always fail.
       as expected (§5.2).
 - [ ] Sign-out (`/sign-out`) still works and, if wired, publishes
       `events.EventSignOut`.
+- [ ] If you migrated a `RequestLoginInfoCallback` that used `*http.Request`
+      data, confirm the replacement subscriber (or `events.WithMiddleware`)
+      still produces that data on real requests — and that the **same**
+      wrapped bus instance was passed to the authorizer, registrar, and
+      `routes.LocksmithRoutesOptions.Bus` (a middleware wrapped around only
+      one of them silently only enriches that orchestrator's events).

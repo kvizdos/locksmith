@@ -258,7 +258,19 @@ func TestRegistrationHandlerPublishesFailedEventWithoutSucceededEvent(t *testing
 func TestRegistrationHandlerEventContextIncludesRequestMetadata(t *testing.T) {
 	t.Parallel()
 
-	bus := &recordingEventBus{}
+	// Custom request-derived fields are now attached via events.WithMiddleware
+	// on the bus itself (applies to every orchestrator, not just
+	// registration) instead of a registrar-specific option.
+	recorder := &recordingEventBus{}
+	bus := events.WithMiddleware(recorder, func(ctx context.Context, e events.Envelope) events.Envelope {
+		if req, ok := events.RequestFromContext(ctx); ok {
+			if e.Metadata == nil {
+				e.Metadata = map[string]string{}
+			}
+			e.Metadata["app_distinct_id"] = req.Header.Get("X-App-Distinct-ID")
+		}
+		return e
+	})
 	db := newRegistrationTestDB(nil)
 	req, err := http.NewRequest(http.MethodPost, "/api/register", strings.NewReader(`{"username":"kenton","password":"password123","email":"email@example.com"}`))
 	if err != nil {
@@ -274,9 +286,6 @@ func TestRegistrationHandlerEventContextIncludesRequestMetadata(t *testing.T) {
 	r := newTestRegistrar(db,
 		WithDefaultRoleName("admin"),
 		WithEventBus(bus),
-		WithRequestEventMetadata(func(r *http.Request) events.ContextMetadata {
-			return events.ContextMetadata{Values: map[string]string{"app_distinct_id": r.Header.Get("X-App-Distinct-ID")}}
-		}),
 	)
 
 	rr := httptest.NewRecorder()
@@ -285,7 +294,7 @@ func TestRegistrationHandlerEventContextIncludesRequestMetadata(t *testing.T) {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
 
-	published := bus.singlePublish(t, events.EventRegistrationSucceeded)
+	published := recorder.singlePublish(t, events.EventRegistrationSucceeded)
 	if published.event.RequestID != "req-123" {
 		t.Fatalf("RequestID = %q, want %q", published.event.RequestID, "req-123")
 	}
