@@ -229,6 +229,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				Path:     "/",
 				Expires:  time.Unix(0, 0),
 				HttpOnly: true,
+				SameSite: http.SameSiteLaxMode,
 			}
 			mc := &http.Cookie{
 				Name:     "magic",
@@ -236,6 +237,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				Path:     "/",
 				Expires:  time.Unix(0, 0),
 				HttpOnly: true,
+				SameSite: http.SameSiteLaxMode,
 			}
 			exp := &http.Cookie{
 				Name:     "ls_expires_at",
@@ -243,6 +245,7 @@ func SecureEndpointHTTPMiddleware(next http.Handler, db database.DatabaseAccesso
 				Path:     "/",
 				Expires:  time.Unix(0, 0),
 				HttpOnly: false,
+				SameSite: http.SameSiteLaxMode,
 			}
 
 			http.SetCookie(w, c)
