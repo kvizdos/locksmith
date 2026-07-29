@@ -2,6 +2,7 @@ package method_oidc
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"time"
 
@@ -40,9 +41,24 @@ func (r *oidcValidationSession) ResolveIdentity(ctx context.Context) error {
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
 		Name          string `json:"name"`
+		Nonce         string `json:"nonce"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return fmt.Errorf("failed to parse id_token claims: %w", err)
+	}
+
+	// The FedCM/One Tap "credential" flow is a bare bearer JWT with no PKCE
+	// equivalent, so it must be bound to the browser that requested it via
+	// the nonce cookie set alongside google_fcm.js (see
+	// oauth.GoogleFCMNonceCookie). Without this check, an attacker could
+	// obtain a valid credential for their own account and replay it against
+	// a victim's browser via a forged cross-site form POST, logging the
+	// victim into the attacker's account (login CSRF).
+	if r.flow == flowCredential {
+		if r.expectedNonce == "" || claims.Nonce == "" ||
+			subtle.ConstantTimeCompare([]byte(claims.Nonce), []byte(r.expectedNonce)) != 1 {
+			return fmt.Errorf("id_token nonce does not match expected sign-in session")
+		}
 	}
 
 	r.SetSubject(idToken.Subject)

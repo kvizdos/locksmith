@@ -30,11 +30,13 @@ func TestResolveIdentityCredentialFlowSetsVerifiedIdentity(t *testing.T) {
 		Verifier:     provider.verifier,
 	})
 	session.flow = flowCredential
+	session.expectedNonce = "expected-nonce"
 	session.untrustedCredentialToken = provider.idToken(t, testOIDCClaims{
 		Subject:       "subject-123",
 		Email:         "kenton@example.com",
 		EmailVerified: true,
 		Name:          "Kenton V",
+		Nonce:         "expected-nonce",
 	})
 
 	if err := session.ResolveIdentity(context.Background()); err != nil {
@@ -67,11 +69,13 @@ func TestResolveIdentityCredentialFlowDoesNotSetUnverifiedEmail(t *testing.T) {
 		Verifier:     provider.verifier,
 	})
 	session.flow = flowCredential
+	session.expectedNonce = "expected-nonce"
 	session.untrustedCredentialToken = provider.idToken(t, testOIDCClaims{
 		Subject:       "subject-123",
 		Email:         "unverified@example.com",
 		EmailVerified: false,
 		Name:          "Unverified User",
+		Nonce:         "expected-nonce",
 	})
 
 	if err := session.ResolveIdentity(context.Background()); err != nil {
@@ -165,6 +169,64 @@ func TestResolveIdentityReturnsVerificationError(t *testing.T) {
 	}
 }
 
+func TestResolveIdentityCredentialFlowRejectsNonceMismatch(t *testing.T) {
+	t.Parallel()
+
+	provider := newTestOIDCProvider(t)
+	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{
+		ProviderName: "google",
+		Verifier:     provider.verifier,
+	})
+	session.flow = flowCredential
+	session.expectedNonce = "expected-nonce"
+	session.untrustedCredentialToken = provider.idToken(t, testOIDCClaims{
+		Subject:       "subject-123",
+		Email:         "attacker@example.com",
+		EmailVerified: true,
+		Name:          "Attacker",
+		Nonce:         "attacker-controlled-nonce",
+	})
+
+	err := session.ResolveIdentity(context.Background())
+	if err == nil {
+		t.Fatal("expected error due to nonce mismatch")
+	}
+	if !strings.Contains(err.Error(), "nonce") {
+		t.Fatalf("expected nonce mismatch error, got %v", err)
+	}
+	if session.GetEmail() != "" {
+		t.Fatal("identity must not be set when the nonce check fails")
+	}
+}
+
+func TestResolveIdentityCredentialFlowRejectsMissingExpectedNonce(t *testing.T) {
+	t.Parallel()
+
+	provider := newTestOIDCProvider(t)
+	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{
+		ProviderName: "google",
+		Verifier:     provider.verifier,
+	})
+	session.flow = flowCredential
+	// expectedNonce intentionally left unset, simulating a code path that
+	// forgot to populate it from the nonce cookie in LoadRequest.
+	session.untrustedCredentialToken = provider.idToken(t, testOIDCClaims{
+		Subject:       "subject-123",
+		Email:         "kenton@example.com",
+		EmailVerified: true,
+		Name:          "Kenton V",
+		Nonce:         "some-nonce",
+	})
+
+	err := session.ResolveIdentity(context.Background())
+	if err == nil {
+		t.Fatal("expected error when expectedNonce is unset")
+	}
+	if !strings.Contains(err.Error(), "nonce") {
+		t.Fatalf("expected nonce mismatch error, got %v", err)
+	}
+}
+
 func TestResolveIdentityUnsupportedFlow(t *testing.T) {
 	t.Parallel()
 
@@ -195,6 +257,7 @@ type testOIDCClaims struct {
 	Email         string
 	EmailVerified bool
 	Name          string
+	Nonce         string
 }
 
 func newTestOIDCProvider(t *testing.T) *testOIDCProvider {
@@ -273,6 +336,7 @@ func (p *testOIDCProvider) idToken(t *testing.T, claims testOIDCClaims) string {
 		"email":          claims.Email,
 		"email_verified": claims.EmailVerified,
 		"name":           claims.Name,
+		"nonce":          claims.Nonce,
 	})
 	token.Header["kid"] = "test-key"
 

@@ -1,6 +1,15 @@
 (() => {
 	console.debug("[ls] google_fcm.js loaded");
 
+	// Injected by the server per-response (see authentication/oauth/google_fcm.go).
+	// Bound to the ls_oidc_fcm_nonce cookie set alongside this script. Google
+	// embeds this value verbatim in the "nonce" claim of the ID token it
+	// returns, and the server verifies that claim against the cookie before
+	// trusting the credential. This prevents a credential obtained on one
+	// browser from being replayed against a different victim's browser
+	// (login CSRF).
+	const SERVER_NONCE = "{{.Nonce}}";
+
 	const currentPage =
 		window.location.pathname + window.location.search + window.location.hash;
 
@@ -24,6 +33,7 @@
 	script.onload = () => {
 			google.accounts.id.initialize({
 				client_id: clientId,
+				nonce: SERVER_NONCE,
 				callback: async (response) => {
 					const form = document.createElement("form");
 					form.method = "POST";

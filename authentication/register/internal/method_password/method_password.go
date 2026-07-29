@@ -52,6 +52,10 @@ type passwordRegistrationRequestDTO struct {
 }
 
 func (prs *passwordRegistrationSession) LoadRequest(r *http.Request) error {
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		return fmt.Errorf("unsupported content type: %s", contentType)
+	}
 	var dto passwordRegistrationRequestDTO
 	decoder := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	decoder.DisallowUnknownFields()

@@ -77,6 +77,7 @@ func TestPassword_MissingBody(t *testing.T) {
 	a := newTestAuthorizer(db)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader("not-json"))
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	a.ServeLoginAPI(rr, req)
 

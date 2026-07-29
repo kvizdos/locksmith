@@ -22,6 +22,12 @@ func (pv *passwordValidatorSession) LoadRequest(r *http.Request) error {
 			authenticator_domain.ErrMethodNotSupported,
 		)
 	}
+
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		return fmt.Errorf("unsupported content type: %s", contentType)
+	}
+
 	var loginRequest loginRequestHTTP
 
 	dec := json.NewDecoder(r.Body)

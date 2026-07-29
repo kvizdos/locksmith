@@ -30,6 +30,7 @@ type oidcValidationSession struct {
 	untrustedParsedCode      string
 	pkceVerifier             string
 	untrustedCredentialToken string
+	expectedNonce            string
 	selectBy                 string
 	redirectTarget           string
 

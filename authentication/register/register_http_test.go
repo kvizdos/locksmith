@@ -139,6 +139,7 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -162,6 +163,7 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr = httptest.NewRecorder()
 
@@ -198,6 +200,7 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -236,6 +239,7 @@ func TestRegistrationHandlerEmailTaken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -274,6 +278,7 @@ func TestRegistrationHandlerEmailInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -312,6 +317,7 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -373,6 +379,7 @@ func TestRegistrationHandlerDoesNotMeetLengthRequirement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -413,6 +420,7 @@ func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -432,6 +440,7 @@ func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr = httptest.NewRecorder()
 
@@ -500,6 +509,7 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -550,6 +560,7 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -590,6 +601,7 @@ func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -639,6 +651,7 @@ func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -688,6 +701,7 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -741,6 +755,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
 
@@ -824,6 +839,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		req.Header.Set("Content-Type", "application/json")
 
 		rr := httptest.NewRecorder()
 

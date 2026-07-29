@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_domain"
+	"github.com/kvizdos/locksmith/authentication/oauth"
 )
 
 func (pv *oidcValidationSession) LoadRequest(r *http.Request) error {
@@ -28,6 +29,10 @@ func (pv *oidcValidationSession) LoadRequest(r *http.Request) error {
 		pv.redirectTarget = sanitizeRedirectPath(r.URL.Query().Get("state"))
 		return nil
 	case flowCredential:
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "application/x-www-form-urlencoded" {
+			return fmt.Errorf("unsupported content type: %s", contentType)
+		}
 		// Google Identity Services' HTML API (data-login_uri) delivers the
 		// credential via a native browser form POST, encoded as
 		// application/x-www-form-urlencoded — not JSON. It carries a
@@ -47,6 +52,18 @@ func (pv *oidcValidationSession) LoadRequest(r *http.Request) error {
 		if credential == "" {
 			return errors.New("missing credential in request body")
 		}
+
+		// The nonce cookie is set alongside google_fcm.js and is baked into
+		// the ID token's "nonce" claim by Google. Requiring and verifying it
+		// (in ResolveIdentity) prevents a credential obtained by an attacker
+		// for their own account from being replayed against a victim's
+		// browser via a forged cross-site form POST.
+		nonceCookie, err := r.Cookie(oauth.GoogleFCMNonceCookie)
+		if err != nil || nonceCookie.Value == "" {
+			return errors.New("missing or expired sign-in nonce cookie")
+		}
+		pv.expectedNonce = nonceCookie.Value
+
 		pv.untrustedCredentialToken = credential
 		pv.selectBy = r.PostFormValue("select_by")
 		if pv.selectBy == "" {

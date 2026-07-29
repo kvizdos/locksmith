@@ -122,6 +122,8 @@ func performRegistrationRequest(t *testing.T, r *registrar, payload string) *htt
 		t.Fatal(err)
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 	r.ServeRegisterAPI(rr, req)
 	return rr
@@ -263,6 +265,7 @@ func TestRegistrationHandlerEventContextIncludesRequestMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.RemoteAddr = "203.0.113.5:12345"
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Request-Id", "req-123")
 	req.Header.Set("Traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00")
 	req.Header.Set("X-App-Distinct-ID", "distinct-123")

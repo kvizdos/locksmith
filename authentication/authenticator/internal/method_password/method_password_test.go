@@ -101,6 +101,7 @@ func TestLoadRequestMalformedJSON(t *testing.T) {
 
 	body := `{"username":"kenton",` // malformed
 	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 
 	err := session.LoadRequest(req)
 	if !errors.Is(err, authenticator_domain.ErrFailedToParse) {

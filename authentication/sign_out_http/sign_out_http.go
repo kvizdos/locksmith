@@ -16,6 +16,15 @@ type SignOutHTTP struct {
 func (m SignOutHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Clear-Site-Data", `"cookies", "storage"`)
 
+	c := &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
 	if m.EventBus != nil {
 		if authUser, ok := r.Context().Value("authUser").(users.LocksmithUserInterface); ok {
 			envelope := events.EnrichEnvelope(r.Context(), events.Envelope{
@@ -30,6 +39,8 @@ func (m SignOutHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			m.EventBus.Publish(r.Context(), envelope)
 		}
 	}
+
+	http.SetCookie(w, c)
 
 	http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 }

@@ -69,7 +69,7 @@ func (c *cookieManager) PassToClient(w http.ResponseWriter, r *http.Request, tok
 		ExpiresAt: token.ExpiresAt.Unix(),
 	})
 
-	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(token.ExpiresAt.Unix(), 0), HttpOnly: true, Secure: true, Path: "/"}
+	cookie := http.Cookie{Name: "token", Value: cookieValue, Expires: time.Unix(token.ExpiresAt.Unix(), 0), HttpOnly: true, Secure: true, Path: "/", SameSite: http.SameSiteLaxMode}
 
 	http.SetCookie(w, &cookie)
 

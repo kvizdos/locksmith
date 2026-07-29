@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kvizdos/locksmith/authentication/authenticator/authenticator_methods"
+	"github.com/kvizdos/locksmith/authentication/oauth"
 	"github.com/kvizdos/locksmith/database"
 )
 
@@ -216,6 +217,11 @@ func TestLoadRequestFlowCodeIgnoresUnsafeState(t *testing.T) {
 func newCredentialFormRequest(form url.Values) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// The credential flow requires the nonce cookie set alongside
+	// google_fcm.js to be present; tests that want to exercise the
+	// missing-cookie case should build the request directly instead of
+	// using this helper.
+	req.AddCookie(&http.Cookie{Name: oauth.GoogleFCMNonceCookie, Value: "expected-nonce-value"})
 	return req
 }
 
@@ -250,6 +256,24 @@ func TestLoadRequestFlowCredentialSuccess(t *testing.T) {
 	}
 	if session.flow != flowCredential {
 		t.Fatalf("expected flow flowCredential, got %v", session.flow)
+	}
+	if session.expectedNonce != "expected-nonce-value" {
+		t.Fatalf("expected expectedNonce 'expected-nonce-value', got %q", session.expectedNonce)
+	}
+}
+
+func TestLoadRequestFlowCredentialMissingNonceCookie(t *testing.T) {
+	t.Parallel()
+
+	session := newOIDCValidationSession(database.TestDatabase{}, authenticator_methods.OIDCValidatorOptions{ProviderName: "google"})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(url.Values{
+		"credential": {"some-jwt-token"},
+	}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if err := session.LoadRequest(req); err == nil {
+		t.Fatal("expected error due to missing sign-in nonce cookie")
 	}
 }
 

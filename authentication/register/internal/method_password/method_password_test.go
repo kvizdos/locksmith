@@ -12,7 +12,7 @@ func TestPasswordRegistrationSessionLoadRequest(t *testing.T) {
 	handler := NewPasswordRegistration()
 	session := handler.Session(nil)
 	req := httptest.NewRequest("POST", "/register", strings.NewReader(`{"username":"alice","password":"correct horse","email":"alice@example.com","code":"invite","validationok":true}`))
-
+	req.Header.Set("Content-Type", "application/json")
 	if err := session.LoadRequest(req); err != nil {
 		t.Fatalf("load request: %v", err)
 	}
