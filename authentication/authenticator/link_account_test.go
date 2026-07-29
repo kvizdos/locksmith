@@ -8,7 +8,7 @@ import (
 
 func TestLinkAccount_InsertsIntoAuthLinks(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"auth_links": {},
 	})
 	a := newTestAuthorizer(db)
@@ -25,9 +25,9 @@ func TestLinkAccount_InsertsIntoAuthLinks(t *testing.T) {
 	}
 
 	// Find the inserted link (there's only one).
-	var inserted map[string]interface{}
+	var inserted map[string]any
 	for _, v := range links {
-		inserted = v.(map[string]interface{})
+		inserted = v.(map[string]any)
 	}
 
 	if inserted["provider"] != "google" {
@@ -73,16 +73,16 @@ func TestLinkAccount_MissingTableStillSucceeds(t *testing.T) {
 
 func TestLinkAccount_ExpectedKeys(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"auth_links": {},
 	})
 	a := newTestAuthorizer(db)
 
 	_ = a.LinkAccount(context.Background(), "u1", "provider", "https://issuer", "subj")
 
-	var inserted map[string]interface{}
+	var inserted map[string]any
 	for _, v := range db.Tables["auth_links"] {
-		inserted = v.(map[string]interface{})
+		inserted = v.(map[string]any)
 	}
 
 	requiredKeys := []string{"provider", "subject", "user_id", "issuer", "linked_at"}

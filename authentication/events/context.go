@@ -1,5 +1,7 @@
 package events
 
+import "maps"
+
 import "context"
 
 type contextKey struct{}
@@ -37,9 +39,7 @@ func EnrichEnvelope(ctx context.Context, event Envelope) Envelope {
 		event.Metadata = cloneValues(metadata.Values)
 	} else {
 		merged := cloneValues(metadata.Values)
-		for key, value := range event.Metadata {
-			merged[key] = value
-		}
+		maps.Copy(merged, event.Metadata)
 		event.Metadata = merged
 	}
 	return event
@@ -50,8 +50,6 @@ func cloneValues(values map[string]string) map[string]string {
 		return nil
 	}
 	cloned := make(map[string]string, len(values))
-	for key, value := range values {
-		cloned[key] = value
-	}
+	maps.Copy(cloned, values)
 	return cloned
 }

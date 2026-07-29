@@ -10,22 +10,22 @@ import (
 
 type RamSharedMemoryProvider struct {
 	// map[Allocation]map[keyName]value
-	internalMemory map[objects.MemoryAllocation]map[string]map[string]interface{}
+	internalMemory map[objects.MemoryAllocation]map[string]map[string]any
 	mutex          sync.RWMutex
 }
 
 func NewRamSharedMemoryProvider() *RamSharedMemoryProvider {
 	return &RamSharedMemoryProvider{
-		internalMemory: make(map[objects.MemoryAllocation]map[string]map[string]interface{}),
+		internalMemory: make(map[objects.MemoryAllocation]map[string]map[string]any),
 	}
 }
 
-func (mem *RamSharedMemoryProvider) GetFromMemory(allocation objects.MemoryAllocation, key string) (interface{}, bool) {
+func (mem *RamSharedMemoryProvider) GetFromMemory(allocation objects.MemoryAllocation, key string) (any, bool) {
 	mem.mutex.RLock()
 	defer mem.mutex.RUnlock()
 
 	if mem.internalMemory[allocation] == nil {
-		mem.internalMemory[allocation] = make(map[string]map[string]interface{})
+		mem.internalMemory[allocation] = make(map[string]map[string]any)
 	}
 
 	v, ok := mem.internalMemory[allocation][key]
@@ -47,7 +47,7 @@ func (mem *RamSharedMemoryProvider) SetMemory(allocation objects.MemoryAllocatio
 	defer mem.mutex.Unlock()
 
 	if mem.internalMemory[allocation] == nil {
-		mem.internalMemory[allocation] = make(map[string]map[string]interface{})
+		mem.internalMemory[allocation] = make(map[string]map[string]any)
 	}
 
 	mem.internalMemory[allocation][key] = value.ToMap()
@@ -60,8 +60,8 @@ func (mem *RamSharedMemoryProvider) DeleteMemory(allocation objects.MemoryAlloca
 	return nil
 }
 
-func (mem *RamSharedMemoryProvider) Increment(allocation objects.MemoryAllocation, key string, alreadyPulled ...interface{}) error {
-	var obj interface{}
+func (mem *RamSharedMemoryProvider) Increment(allocation objects.MemoryAllocation, key string, alreadyPulled ...any) error {
+	var obj any
 	found := true
 
 	if len(alreadyPulled) > 0 {

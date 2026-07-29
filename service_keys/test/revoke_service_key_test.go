@@ -13,7 +13,7 @@ func TestRevokeServiceKey_Success(t *testing.T) {
 	now := time.Now().UTC()
 
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"demo-key": service_keys.ServiceKey{
 					ID:        primitive.NewObjectID(),
@@ -50,7 +50,7 @@ func TestRevokeServiceKey_AlreadyRevoked(t *testing.T) {
 	revoked := now.Add(-1 * time.Hour)
 
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"revoked-key": service_keys.ServiceKey{
 					ID:        primitive.NewObjectID(),
@@ -73,7 +73,7 @@ func TestRevokeServiceKey_AlreadyRevoked(t *testing.T) {
 
 func TestRevokeServiceKey_ClientNotFound(t *testing.T) {
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}

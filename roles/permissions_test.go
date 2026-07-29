@@ -1,6 +1,7 @@
 package roles
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -53,13 +54,7 @@ func TestCreatePermissionSet_Basic(t *testing.T) {
 
 	expected := []string{"users.read", "users.create", "billing.export"}
 	for _, exp := range expected {
-		found := false
-		for _, p := range adminPerms {
-			if p == exp {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(adminPerms, exp)
 		if !found {
 			t.Errorf("expected permission %s in admin role", exp)
 		}

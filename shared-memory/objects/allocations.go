@@ -7,7 +7,7 @@ const (
 )
 
 type MappableInterface interface {
-	ToMap() map[string]interface{}
+	ToMap() map[string]any
 }
 
 type IncrementableInterface interface {

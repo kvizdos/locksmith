@@ -52,7 +52,7 @@ func TestPasswordValidatorSessionReturnsSession(t *testing.T) {
 	t.Parallel()
 
 	pv := NewPasswordValidator().(passwordValidator)
-	db := database.TestDatabase{Tables: map[string]map[string]interface{}{}}
+	db := database.TestDatabase{Tables: map[string]map[string]any{}}
 
 	session := pv.Session(db)
 	if session == nil {

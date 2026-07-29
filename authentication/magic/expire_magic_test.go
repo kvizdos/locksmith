@@ -23,9 +23,9 @@ func TestExpireOldAutomatically(t *testing.T) {
 		TTL:                time.Hour,
 	})
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id": userID,
 					"magic": MagicAuthentications{
 						mac1,
@@ -38,13 +38,13 @@ func TestExpireOldAutomatically(t *testing.T) {
 
 	ExpireOld(testDb, userID)
 
-	rawUser, _ := testDb.FindOne("users", map[string]interface{}{
+	rawUser, _ := testDb.FindOne("users", map[string]any{
 		"id": userID,
 	})
 
-	user := rawUser.(map[string]interface{})
+	user := rawUser.(map[string]any)
 
-	magics := MagicsFromMap(user["magic"].([]interface{}))
+	magics := MagicsFromMap(user["magic"].([]any))
 	if len(magics) != 1 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))
 		return
@@ -75,9 +75,9 @@ func TestExpireOldWithManual(t *testing.T) {
 		TTL:                time.Hour,
 	})
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id": userID,
 					"magic": MagicAuthentications{
 						mac1,
@@ -90,12 +90,12 @@ func TestExpireOldWithManual(t *testing.T) {
 
 	ExpireOld(testDb, userID, manualID)
 
-	rawUser, _ := testDb.FindOne("users", map[string]interface{}{
+	rawUser, _ := testDb.FindOne("users", map[string]any{
 		"id": userID,
 	})
-	user := rawUser.(map[string]interface{})
+	user := rawUser.(map[string]any)
 
-	magics := MagicsFromMap(user["magic"].([]interface{}))
+	magics := MagicsFromMap(user["magic"].([]any))
 
 	if len(magics) != 0 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))

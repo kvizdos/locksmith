@@ -32,13 +32,13 @@ func TestSecureEndpointHTTPMiddlewareValidationFailsWithBadMagicToken(t *testing
 		TTL: time.Hour,
 	})
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 					"magic": magic.MagicAuthentications{
 						mac,
@@ -89,13 +89,13 @@ func TestSecureEndpointHTTPMiddlewareValidationFailsWithInvalidatedMagicToken(t 
 		TTL: time.Hour,
 	})
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 					"magic":    magic.MagicAuthentications{}.ToMap(),
 				},
@@ -142,13 +142,13 @@ func TestSecureEndpointHTTPMiddlewareValidationFailsWithValidMagicTokenButNoMatc
 		TTL: time.Hour,
 	})
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 					"magic":    magic.MagicAuthentications{}.ToMap(),
 				},
@@ -195,13 +195,13 @@ func TestSecureEndpointHTTPMiddlewareValidationSucceedsWithMagicToken(t *testing
 		TTL: time.Hour,
 	})
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 					"magic": magic.MagicAuthentications{
 						mac,

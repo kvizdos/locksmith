@@ -23,13 +23,13 @@ type Invitation struct {
 }
 
 func (i Invitation) Expire(db database.DatabaseAccessor) {
-	db.DeleteOne("invites", map[string]interface{}{
+	db.DeleteOne("invites", map[string]any{
 		"code": i.Code,
 	})
 }
 
-func (i Invitation) ToMap() map[string]interface{} {
-	return map[string]interface{}{
+func (i Invitation) ToMap() map[string]any {
+	return map[string]any{
 		"code":    i.Code,
 		"email":   i.Email,
 		"sentAt":  i.SentAt,
@@ -40,7 +40,7 @@ func (i Invitation) ToMap() map[string]interface{} {
 }
 
 func InvitationFromMap(inp any) Invitation {
-	input := inp.(map[string]interface{})
+	input := inp.(map[string]any)
 
 	return Invitation{
 		Code:         input["code"].(string),
@@ -53,7 +53,7 @@ func InvitationFromMap(inp any) Invitation {
 }
 
 func ListInvites(db database.DatabaseAccessor) []Invitation {
-	rawInvite, found := db.Find("invites", map[string]interface{}{})
+	rawInvite, found := db.Find("invites", map[string]any{})
 
 	if !found {
 		return []Invitation{}
@@ -93,7 +93,7 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 		return "", "", fmt.Errorf("invalid email address")
 	}
 
-	_, alreadyRegistered := db.FindOne("users", map[string]interface{}{
+	_, alreadyRegistered := db.FindOne("users", map[string]any{
 		"email": email,
 	})
 
@@ -101,7 +101,7 @@ func InviteUser(db database.DatabaseAccessor, email string, role string, invited
 		return "", "", fmt.Errorf("email already registered")
 	}
 
-	_, alreadyInvited := db.FindOne("invites", map[string]interface{}{
+	_, alreadyInvited := db.FindOne("invites", map[string]any{
 		"email": email,
 	})
 
@@ -152,7 +152,7 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 	// already by a registered user
 	// or invite.
 	if len(newEmail) > 0 {
-		_, alreadyRegistered := db.FindOne("users", map[string]interface{}{
+		_, alreadyRegistered := db.FindOne("users", map[string]any{
 			"email": newEmail[0],
 		})
 
@@ -160,7 +160,7 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 			return "", fmt.Errorf("email already registered")
 		}
 
-		_, alreadyInvited := db.FindOne("invites", map[string]interface{}{
+		_, alreadyInvited := db.FindOne("invites", map[string]any{
 			"email": newEmail[0],
 		})
 
@@ -169,7 +169,7 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 		}
 	}
 
-	_, inviteFound := db.FindOne("invites", map[string]interface{}{
+	_, inviteFound := db.FindOne("invites", map[string]any{
 		"userid": forUserID,
 	})
 
@@ -187,7 +187,7 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 		return "", fmt.Errorf("error generating secure invite code: %s", err.Error())
 	}
 
-	updateBody := map[string]interface{}{
+	updateBody := map[string]any{
 		"code":    fmt.Sprintf("%x", hashedCode),
 		"sentAt":  time.Now().UTC().Unix(),
 		"inviter": authUserID,
@@ -197,9 +197,9 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 		updateBody["email"] = newEmail[0]
 	}
 
-	_, err = db.UpdateOne("invites", map[string]interface{}{
+	_, err = db.UpdateOne("invites", map[string]any{
 		"userid": forUserID,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: updateBody,
 	})
 
@@ -217,7 +217,7 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 // Note: this performs an exact-match query, so callers should normalize
 // casing themselves (e.g. lowercase) to match how invites are stored.
 func GetActiveInviteByEmail(db database.DatabaseAccessor, email string) (Invitation, bool, error) {
-	rawInvite, found := db.FindOne("invites", map[string]interface{}{
+	rawInvite, found := db.FindOne("invites", map[string]any{
 		"email": email,
 	})
 
@@ -225,7 +225,7 @@ func GetActiveInviteByEmail(db database.DatabaseAccessor, email string) (Invitat
 		return Invitation{}, false, nil
 	}
 
-	inv := rawInvite.(map[string]interface{})
+	inv := rawInvite.(map[string]any)
 
 	invite := Invitation{
 		Code:         inv["code"].(string),
@@ -243,7 +243,7 @@ func GetActiveInviteByEmail(db database.DatabaseAccessor, email string) (Invitat
 // mirrors Invitation.Expire but doesn't require the caller to already hold
 // the invite's hashed code.
 func ExpireByEmail(db database.DatabaseAccessor, email string) {
-	db.DeleteOne("invites", map[string]interface{}{
+	db.DeleteOne("invites", map[string]any{
 		"email": email,
 	})
 }
@@ -268,9 +268,9 @@ func ClaimActiveInviteOnVerifiedEmail(db database.DatabaseAccessor, userID strin
 		return nil
 	}
 
-	_, err = db.UpdateOne("users", map[string]interface{}{
+	_, err = db.UpdateOne("users", map[string]any{
 		"id": userID,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: {
 			"role": invite.Role,
 		},
@@ -292,7 +292,7 @@ func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, e
 	hasher.Write([]byte(code))
 	hashedCode := hasher.Sum(nil)
 
-	rawInvite, inviteFound := db.FindOne("invites", map[string]interface{}{
+	rawInvite, inviteFound := db.FindOne("invites", map[string]any{
 		"code": fmt.Sprintf("%x", hashedCode),
 	})
 
@@ -300,7 +300,7 @@ func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, e
 		return Invitation{}, fmt.Errorf("could not find token")
 	}
 
-	inv := rawInvite.(map[string]interface{})
+	inv := rawInvite.(map[string]any)
 
 	invite := Invitation{
 		Code:         inv["code"].(string),

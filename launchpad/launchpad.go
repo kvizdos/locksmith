@@ -1,5 +1,4 @@
 //go:build enable_launchpad
-// +build enable_launchpad
 
 package launchpad
 

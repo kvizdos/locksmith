@@ -410,7 +410,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 
 		_, err = a.db.UpdateOne("users", map[string]any{
 			"id": user.GetID(),
-		}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		}, map[database.DatabaseUpdateActions]map[string]any{
 			database.SET: {
 				"emailVerified":           true,
 				"emailVerificationMethod": fmt.Sprintf("login-hint-%s", handler.Name()),

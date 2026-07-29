@@ -19,7 +19,7 @@ func TestCreateServiceKey_Success(t *testing.T) {
 	}
 
 	testDb := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}
@@ -52,9 +52,9 @@ func TestCreateServiceKey_DuplicateName(t *testing.T) {
 	}
 
 	testDb := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
-				"1": map[string]interface{}{"name": "Demo Key"},
+				"1": map[string]any{"name": "Demo Key"},
 			},
 		},
 	}
@@ -73,7 +73,7 @@ func TestCreateServiceKey_InvalidScope(t *testing.T) {
 	roles.AVAILABLE_PERMISSIONS = map[string]roles.Permission{}
 
 	testDb := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}
@@ -99,7 +99,7 @@ func TestCreateServiceKey_DuplicateScopes(t *testing.T) {
 	}
 
 	testDb := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}

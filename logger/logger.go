@@ -74,7 +74,7 @@ type Logger struct {
 	AlsoPrint bool
 }
 
-func (l *Logger) Log(useFormat LogFormats, params ...interface{}) {
+func (l *Logger) Log(useFormat LogFormats, params ...any) {
 	selectedLog := Logs[useFormat]
 	if len(params) != len(selectedLog.RegexOrder) {
 		panic(fmt.Sprintf("too incorrect number of arguments passed to %+v - %+v\n", useFormat, params))

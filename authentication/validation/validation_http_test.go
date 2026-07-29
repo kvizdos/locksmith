@@ -27,9 +27,9 @@ func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 	hashedCode := hasher.Sum(nil)
 	hashedToken := fmt.Sprintf("%x", hashedCode)
 
-	db.UpdateOne("users", map[string]interface{}{
+	db.UpdateOne("users", map[string]any{
 		"username": "kenton",
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"sessions": authentication.PasswordSession{
 				Token:     hashedToken,
@@ -43,7 +43,7 @@ func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 
 func TestValidateHTTPNoCookiePresent(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -63,7 +63,7 @@ func TestValidateHTTPNoCookiePresent(t *testing.T) {
 
 func TestValidationHTTPMalformedTokenNotBase64Encoded(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -98,7 +98,7 @@ func TestValidationHTTPMalformedTokenNotBase64Encoded(t *testing.T) {
 
 func TestValidationHTTPalformedTokenBase64EncodedInvalidTokenLength(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -130,7 +130,7 @@ func TestValidationHTTPalformedTokenBase64EncodedInvalidTokenLength(t *testing.T
 
 func TestValidationMiddlewareInvalidTokenUserDoesNotExist(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -141,7 +141,7 @@ func TestValidationMiddlewareInvalidTokenUserDoesNotExist(t *testing.T) {
 	}
 
 	randomness, _ := authentication.GenerateRandomString(64)
-	tok := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:user", randomness)))
+	tok := base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:user", randomness))
 
 	// Inject Token..
 	token := http.Cookie{
@@ -163,7 +163,7 @@ func TestValidationMiddlewareInvalidTokenUserDoesNotExist(t *testing.T) {
 
 func TestValidationMiddlewareInvalidTokenBadUsername(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -203,13 +203,13 @@ func TestValidationMiddlewareInvalidTokenBadUsername(t *testing.T) {
 
 func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -257,13 +257,13 @@ func TestValidationMiddlewareInvalidTokenBadToken(t *testing.T) {
 
 func TestValidationMiddlewareValidToken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -323,7 +323,7 @@ type customUser struct {
 	customObject string
 }
 
-func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]any) {
 	// Load initial locksmith data
 	var user users.LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
@@ -340,13 +340,13 @@ func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[str
 
 func TestValidationMiddlewareValidTokenCustomUser(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":           "c8531661-22a7-493f-b228-028842e09a05",
 					"username":     "kenton",
 					"email":        "email@email.com",
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "user",
 					"customObject": "hello",
 				},
@@ -403,13 +403,13 @@ func TestValidationMiddlewareValidTokenCustomUser(t *testing.T) {
 
 func TestValidationMiddlewareExpiredToken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -417,9 +417,9 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 	}
 
 	tokenString, _ := authentication.GenerateRandomString(64)
-	testDb.UpdateOne("users", map[string]interface{}{
+	testDb.UpdateOne("users", map[string]any{
 		"username": "kenton",
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"sessions": authentication.PasswordSession{
 				Token:     tokenString,
@@ -463,12 +463,12 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 	}
 
 	// Validate that expired token was removed from database
-	dbUser, _ := testDb.FindOne("users", map[string]interface{}{
+	dbUser, _ := testDb.FindOne("users", map[string]any{
 		"username": "kenton",
 	})
 
 	var tmpUser users.LocksmithUserInterface
-	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
+	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]any))
 	user := tmpUser.(users.LocksmithUser)
 
 	if len(user.PasswordSessions) != 0 {
@@ -478,13 +478,13 @@ func TestValidationMiddlewareExpiredToken(t *testing.T) {
 
 func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -528,12 +528,12 @@ func TestValidationMiddlewareRemovesExpiredTokenAndPreservesValid(t *testing.T) 
 	}
 
 	// Validate that expired token was removed from database
-	dbUser, _ := testDb.FindOne("users", map[string]interface{}{
+	dbUser, _ := testDb.FindOne("users", map[string]any{
 		"username": "kenton",
 	})
 
 	var tmpUser users.LocksmithUserInterface
-	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]interface{}))
+	users.LocksmithUser{}.ReadFromMap(&tmpUser, dbUser.(map[string]any))
 	user := tmpUser.(users.LocksmithUser)
 
 	if len(user.PasswordSessions) != 1 {

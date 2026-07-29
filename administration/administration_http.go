@@ -92,7 +92,7 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 	}
 
 	if r.Method == http.MethodGet {
-		rawUser, found := db.FindOne("users", map[string]interface{}{
+		rawUser, found := db.FindOne("users", map[string]any{
 			"id": requestingUserID,
 		})
 
@@ -102,7 +102,7 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 		}
 
 		var tmpUser users.LocksmithUserInterface
-		users.LocksmithUser{}.ReadFromMap(&tmpUser, rawUser.(map[string]interface{}))
+		users.LocksmithUser{}.ReadFromMap(&tmpUser, rawUser.(map[string]any))
 		user := tmpUser.(users.LocksmithUser)
 
 		type LastLoginInfo struct {
@@ -155,12 +155,12 @@ func (h AdministrationLockStatusAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 			setLoginTimeTo = time.Date(1970, 1, 1, 1, 1, 1, 0, time.UTC)
 		}
 
-		_, err := db.UpdateOne("users", map[string]interface{}{
+		_, err := db.UpdateOne("users", map[string]any{
 			"id": requestingUserID,
-		}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		}, map[database.DatabaseUpdateActions]map[string]any{
 			database.SET: {
 				"last_login": setLoginTimeTo.Unix(),
-				"sessions":   []interface{}{},
+				"sessions":   []any{},
 			},
 		})
 

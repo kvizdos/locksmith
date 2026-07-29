@@ -181,12 +181,12 @@ func TestRegistrationHandlerMissingBodyParams(t *testing.T) {
 
 func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -219,13 +219,13 @@ func TestRegistrationHandlerUsernameTaken(t *testing.T) {
 
 func TestRegistrationHandlerEmailTaken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -258,13 +258,13 @@ func TestRegistrationHandlerEmailTaken(t *testing.T) {
 
 func TestRegistrationHandlerEmailInvalid(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -297,13 +297,13 @@ func TestRegistrationHandlerEmailInvalid(t *testing.T) {
 
 func TestRegistrationHandlerSuccess(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -328,7 +328,7 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 		return
 	}
 
-	newUser, found := testDb.FindOne("users", map[string]interface{}{
+	newUser, found := testDb.FindOne("users", map[string]any{
 		"username": "kenton",
 	})
 
@@ -337,7 +337,7 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 		return
 	}
 
-	user := newUser.(map[string]interface{})
+	user := newUser.(map[string]any)
 
 	var lsu users.LocksmithUserInterface
 	lsu = users.LocksmithUser{}
@@ -359,13 +359,13 @@ func TestRegistrationHandlerSuccess(t *testing.T) {
 
 func TestRegistrationHandlerDoesNotMeetLengthRequirement(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -400,13 +400,13 @@ func TestRegistrationHandlerDoesNotMeetLengthRequirement(t *testing.T) {
 
 func TestRegistrationHandlerDoesMeetLengthRequirementSuccess(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -458,7 +458,7 @@ type customUser struct {
 	CustomObject string `json:"customObject"`
 }
 
-func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]any) {
 	// Load initial locksmith data
 	var user users.LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
@@ -473,7 +473,7 @@ func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[str
 	*writeTo = converted
 }
 
-func (c customUser) ToMap() map[string]interface{} {
+func (c customUser) ToMap() map[string]any {
 	lsu := c.LocksmithUser.ToMap()
 
 	lsu["customObject"] = c.CustomObject
@@ -483,13 +483,13 @@ func (c customUser) ToMap() map[string]interface{} {
 
 func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -520,7 +520,7 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 		return
 	}
 
-	newUser, found := testDb.FindOne("users", map[string]interface{}{
+	newUser, found := testDb.FindOne("users", map[string]any{
 		"username": "kenton",
 	})
 
@@ -529,7 +529,7 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 		return
 	}
 
-	user := newUser.(map[string]interface{})
+	user := newUser.(map[string]any)
 
 	var lsu users.LocksmithUserInterface
 	lsu = customUser{}
@@ -547,7 +547,7 @@ func TestRegistrationHandlerSuccessCustomUser(t *testing.T) {
 // Tests to see if the username does not match [A-z0-9]
 func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -581,13 +581,13 @@ func TestRegistrationHandlerInvalidUsername(t *testing.T) {
 // Test invite code stuff..
 func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -621,9 +621,9 @@ func TestRegistrationHandlerInvalidInviteCode(t *testing.T) {
 
 func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"code":    "09c47c463871acf1da8c5c6dbcc73723d35d1aa262f7cfb29bad901d9640cd03",
 					"email":   "bob@bob.com",
 					"role":    "user",
@@ -633,11 +633,11 @@ func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
 				},
 			},
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -671,9 +671,9 @@ func TestRegistrationHandlerInviteCodeNotFound(t *testing.T) {
 
 func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"code":    "09c47c463871acf1da8c5c6dbcc73723d35d1aa262f7cfb29bad901d9640cd03",
 					"email":   "bob@bob.com",
 					"role":    "user",
@@ -683,11 +683,11 @@ func TestRegistrationHandlerIncorrectEmail(t *testing.T) {
 				},
 			},
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -725,9 +725,9 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"code":    fmt.Sprintf("%x", hashedCode),
 					"email":   "bob@bob.com",
 					"role":    "admin",
@@ -737,11 +737,11 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 				},
 			},
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton2",
 					"email":    "email@email.com2",
-					"sessions": []interface{}{"abc"},
+					"sessions": []any{"abc"},
 				},
 			},
 		},
@@ -766,7 +766,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 		return
 	}
 
-	_, correct := testDb.FindOne("users", map[string]interface{}{
+	_, correct := testDb.FindOne("users", map[string]any{
 		"username": "kenton",
 		"role":     "admin",
 	})
@@ -775,7 +775,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 		t.Errorf("could not find user in database.")
 	}
 
-	_, shouldBeFalse := testDb.FindOne("invites", map[string]interface{}{
+	_, shouldBeFalse := testDb.FindOne("invites", map[string]any{
 		"code": fmt.Sprintf("%x", hashedCode),
 	})
 
@@ -787,7 +787,7 @@ func TestRegistrationHandlerWithInviteSuccess(t *testing.T) {
 // Test Email-Only Support
 func TestRegistrationWithEmail(t *testing.T) {
 	testCases := []struct {
-		DbSeed           map[string]interface{}
+		DbSeed           map[string]any
 		Username         string
 		Password         string
 		ExpectStatusCode int
@@ -795,7 +795,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 	}{
 		{
 			// Should pass with valid email that doesn't exist
-			DbSeed:           map[string]interface{}{},
+			DbSeed:           map[string]any{},
 			Username:         "kvizdos@gmail.com",
 			Password:         "password123",
 			ExpectStatusCode: 200,
@@ -803,7 +803,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 		},
 		{
 			// Should fail with a non-email passed as username
-			DbSeed:           map[string]interface{}{},
+			DbSeed:           map[string]any{},
 			Username:         "kvizdos",
 			Password:         "password123",
 			ExpectStatusCode: 400,
@@ -811,8 +811,8 @@ func TestRegistrationWithEmail(t *testing.T) {
 		},
 		{
 			// Test with a email that already exists
-			DbSeed: map[string]interface{}{
-				"rand-id": map[string]interface{}{
+			DbSeed: map[string]any{
+				"rand-id": map[string]any{
 					"username": "kvizdos@gmail.com",
 					"email":    "kvizdos@gmail.com",
 				},
@@ -826,7 +826,7 @@ func TestRegistrationWithEmail(t *testing.T) {
 
 	for _, test := range testCases {
 		testDb := database.TestDatabase{
-			Tables: map[string]map[string]interface{}{
+			Tables: map[string]map[string]any{
 				"users": test.DbSeed,
 			},
 		}

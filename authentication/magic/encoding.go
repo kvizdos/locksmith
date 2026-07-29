@@ -4,7 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func MagicFromMap(input map[string]interface{}) MagicAuthentication {
+func MagicFromMap(input map[string]any) MagicAuthentication {
 	var permissions []string
 	switch input["permissions"].(type) {
 	case primitive.A:
@@ -13,8 +13,8 @@ func MagicFromMap(input map[string]interface{}) MagicAuthentication {
 		}
 	case []string:
 		permissions = input["permissions"].([]string)
-	case []interface{}:
-		for _, item := range input["permissions"].([]interface{}) {
+	case []any:
+		for _, item := range input["permissions"].([]any) {
 			permissions = append(permissions, item.(string))
 		}
 	}
@@ -25,11 +25,11 @@ func MagicFromMap(input map[string]interface{}) MagicAuthentication {
 	}
 }
 
-func MagicsFromMap(input []interface{}) MagicAuthentications {
+func MagicsFromMap(input []any) MagicAuthentications {
 	magics := make([]MagicAuthentication, len(input))
 
 	for i, rm := range input {
-		magics[i] = MagicFromMap(rm.(map[string]interface{}))
+		magics[i] = MagicFromMap(rm.(map[string]any))
 	}
 
 	return magics

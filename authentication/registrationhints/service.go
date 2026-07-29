@@ -3,6 +3,7 @@ package registrationhints
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -127,10 +128,5 @@ func ClearCookie(w http.ResponseWriter) {
 }
 
 func hasAudience(audiences jwt.ClaimStrings, expected string) bool {
-	for _, audience := range audiences {
-		if audience == expected {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(audiences, expected)
 }

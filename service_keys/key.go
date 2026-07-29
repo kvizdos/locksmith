@@ -56,7 +56,7 @@ func (k ServiceKey) ToMap() map[string]any {
 }
 
 func ServiceKeyFromMap(rawInput any) ServiceKey {
-	input := rawInput.(map[string]interface{})
+	input := rawInput.(map[string]any)
 	rawSecrets := input["secrets"].([]map[string]any)
 	secrets := []ServiceSecret{}
 	for _, raw := range rawSecrets {
@@ -82,7 +82,7 @@ func ServiceKeyFromMap(rawInput any) ServiceKey {
 	}
 
 	ips := []string{}
-	if ips, ok := input["ips"].([]interface{}); ok {
+	if ips, ok := input["ips"].([]any); ok {
 		for _, ip := range ips {
 			ips = append(ips, ip)
 		}

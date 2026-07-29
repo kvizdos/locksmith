@@ -5,8 +5,8 @@ type UserLoginAttempt struct {
 	LastAttempt int64
 }
 
-func (u UserLoginAttempt) ToMap() map[string]interface{} {
-	return map[string]interface{}{
+func (u UserLoginAttempt) ToMap() map[string]any {
+	return map[string]any{
 		"attempts": u.Attempts,
 		"last":     u.LastAttempt,
 	}
@@ -17,7 +17,7 @@ func (u UserLoginAttempt) Increment() IncrementableInterface {
 	return u
 }
 
-func ReadUserLoginAttemptFromMap(input map[string]interface{}) UserLoginAttempt {
+func ReadUserLoginAttemptFromMap(input map[string]any) UserLoginAttempt {
 	return UserLoginAttempt{
 		Attempts:    input["attempts"].(int),
 		LastAttempt: input["last"].(int64),

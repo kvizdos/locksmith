@@ -33,8 +33,8 @@ type MagicAuthentication struct {
 	Username           string   // filled in at validation time
 }
 
-func (m MagicAuthentication) ToMap() map[string]interface{} {
-	return map[string]interface{}{
+func (m MagicAuthentication) ToMap() map[string]any {
+	return map[string]any{
 		"code":        m.Code,
 		"permissions": m.AllowedPermissions,
 		"expires":     m.ExpiresAt,
@@ -43,8 +43,8 @@ func (m MagicAuthentication) ToMap() map[string]interface{} {
 
 type MagicAuthentications []MagicAuthentication
 
-func (m MagicAuthentications) ToMap() []interface{} {
-	out := make([]interface{}, len(m))
+func (m MagicAuthentications) ToMap() []any {
+	out := make([]any, len(m))
 
 	for i, magic := range m {
 		out[i] = magic.ToMap()

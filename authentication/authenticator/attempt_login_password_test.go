@@ -10,7 +10,7 @@ import (
 )
 
 func TestPassword_ValidCredentials(t *testing.T) {
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -29,7 +29,7 @@ func TestPassword_ValidCredentials(t *testing.T) {
 }
 
 func TestPassword_ValidCredentials_EmailAsUsername(t *testing.T) {
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -45,7 +45,7 @@ func TestPassword_ValidCredentials_EmailAsUsername(t *testing.T) {
 }
 
 func TestPassword_InvalidPassword(t *testing.T) {
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -103,7 +103,7 @@ func TestPassword_WrongHTTPMethod(t *testing.T) {
 func TestPassword_PasswordlessUserDenied(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", authentication.PasswordInfo{Passwordless: true}, "user")
 
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {"u1": user},
 	})
 	a := newTestAuthorizer(db)
@@ -121,7 +121,7 @@ func TestPassword_EmailNotVerified(t *testing.T) {
 	user["needsEmailVerification"] = true
 	user["emailVerified"] = false
 
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {"u1": user},
 	})
 	a := newTestAuthorizer(db)
@@ -143,7 +143,7 @@ func TestPassword_OAuthRestrictedSourceMismatch(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user")
 	user["oauth"] = "google" // restricted to google, not password
 
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {"u1": user},
 	})
 	a := newTestAuthorizer(db)
@@ -160,7 +160,7 @@ func TestPassword_OAuthRestrictedSourceMatches(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user")
 	user["oauth"] = "password" // matches handler name
 
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {"u1": user},
 	})
 	a := newTestAuthorizer(db)

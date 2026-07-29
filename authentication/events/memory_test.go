@@ -88,7 +88,7 @@ func TestMemoryBusMultipleSubscribersReceiveEvent(t *testing.T) {
 
 	bus := NewMemoryBus()
 	calls := 0
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		bus.Subscribe(EventRegistrationSucceeded, func(context.Context, Envelope) error {
 			calls++
 			return nil

@@ -90,7 +90,7 @@ func (sp SigningPackage) ParseJWT(
 		return nil, errors.New("public key is nil")
 	}
 
-	return jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	return jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		if token.Method.Alg() != jwt.SigningMethodES256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: got %q expected %q", token.Method.Alg(), jwt.SigningMethodES256.Alg())
 		}

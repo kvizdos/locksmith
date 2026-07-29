@@ -2,6 +2,7 @@ package roles
 
 import (
 	"fmt"
+	"slices"
 )
 
 var AVAILABLE_ROLES map[string][]string
@@ -12,12 +13,7 @@ type Role struct {
 }
 
 func (r Role) HasPermission(permission string) bool {
-	for _, perm := range r.Permissions {
-		if perm == permission {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Permissions, permission)
 }
 
 // Used to add a new role into the system.

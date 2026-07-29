@@ -14,7 +14,7 @@ func TestRevokeServiceSecret_Success(t *testing.T) {
 
 	secretID := "active-secret-id"
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"svc-id": service_keys.ServiceKey{
 					ID:       primitive.NewObjectID(),
@@ -63,7 +63,7 @@ func TestRevokeServiceSecret_AlreadyRevoked(t *testing.T) {
 	revokedAt := now.Add(-1 * time.Hour)
 
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"svc-id": service_keys.ServiceKey{
 					ID:       primitive.NewObjectID(),
@@ -93,7 +93,7 @@ func TestRevokeServiceSecret_SecretNotFound(t *testing.T) {
 	now := time.Now().UTC()
 
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"svc-id": service_keys.ServiceKey{
 					ID:        primitive.NewObjectID(),
@@ -114,7 +114,7 @@ func TestRevokeServiceSecret_SecretNotFound(t *testing.T) {
 
 func TestRevokeServiceSecret_ClientNotFound(t *testing.T) {
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}

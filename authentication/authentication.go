@@ -15,8 +15,8 @@ import (
 
 type PasswordSessions []PasswordSession
 
-func (p PasswordSessions) ToMap() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(p))
+func (p PasswordSessions) ToMap() []map[string]any {
+	out := make([]map[string]any, len(p))
 
 	for i, pw := range p {
 		out[i] = pw.ToMap()
@@ -25,7 +25,7 @@ func (p PasswordSessions) ToMap() []map[string]interface{} {
 	return out
 }
 
-func (p PasswordSessions) FromMap(input []map[string]interface{}) []PasswordSession {
+func (p PasswordSessions) FromMap(input []map[string]any) []PasswordSession {
 	out := make([]PasswordSession, len(input))
 
 	for i, m := range input {
@@ -40,14 +40,14 @@ type PasswordSession struct {
 	ExpiresAt int64  `json:"expire" bson:"expire"`
 }
 
-func (p PasswordSession) ToMap() map[string]interface{} {
-	return map[string]interface{}{
+func (p PasswordSession) ToMap() map[string]any {
+	return map[string]any{
 		"token":  p.Token,
 		"expire": p.ExpiresAt,
 	}
 }
 
-func (p PasswordSession) FromMap(input map[string]interface{}) PasswordSession {
+func (p PasswordSession) FromMap(input map[string]any) PasswordSession {
 	return PasswordSession{
 		Token:     input["token"].(string),
 		ExpiresAt: input["expire"].(int64),
@@ -88,18 +88,18 @@ type PasswordInfo struct {
 	Passwordless        bool                  `json:"passwordless" bson:"passwordless"`
 }
 
-func (p PasswordInfo) ToMap() map[string]interface{} {
-	out := make(map[string]interface{})
+func (p PasswordInfo) ToMap() map[string]any {
+	out := make(map[string]any)
 
 	out["password"] = p.Password
 	out["salt"] = p.Salt
-	out["webauth"] = map[string]interface{}{} // TODO
+	out["webauth"] = map[string]any{} // TODO
 	out["passwordless"] = p.Passwordless
 
 	return out
 }
 
-func PasswordInfoFromMap(passinfo map[string]interface{}) PasswordInfo {
+func PasswordInfoFromMap(passinfo map[string]any) PasswordInfo {
 	p := PasswordInfo{
 		Password:            passinfo["password"].(string),
 		Salt:                passinfo["salt"].(string),

@@ -97,7 +97,7 @@ func (e *verifier) getCode(ctx context.Context, method verifierMethod, userID st
 
 	_, err := e.db.UpdateOne("email_verifications", map[string]any{
 		"_id": rawCode.(map[string]any)["_id"].(primitive.ObjectID),
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: {
 			"expires_at": time.Now().UTC().Add(1 * time.Hour).Unix(),
 		},

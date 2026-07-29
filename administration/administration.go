@@ -6,7 +6,7 @@ import (
 )
 
 func DeleteUser(db database.DatabaseAccessor, username string) (bool, error) {
-	deleted, err := db.DeleteOne("users", map[string]interface{}{
+	deleted, err := db.DeleteOne("users", map[string]any{
 		"username": username,
 	})
 
@@ -33,18 +33,18 @@ func ListUsers(db database.DatabaseAccessor, opts ListUsersOptions) ([]users.Pub
 		useStruct = opts.CustomInterface
 	}
 
-	query := map[string]interface{}{}
+	query := map[string]any{}
 
 	if len(opts.GetRoles) > 1 {
-		query["$or"] = []map[string]interface{}{}
+		query["$or"] = []map[string]any{}
 
 		for _, role := range opts.GetRoles {
-			query["$or"] = append(query["$or"].([]map[string]interface{}), map[string]interface{}{
+			query["$or"] = append(query["$or"].([]map[string]any), map[string]any{
 				"role": role,
 			})
 		}
 	} else if len(opts.GetRoles) == 1 {
-		query = map[string]interface{}{
+		query = map[string]any{
 			"role": opts.GetRoles[0],
 		}
 	}
@@ -58,7 +58,7 @@ func ListUsers(db database.DatabaseAccessor, opts ListUsersOptions) ([]users.Pub
 	usersArray := make([]users.PublicLocksmithUserInterface, len(allUsers))
 
 	for i, user := range allUsers {
-		useStruct.ReadFromMap(&useStruct, user.(map[string]interface{}))
+		useStruct.ReadFromMap(&useStruct, user.(map[string]any))
 		public, err := useStruct.ToPublic()
 
 		if err != nil {

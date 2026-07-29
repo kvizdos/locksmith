@@ -73,7 +73,7 @@ func (rr VerifierExchangeHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	_, err = db.UpdateOne("users", map[string]any{
 		"id": authUser.GetID(),
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: {
 			"emailVerified":           true,
 			"emailVerificationMethod": "email",

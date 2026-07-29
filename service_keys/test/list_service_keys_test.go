@@ -13,7 +13,7 @@ func TestListServiceKeysByCreatedBy(t *testing.T) {
 	now := time.Now().UTC()
 
 	db := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"key-1": service_keys.ServiceKey{
 					ID:        primitive.NewObjectID(),
@@ -55,7 +55,7 @@ func TestListServiceKeysByCreatedBy(t *testing.T) {
 
 func TestListServiceKeys_Empty(t *testing.T) {
 	db := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}
@@ -71,7 +71,7 @@ func TestListServiceKeys_AllKeys(t *testing.T) {
 	now := time.Now().UTC()
 
 	db := &database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"a": service_keys.ServiceKey{
 					ID:        primitive.NewObjectID(),

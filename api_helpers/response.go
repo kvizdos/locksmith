@@ -9,7 +9,7 @@ func SuccessResponse(w http.ResponseWriter) {
 	WriteResponse(w, APIGenericSuccess, http.StatusOK)
 }
 
-func WriteResponse(w http.ResponseWriter, response interface{}, statusCode int) {
+func WriteResponse(w http.ResponseWriter, response any, statusCode int) {
 	js, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -29,7 +29,7 @@ type APIResponseError struct {
 	Details string `json:"details,omitempty"`
 }
 
-var APIGenericSuccess = map[string]interface{}{
+var APIGenericSuccess = map[string]any{
 	"success": true,
 }
 

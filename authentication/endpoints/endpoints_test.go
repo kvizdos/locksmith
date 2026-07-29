@@ -19,7 +19,7 @@ type testHandler struct{}
 func (lh testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
 	role, _ := authUser.GetRole()
-	w.Write([]byte(fmt.Sprintf("%s %d", role.Name, len(role.Permissions))))
+	w.Write(fmt.Appendf(nil, "%s %d", role.Name, len(role.Permissions)))
 }
 
 func InjectTokenToDatabase(db database.DatabaseAccessor) string {
@@ -38,9 +38,9 @@ func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 		Token:     hashedToken,
 		ExpiresAt: time.Now().Unix() + 60000,
 	}
-	db.UpdateOne("users", map[string]interface{}{
+	db.UpdateOne("users", map[string]any{
 		"username": u.Username,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"sessions": session,
 		},
@@ -55,7 +55,7 @@ func InjectTokenToDatabase(db database.DatabaseAccessor) string {
 // im only going to test one fail case here to make sure
 func TestSecureEndpointHTTPMiddlewareInvalidToken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -80,13 +80,13 @@ func TestSecureEndpointHTTPMiddlewareInvalidPermissions(t *testing.T) {
 		"user": {},
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -131,13 +131,13 @@ func TestSecureEndpointHTTPMiddlewareValidPermissions(t *testing.T) {
 		},
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 				},
 			},
@@ -183,13 +183,13 @@ func TestSecureEndpointHTTPMiddlewareFailsMultipleRequiredPermissions(t *testing
 		},
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 				},
 			},
@@ -235,13 +235,13 @@ func TestSecureEndpointHTTPMiddlewareSecondaryValidationFails(t *testing.T) {
 		},
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 				},
 			},
@@ -289,13 +289,13 @@ func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceeds(t *testing.T) {
 		},
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 				},
 			},
@@ -345,7 +345,7 @@ type customUser struct {
 	customObject string
 }
 
-func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]any) {
 	// Load initial locksmith data
 	var user users.LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
@@ -368,13 +368,13 @@ func TestSecureEndpointHTTPMiddlewareSecondaryValidationSucceedsWithCustomUser(t
 		},
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":           "c8531661-22a7-493f-b228-028842e09a05",
 					"username":     "kenton",
 					"email":        "custom@email.com",
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "admin",
 					"customObject": "hello",
 				},

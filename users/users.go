@@ -23,8 +23,8 @@ type LocksmithUserInterface interface {
 	GetLastLoginDate() time.Time
 
 	// Read from Database
-	ReadFromMap(*LocksmithUserInterface, map[string]interface{})
-	ToMap() map[string]interface{}
+	ReadFromMap(*LocksmithUserInterface, map[string]any)
+	ToMap() map[string]any
 
 	// Convert to "public" interface
 	// Slimmed down version of this interface
@@ -192,14 +192,14 @@ func (u LocksmithUser) GetOAuthRestrictedSource() string {
 	return u.OAuthRestrictedSource
 }
 
-func (u LocksmithUser) ToMap() map[string]interface{} {
-	out := make(map[string]interface{})
+func (u LocksmithUser) ToMap() map[string]any {
+	out := make(map[string]any)
 
 	out["id"] = u.ID
 	out["username"] = u.Username
 	out["email"] = u.Email
 	out["password"] = u.PasswordInfo.ToMap()
-	out["websessions"] = map[string]interface{}{} // TODO
+	out["websessions"] = map[string]any{} // TODO
 	out["sessions"] = u.PasswordSessions.ToMap()
 	out["role"] = u.Role
 	out["magic"] = u.Magics.ToMap()
@@ -216,19 +216,19 @@ func (u LocksmithUser) ToMap() map[string]interface{} {
 	return out
 }
 
-func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[string]interface{}) {
+func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[string]any) {
 	sessions := []authentication.PasswordSession{}
 
 	if user["sessions"] != nil {
 		rawSessions := user["sessions"]
-		if mappedSessions, ok := rawSessions.([]map[string]interface{}); ok {
+		if mappedSessions, ok := rawSessions.([]map[string]any); ok {
 			sessions = authentication.PasswordSessions{}.FromMap(mappedSessions)
 		} else {
 
-			for _, v := range user["sessions"].([]interface{}) {
+			for _, v := range user["sessions"].([]any) {
 				session, ok := v.(authentication.PasswordSession)
 				if !ok {
-					newSession := v.(map[string]interface{})
+					newSession := v.(map[string]any)
 					sessions = append(sessions, authentication.PasswordSession{
 						Token:     newSession["token"].(string),
 						ExpiresAt: newSession["expire"].(int64),
@@ -245,8 +245,8 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 	switch user["password"].(type) {
 	case authentication.PasswordInfo:
 		passinfo = user["password"].(authentication.PasswordInfo)
-	case map[string]interface{}:
-		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]interface{}))
+	case map[string]any:
+		passinfo = authentication.PasswordInfoFromMap(user["password"].(map[string]any))
 	}
 
 	oauthRestricted := ""
@@ -269,8 +269,8 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 		switch magicValue.(type) {
 		case []magic.MagicAuthentication:
 			magics = magicValue.([]magic.MagicAuthentication)
-		case []interface{}:
-			magics = magic.MagicsFromMap(magicValue.([]interface{}))
+		case []any:
+			magics = magic.MagicsFromMap(magicValue.([]any))
 		}
 	}
 
@@ -342,17 +342,17 @@ func (u LocksmithUser) SavePasswordSession(session authentication.PasswordSessio
 
 	session.Token = hashedToken
 
-	_, err := db.UpdateOne("users", map[string]interface{}{
+	_, err := db.UpdateOne("users", map[string]any{
 		"username": u.Username,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"sessions": session,
 		},
 	})
 
-	_, err = db.UpdateOne("users", map[string]interface{}{
+	_, err = db.UpdateOne("users", map[string]any{
 		"username": u.Username,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: {
 			"last_login": time.Now().UTC().Unix(),
 		},
@@ -382,13 +382,13 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 		}
 	}
 
-	updateMap := map[database.DatabaseUpdateActions]map[string]interface{}{
+	updateMap := map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: {},
 	}
 
 	if len(nonexpiredTokens) != len(u.PasswordSessions) {
 		// Create a new slice of type []interface{}
-		interfaces := make([]interface{}, len(nonexpiredTokens))
+		interfaces := make([]any, len(nonexpiredTokens))
 
 		// Convert each PasswordSession to an interface{}
 		for i, session := range nonexpiredTokens {
@@ -399,7 +399,7 @@ func (u LocksmithUser) ValidateSessionToken(token string, db database.DatabaseAc
 	}
 
 	if len(updateMap[database.SET]) > 0 {
-		db.UpdateOne("users", map[string]interface{}{
+		db.UpdateOne("users", map[string]any{
 			"id": u.ID,
 		}, updateMap)
 	}
@@ -428,9 +428,9 @@ func (u LocksmithUser) CreateMagicAuthenticationCode(db database.DatabaseAccesso
 		return "", err
 	}
 
-	db.UpdateOne("users", map[string]interface{}{
+	db.UpdateOne("users", map[string]any{
 		"id": u.ID,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"magic": mac.ToMap(),
 		},
@@ -452,9 +452,9 @@ func (u LocksmithUser) CleanupOldMagicTokens(db database.DatabaseAccessor) {
 	keep := <-activeMagics
 
 	if len(keep) != len(u.Magics) {
-		db.UpdateOne("users", map[string]interface{}{
+		db.UpdateOne("users", map[string]any{
 			"id": u.ID,
-		}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		}, map[database.DatabaseUpdateActions]map[string]any{
 			database.SET: {
 				"magic": keep.ToMap(),
 			},

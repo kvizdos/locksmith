@@ -40,12 +40,12 @@ func newTestHintService(t *testing.T) registrationhints.Service {
 	return registrationhints.Service{Signer: signer}
 }
 
-func newRegistrarTestDB(tables map[string]map[string]interface{}) database.TestDatabase {
+func newRegistrarTestDB(tables map[string]map[string]any) database.TestDatabase {
 	if tables == nil {
-		tables = map[string]map[string]interface{}{}
+		tables = map[string]map[string]any{}
 	}
 	if _, ok := tables["users"]; !ok {
-		tables["users"] = map[string]interface{}{}
+		tables["users"] = map[string]any{}
 	}
 	return database.TestDatabase{Tables: tables}
 }
@@ -69,12 +69,12 @@ func TestRegistrarRegisterCreatesLowercaseUserWithHashedPassword(t *testing.T) {
 		t.Fatalf("email = %q, want %q", result.User.GetEmail(), "email@example.com")
 	}
 
-	raw, found := db.FindOne("users", map[string]interface{}{"username": "kenton"})
+	raw, found := db.FindOne("users", map[string]any{"username": "kenton"})
 	if !found {
 		t.Fatal("new user was not inserted")
 	}
 	var lsu users.LocksmithUserInterface = users.LocksmithUser{}
-	lsu.ReadFromMap(&lsu, raw.(map[string]interface{}))
+	lsu.ReadFromMap(&lsu, raw.(map[string]any))
 	passwordInfo := lsu.GetPasswordInfo()
 	if passwordInfo.Password == "password123" {
 		t.Fatal("password was stored in plaintext")
@@ -85,9 +85,9 @@ func TestRegistrarRegisterCreatesLowercaseUserWithHashedPassword(t *testing.T) {
 }
 
 func TestRegistrarRegisterRejectsDuplicateUsernameOrEmail(t *testing.T) {
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {
-			"u1": map[string]interface{}{
+			"u1": map[string]any{
 				"id":       "u1",
 				"username": "kenton",
 				"email":    "email@example.com",
@@ -121,10 +121,10 @@ func TestRegistrarRegisterUsesInviteRoleIDAndExpiresInvite(t *testing.T) {
 	hasher.Write([]byte(code))
 	hashedCode := fmt.Sprintf("%x", hasher.Sum(nil))
 
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {},
 		"invites": {
-			"invite1": map[string]interface{}{
+			"invite1": map[string]any{
 				"code":    hashedCode,
 				"email":   "bob@bob.com",
 				"role":    "admin",
@@ -151,17 +151,17 @@ func TestRegistrarRegisterUsesInviteRoleIDAndExpiresInvite(t *testing.T) {
 	if result.User.GetID() != "invited-user-id" {
 		t.Fatalf("user id = %q, want invited-user-id", result.User.GetID())
 	}
-	if _, found := db.FindOne("invites", map[string]interface{}{"code": hashedCode}); found {
+	if _, found := db.FindOne("invites", map[string]any{"code": hashedCode}); found {
 		t.Fatal("invite was not expired")
 	}
 }
 
 func TestRegistrarPasswordRegistrationDefersPendingInviteUntilEmailVerified(t *testing.T) {
 	sender := &recordingVerificationSender{}
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {},
 		"invites": {
-			"invite1": map[string]interface{}{
+			"invite1": map[string]any{
 				"code":    "unused-hashed-code",
 				"email":   "bob@bob.com",
 				"role":    "admin",
@@ -193,16 +193,16 @@ func TestRegistrarPasswordRegistrationDefersPendingInviteUntilEmailVerified(t *t
 	if sender.calls != 1 {
 		t.Fatalf("verification send calls = %d, want 1", sender.calls)
 	}
-	if _, found := db.FindOne("invites", map[string]interface{}{"email": "bob@bob.com"}); !found {
+	if _, found := db.FindOne("invites", map[string]any{"email": "bob@bob.com"}); !found {
 		t.Fatal("invite should still be pending, not yet expired")
 	}
 }
 
 func TestRegistrarPasswordRegistrationIgnoresPendingInviteWithoutAccountVerifier(t *testing.T) {
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {},
 		"invites": {
-			"invite1": map[string]interface{}{
+			"invite1": map[string]any{
 				"code":    "unused-hashed-code",
 				"email":   "bob@bob.com",
 				"role":    "admin",
@@ -227,16 +227,16 @@ func TestRegistrarPasswordRegistrationIgnoresPendingInviteWithoutAccountVerifier
 	if result.RequiresEmailVerification {
 		t.Fatal("RequiresEmailVerification = true, want false without a configured account verifier")
 	}
-	if _, found := db.FindOne("invites", map[string]interface{}{"email": "bob@bob.com"}); !found {
+	if _, found := db.FindOne("invites", map[string]any{"email": "bob@bob.com"}); !found {
 		t.Fatal("invite should still be pending, not expired")
 	}
 }
 
 func TestRegistrarHintedRegistrationClaimsMatchingInviteByVerifiedEmail(t *testing.T) {
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {},
 		"invites": {
-			"invite1": map[string]interface{}{
+			"invite1": map[string]any{
 				"code":    "unused-hashed-code",
 				"email":   "rostered@example.com",
 				"role":    "admin",
@@ -259,16 +259,16 @@ func TestRegistrarHintedRegistrationClaimsMatchingInviteByVerifiedEmail(t *testi
 	if result.User.GetID() != "invited-user-id" {
 		t.Fatalf("user id = %q, want invited-user-id", result.User.GetID())
 	}
-	if _, found := db.FindOne("invites", map[string]interface{}{"email": "rostered@example.com"}); found {
+	if _, found := db.FindOne("invites", map[string]any{"email": "rostered@example.com"}); found {
 		t.Fatal("invite was not expired")
 	}
 }
 
 func TestRegistrarHintedRegistrationIgnoresInviteWhenEmailUnverified(t *testing.T) {
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {},
 		"invites": {
-			"invite1": map[string]interface{}{
+			"invite1": map[string]any{
 				"code":    "unused-hashed-code",
 				"email":   "rostered@example.com",
 				"role":    "admin",
@@ -293,7 +293,7 @@ func TestRegistrarHintedRegistrationIgnoresInviteWhenEmailUnverified(t *testing.
 	if result.User.GetID() == "invited-user-id" {
 		t.Fatal("user was assigned the invite's pinned user id despite unverified email")
 	}
-	if _, found := db.FindOne("invites", map[string]interface{}{"email": "rostered@example.com"}); !found {
+	if _, found := db.FindOne("invites", map[string]any{"email": "rostered@example.com"}); !found {
 		t.Fatal("invite should not have been expired")
 	}
 }
@@ -329,11 +329,11 @@ func TestRegistrarHintedRegistrationCreatesUserAndAuthLink(t *testing.T) {
 		t.Fatal("expected hinted user to be passwordless")
 	}
 
-	link, found := db.FindOne("auth_links", map[string]interface{}{"subject": hint.Subject})
+	link, found := db.FindOne("auth_links", map[string]any{"subject": hint.Subject})
 	if !found {
 		t.Fatal("auth link was not created")
 	}
-	linkMap := link.(map[string]interface{})
+	linkMap := link.(map[string]any)
 	if linkMap["provider"] != hint.ProviderName {
 		t.Fatalf("link provider = %v, want %q", linkMap["provider"], hint.ProviderName)
 	}
@@ -449,7 +449,7 @@ func TestRegistrarHintedRegistrationReplayCannotRecreateExistingUser(t *testing.
 	if len(db.Tables["auth_links"]) != 1 {
 		t.Fatalf("auth_links count after replay = %d, want 1 (no duplicate auth link)", len(db.Tables["auth_links"]))
 	}
-	if _, found := db.FindOne("users", map[string]interface{}{"email": first.User.GetEmail()}); !found {
+	if _, found := db.FindOne("users", map[string]any{"email": first.User.GetEmail()}); !found {
 		t.Fatal("original user should remain after replay attempt")
 	}
 }
@@ -458,9 +458,9 @@ func TestRegistrarHintedRegistrationRejectsDuplicateEmail(t *testing.T) {
 	t.Parallel()
 
 	hint := newRosterableHint()
-	db := newRegistrarTestDB(map[string]map[string]interface{}{
+	db := newRegistrarTestDB(map[string]map[string]any{
 		"users": {
-			"u1": map[string]interface{}{
+			"u1": map[string]any{
 				"id":       "u1",
 				"username": hint.Email,
 				"email":    hint.Email,

@@ -106,7 +106,7 @@ func TestOidcHandlerSession(t *testing.T) {
 	t.Parallel()
 
 	h := oidcHandler{options: authenticator_methods.OIDCValidatorOptions{ProviderName: "google"}}
-	db := database.TestDatabase{Tables: map[string]map[string]interface{}{}}
+	db := database.TestDatabase{Tables: map[string]map[string]any{}}
 
 	session := h.Session(db)
 	if session == nil {

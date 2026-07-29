@@ -111,12 +111,12 @@ func (h ResetPasswordAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	_, err = db.UpdateOne("users", map[string]interface{}{
+	_, err = db.UpdateOne("users", map[string]any{
 		"id": authUser.ID,
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.SET: {
 			"password": password.ToMap(),
-			"sessions": []interface{}{},
+			"sessions": []any{},
 		},
 	})
 

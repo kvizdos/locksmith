@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
 	"strings"
@@ -255,8 +256,8 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		useID = invite.AttachUserID
 	}
 
-	matches, _ := r.db.Find("users", map[string]interface{}{
-		"$or": []map[string]interface{}{{"username": strings.ToLower(req.Username)}, {"email": strings.ToLower(req.Email)}},
+	matches, _ := r.db.Find("users", map[string]any{
+		"$or": []map[string]any{{"username": strings.ToLower(req.Username)}, {"email": strings.ToLower(req.Email)}},
 	})
 	if len(matches) != 0 {
 		return nil, register_domain.ErrRegistrationTaken
@@ -319,7 +320,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 	if isHinted {
 		// Auth link identity is derived exclusively from the signed hint
 		// (provider, issuer, subject), never from client-supplied JSON.
-		_, err = r.db.InsertOne("auth_links", map[string]interface{}{
+		_, err = r.db.InsertOne("auth_links", map[string]any{
 			"provider":  req.Hint.ProviderName,
 			"issuer":    req.Hint.Issuer,
 			"subject":   req.Hint.Subject,
@@ -339,7 +340,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 			})
 			_, err = r.db.UpdateOne("users", map[string]any{
 				"id": lsu.GetID(),
-			}, map[database.DatabaseUpdateActions]map[string]interface{}{
+			}, map[database.DatabaseUpdateActions]map[string]any{
 				database.SET: {
 					"emailVerified":           true,
 					"emailVerificationMethod": fmt.Sprintf("hint-%s-%s", req.Hint.ProviderName, selectBy),
@@ -435,9 +436,7 @@ func mergeContextMetadata(base, app events.ContextMetadata) events.ContextMetada
 		if base.Values == nil {
 			base.Values = map[string]string{}
 		}
-		for key, value := range app.Values {
-			base.Values[key] = value
-		}
+		maps.Copy(base.Values, app.Values)
 	}
 	return base
 }

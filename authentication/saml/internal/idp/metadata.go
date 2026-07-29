@@ -34,12 +34,12 @@ func BuildIdPMetadata(cfg *saml_config.IdPConfig) ([]byte, error) {
 }
 
 func stripPEM(pem string) string {
-	out := ""
-	for _, line := range strings.Split(pem, "\n") {
+	var out strings.Builder
+	for line := range strings.SplitSeq(pem, "\n") {
 		if strings.HasPrefix(line, "-----") {
 			continue
 		}
-		out += strings.TrimSpace(line)
+		out.WriteString(strings.TrimSpace(line))
 	}
-	return out
+	return out.String()
 }

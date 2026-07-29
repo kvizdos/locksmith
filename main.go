@@ -63,7 +63,7 @@ func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
 	role, _ := authUser.GetRole()
 	sid, _ := r.Context().Value("sid").(string)
-	w.Write([]byte(fmt.Sprintf(`<html>
+	w.Write(fmt.Appendf(nil, `<html>
 		<head>
 			<script defer type="text/javascript" src="/api/auth/oauth/keep-alive.js"></script>
 		</head>
@@ -71,7 +71,7 @@ func (th TestAppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			<p>%s -- %t - %s %s %d - Your SID is %s</p>
 		</body>
 		</html>
-		`, r.URL.Path, authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions), sid)))
+		`, r.URL.Path, authUser.IsMagic(), authUser.GetUsername(), role.Name, len(role.Permissions), sid))
 }
 
 func printResetToken(token string, user users.LocksmithUserInterface) {
@@ -338,7 +338,7 @@ func main() {
 					Email:       "admin@admin.com",
 					Role:        "admin",
 					Redirect:    "/locksmith",
-					Custom: map[string]interface{}{
+					Custom: map[string]any{
 						"customObject": "hello world",
 					},
 				},
@@ -347,7 +347,7 @@ func main() {
 					Email:       "user@user.com",
 					Role:        "user",
 					Redirect:    "/app",
-					Custom: map[string]interface{}{
+					Custom: map[string]any{
 						// If you need a static ID for testing / interacting
 						// with other places, it's useful
 						// to set that here.

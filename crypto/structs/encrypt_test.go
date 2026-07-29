@@ -65,7 +65,7 @@ func TestEncryptStructJSON(t *testing.T) {
 		return
 	}
 
-	expect := map[string]interface{}{
+	expect := map[string]any{
 		"username": "kvizdos",
 		"password": "encrypted:securepass123",
 		"array":    []string{"encrypted:value1", "encrypted:value2"},
@@ -123,7 +123,7 @@ func TestEncryptStructBSON(t *testing.T) {
 		return
 	}
 
-	expect := map[string]interface{}{
+	expect := map[string]any{
 		"user":    "kvizdos",
 		"pass":    "encrypted:securepass123",
 		"arrtest": []string{"encrypted:value1", "encrypted:value2"},

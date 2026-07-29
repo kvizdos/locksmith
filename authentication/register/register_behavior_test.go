@@ -107,11 +107,11 @@ func (s *recordingVerificationSender) SendVerificationEmail(_ context.Context, u
 	return nil
 }
 
-func newRegistrationTestDB(usersSeed map[string]interface{}) database.TestDatabase {
+func newRegistrationTestDB(usersSeed map[string]any) database.TestDatabase {
 	if usersSeed == nil {
-		usersSeed = map[string]interface{}{}
+		usersSeed = map[string]any{}
 	}
-	return database.TestDatabase{Tables: map[string]map[string]interface{}{"users": usersSeed}}
+	return database.TestDatabase{Tables: map[string]map[string]any{"users": usersSeed}}
 }
 
 func performRegistrationRequest(t *testing.T, r *registrar, payload string) *httptest.ResponseRecorder {
@@ -334,7 +334,7 @@ func TestRegistrationHandlerHintedRegistrationViaAuthorizationHeader(t *testing.
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if _, found := db.FindOne("users", map[string]interface{}{"username": hint.Email}); !found {
+	if _, found := db.FindOne("users", map[string]any{"username": hint.Email}); !found {
 		t.Fatal("expected hinted user to be created")
 	}
 	if len(db.Tables["auth_links"]) != 1 {
@@ -373,7 +373,7 @@ func TestRegistrationHandlerHintedRegistrationViaCookie(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	if _, found := db.FindOne("users", map[string]interface{}{"username": hint.Email}); !found {
+	if _, found := db.FindOne("users", map[string]any{"username": hint.Email}); !found {
 		t.Fatal("expected hinted user to be created")
 	}
 }
@@ -573,7 +573,7 @@ func TestRegistrationHandlerStrictJSONRejectsUnsupportedFields(t *testing.T) {
 			if got := decodeRegistrationResponse(t, rr).Error; got != "could not unmarshal" {
 				t.Fatalf("error = %q, want %q", got, "could not unmarshal")
 			}
-			if _, found := db.FindOne("users", map[string]interface{}{"username": "kenton"}); found {
+			if _, found := db.FindOne("users", map[string]any{"username": "kenton"}); found {
 				t.Fatal("unsupported field request inserted a user")
 			}
 		})
@@ -585,20 +585,20 @@ func TestRegistrationHandlerRejectsDuplicateUsernameOrEmailCaseInsensitively(t *
 
 	tests := []struct {
 		name    string
-		seed    map[string]interface{}
+		seed    map[string]any
 		payload string
 	}{
 		{
 			name: "duplicate username with different case",
-			seed: map[string]interface{}{
-				"existing": map[string]interface{}{"username": "kenton", "email": "other@example.com"},
+			seed: map[string]any{
+				"existing": map[string]any{"username": "kenton", "email": "other@example.com"},
 			},
 			payload: `{"username":"KENTON","password":"password123","email":"new@example.com"}`,
 		},
 		{
 			name: "duplicate email with different case",
-			seed: map[string]interface{}{
-				"existing": map[string]interface{}{"username": "someone", "email": "email@example.com"},
+			seed: map[string]any{
+				"existing": map[string]any{"username": "someone", "email": "email@example.com"},
 			},
 			payload: `{"username":"newuser","password":"password123","email":"EMAIL@example.com"}`,
 		},
@@ -628,9 +628,9 @@ func TestRegistrationHandlerRejectsInviteEmailMismatchWithoutCreatingUser(t *tes
 	hasher := sha256.New()
 	hasher.Write([]byte(inviteCode))
 	hashedCode := fmt.Sprintf("%x", hasher.Sum(nil))
-	db := database.TestDatabase{Tables: map[string]map[string]interface{}{
+	db := database.TestDatabase{Tables: map[string]map[string]any{
 		"invites": {
-			"invite": map[string]interface{}{
+			"invite": map[string]any{
 				"code":    hashedCode,
 				"email":   "invited@example.com",
 				"role":    "admin",
@@ -651,10 +651,10 @@ func TestRegistrationHandlerRejectsInviteEmailMismatchWithoutCreatingUser(t *tes
 	if got := decodeRegistrationResponse(t, rr).Error; got != "invalid email" {
 		t.Fatalf("error = %q, want %q", got, "invalid email")
 	}
-	if _, found := db.FindOne("users", map[string]interface{}{"username": "kenton"}); found {
+	if _, found := db.FindOne("users", map[string]any{"username": "kenton"}); found {
 		t.Fatal("invite email mismatch inserted a user")
 	}
-	if _, found := db.FindOne("invites", map[string]interface{}{"code": hashedCode}); !found {
+	if _, found := db.FindOne("invites", map[string]any{"code": hashedCode}); !found {
 		t.Fatal("invite email mismatch expired the invite")
 	}
 }
@@ -773,11 +773,11 @@ func TestRegistrationHandlerCustomUserHookCanPersistAdditionalFields(t *testing.
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, rr.Body.String())
 	}
-	inserted, found := db.FindOne("users", map[string]interface{}{"username": "kenton"})
+	inserted, found := db.FindOne("users", map[string]any{"username": "kenton"})
 	if !found {
 		t.Fatal("registered user was not persisted")
 	}
-	user := inserted.(map[string]interface{})
+	user := inserted.(map[string]any)
 	if user["customObject"] != "configured" {
 		t.Fatalf("customObject = %v, want %q", user["customObject"], "configured")
 	}

@@ -56,9 +56,9 @@ var _ tokens.TokenManager = (*mockTokenManager)(nil)
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-func newTestDB(tables map[string]map[string]interface{}) database.TestDatabase {
+func newTestDB(tables map[string]map[string]any) database.TestDatabase {
 	if tables == nil {
-		tables = map[string]map[string]interface{}{}
+		tables = map[string]map[string]any{}
 	}
 	return database.TestDatabase{Tables: tables}
 }
@@ -78,13 +78,13 @@ func compiledPassword(plain string) authentication.PasswordInfo {
 	return p
 }
 
-func makeUser(id, username, email string, password authentication.PasswordInfo, role string) map[string]interface{} {
-	return map[string]interface{}{
+func makeUser(id, username, email string, password authentication.PasswordInfo, role string) map[string]any {
+	return map[string]any{
 		"id":                     id,
 		"username":               username,
 		"email":                  email,
 		"password":               password,
-		"sessions":               []interface{}{},
+		"sessions":               []any{},
 		"role":                   role,
 		"emailVerified":          false,
 		"needsEmailVerification": false,
@@ -176,7 +176,7 @@ func (h mockFederatedHandler) CanHandle(r *http.Request) bool { return true }
 func (h mockFederatedHandler) Name() string                   { return "mock-federated" }
 func (h mockFederatedHandler) Passwordless() bool             { return true }
 func (h mockFederatedHandler) Session(_ interface {
-	FindOne(string, map[string]interface{}) (interface{}, bool)
+	FindOne(string, map[string]any) (any, bool)
 }) authenticator_domain.Session {
 	return h.session
 }

@@ -53,7 +53,7 @@ func TestListUsersInvalidMethod(t *testing.T) {
 func TestListUsersReceivesValidJSON(t *testing.T) {
 	var usersList []users.PublicLocksmithUser
 
-	var sessions []interface{}
+	var sessions []any
 	tempSessions := []authentication.PasswordSession{
 		{
 			Token:     "abc",
@@ -66,9 +66,9 @@ func TestListUsersReceivesValidJSON(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -119,7 +119,7 @@ func TestListUsersReceivesValidJSON(t *testing.T) {
 func TestListUsersSpecificRole(t *testing.T) {
 	var usersList []users.PublicLocksmithUser
 
-	var sessions []interface{}
+	var sessions []any
 	tempSessions := []authentication.PasswordSession{
 		{
 			Token:     "abc",
@@ -132,9 +132,9 @@ func TestListUsersSpecificRole(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -146,7 +146,7 @@ func TestListUsersSpecificRole(t *testing.T) {
 					"sessions": sessions,
 				},
 
-				"a8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"a8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "bob",
 					"email":    "email@email.com",
@@ -197,7 +197,7 @@ func TestListUsersSpecificRole(t *testing.T) {
 func TestListUsersMultipleRoles(t *testing.T) {
 	var usersList []users.PublicLocksmithUser
 
-	var sessions []interface{}
+	var sessions []any
 	tempSessions := []authentication.PasswordSession{
 		{
 			Token:     "abc",
@@ -210,9 +210,9 @@ func TestListUsersMultipleRoles(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -224,7 +224,7 @@ func TestListUsersMultipleRoles(t *testing.T) {
 					"sessions": sessions,
 				},
 
-				"a8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"a8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "bob",
 					"email":    "email@email.com",
@@ -236,7 +236,7 @@ func TestListUsersMultipleRoles(t *testing.T) {
 					"sessions": sessions,
 				},
 
-				"b8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"b8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "z8531661-22a7-493f-b228-028842e09a05",
 					"username": "james",
 					"email":    "email@email.com",
@@ -283,7 +283,7 @@ func TestListUsersMultipleRoles(t *testing.T) {
 func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 	var usersList []publicCustomUser
 
-	var sessions []interface{}
+	var sessions []any
 	tempSessions := []authentication.PasswordSession{
 		{
 			Token:     "abc",
@@ -296,9 +296,9 @@ func TestListUsersReceivesValidJSONWithCustomStruct(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -393,9 +393,9 @@ func TestDeleteUserHTTPHandlesNoPayload(t *testing.T) {
 
 func TestDeleteUserHTTPNonexistentUser(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -403,7 +403,7 @@ func TestDeleteUserHTTPNonexistentUser(t *testing.T) {
 						Password: "testpassword",
 						Salt:     "testsalt",
 					},
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "user",
 					"customObject": "hello",
 				},
@@ -437,9 +437,9 @@ func TestDeleteUserHTTPNonexistentUser(t *testing.T) {
 
 func TestDeleteUserSelfHTTP(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -447,7 +447,7 @@ func TestDeleteUserSelfHTTP(t *testing.T) {
 						Password: "testpassword",
 						Salt:     "testsalt",
 					},
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "user",
 					"customObject": "hello",
 				},
@@ -481,9 +481,9 @@ func TestDeleteUserSelfHTTP(t *testing.T) {
 
 func TestDeleteUserSelfUnauthorizedHTTP(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -491,7 +491,7 @@ func TestDeleteUserSelfUnauthorizedHTTP(t *testing.T) {
 						Password: "testpassword",
 						Salt:     "testsalt",
 					},
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "norights",
 					"customObject": "hello",
 				},
@@ -525,9 +525,9 @@ func TestDeleteUserSelfUnauthorizedHTTP(t *testing.T) {
 
 func TestDeleteUserHTTPUnauthorizedCantDeleteOtherUsers(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -535,7 +535,7 @@ func TestDeleteUserHTTPUnauthorizedCantDeleteOtherUsers(t *testing.T) {
 						Password: "testpassword",
 						Salt:     "testsalt",
 					},
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "user",
 					"customObject": "hello",
 				},
@@ -569,9 +569,9 @@ func TestDeleteUserHTTPUnauthorizedCantDeleteOtherUsers(t *testing.T) {
 
 func TestDeleteUserHTTPAuthorizedCanDeleteOtherUsers(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -579,7 +579,7 @@ func TestDeleteUserHTTPAuthorizedCanDeleteOtherUsers(t *testing.T) {
 						Password: "testpassword",
 						Salt:     "testsalt",
 					},
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "admin",
 					"customObject": "hello",
 				},

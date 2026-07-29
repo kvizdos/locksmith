@@ -41,11 +41,11 @@ func TestCleanupMagicsFromUser(t *testing.T) {
 		AllowedPermissions: []string{"perm"},
 		TTL:                1 * time.Hour,
 	})
-	lsu := map[string]interface{}{
+	lsu := map[string]any{
 		"id":       "c8531661-22a7-493f-b228-028842e09a05",
 		"username": "kenton",
 		"email":    "email@email.com",
-		"password": map[string]interface{}{
+		"password": map[string]any{
 			"password": "passwordhere",
 			"salt":     "salthere",
 		},
@@ -57,7 +57,7 @@ func TestCleanupMagicsFromUser(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
 				"c8531661-22a7-493f-b228-028842e09a05": lsu,
 			},
@@ -70,12 +70,12 @@ func TestCleanupMagicsFromUser(t *testing.T) {
 	converted := user.(LocksmithUser)
 	converted.CleanupOldMagicTokens(testDb)
 
-	rawUser, _ := testDb.FindOne("users", map[string]interface{}{
+	rawUser, _ := testDb.FindOne("users", map[string]any{
 		"id": "c8531661-22a7-493f-b228-028842e09a05",
 	})
-	u := rawUser.(map[string]interface{})
+	u := rawUser.(map[string]any)
 
-	magics := magic.MagicsFromMap(u["magic"].([]interface{}))
+	magics := magic.MagicsFromMap(u["magic"].([]any))
 
 	if len(magics) != 1 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))
@@ -84,7 +84,7 @@ func TestCleanupMagicsFromUser(t *testing.T) {
 }
 
 func TestLoadLocksmithUserFromMap(t *testing.T) {
-	var sessions []interface{}
+	var sessions []any
 	tempSessions := []authentication.PasswordSession{
 		{
 			Token:     "abc",
@@ -100,11 +100,11 @@ func TestLoadLocksmithUserFromMap(t *testing.T) {
 		sessions = append(sessions, sess)
 	}
 
-	lsu := map[string]interface{}{
+	lsu := map[string]any{
 		"id":       "c8531661-22a7-493f-b228-028842e09a05",
 		"username": "kenton",
 		"email":    "email@email.com",
-		"password": map[string]interface{}{
+		"password": map[string]any{
 			"password": "passwordhere",
 			"salt":     "salthere",
 		},
@@ -148,7 +148,7 @@ type customUser struct {
 	customObject string
 }
 
-func (c customUser) ReadFromMap(writeTo *LocksmithUserInterface, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *LocksmithUserInterface, u map[string]any) {
 	// Load initial locksmith data
 	var user LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
@@ -165,15 +165,15 @@ func (c customUser) ReadFromMap(writeTo *LocksmithUserInterface, u map[string]in
 
 func TestLoadCustomUserFromMap(t *testing.T) {
 
-	lsu := map[string]interface{}{
+	lsu := map[string]any{
 		"id":       "c8531661-22a7-493f-b228-028842e09a05",
 		"username": "kenton",
 		"email":    "email@email.com",
-		"password": map[string]interface{}{
+		"password": map[string]any{
 			"password": "passwordhere",
 			"salt":     "salthere",
 		},
-		"sessions":     []interface{}{},
+		"sessions":     []any{},
 		"role":         "user",
 		"customObject": "helloworld",
 	}

@@ -18,7 +18,7 @@ import (
 
 func TestServeLoginAPI_ValidLogin_SetsExpiresAtCookie(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -68,7 +68,7 @@ func TestServeLoginAPI_NoHandlerMatches_Returns500(t *testing.T) {
 
 func TestServeLoginAPI_TokenNilWithoutError_ReturnsAuthError(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -209,7 +209,7 @@ func TestSetBaseCookies_WithOAuthProvider(t *testing.T) {
 
 func TestAttemptLogin_EmailAsUsername_LooksUpByEmail(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -226,7 +226,7 @@ func TestAttemptLogin_EmailAsUsername_LooksUpByEmail(t *testing.T) {
 
 func TestAttemptLogin_EmailAsUsername_UsernameLookupFails(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {
 			"u1": makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user"),
 		},
@@ -247,7 +247,7 @@ func TestAttemptLogin_EmailAsUsername_UsernameLookupFails(t *testing.T) {
 
 func TestServeLoginAPI_RosterableFederated_RedirectsToHintedRegistration(t *testing.T) {
 	t.Parallel()
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {},
 		"auth_links": {},
 	})
@@ -389,10 +389,10 @@ func TestWriteAuthError_CallsMinCtxFunc(t *testing.T) {
 func TestAttemptLogin_FederatedSuccess_LogsUserID(t *testing.T) {
 	t.Parallel()
 	user := makeUser("u1", "kenton", "k@example.com", authentication.PasswordInfo{Passwordless: true}, "user")
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users": {"u1": user},
 		"auth_links": {
-			"l1": map[string]interface{}{
+			"l1": map[string]any{
 				"provider":  "mock-federated",
 				"subject":   "sub-123",
 				"issuer":    "https://issuer.example.com",

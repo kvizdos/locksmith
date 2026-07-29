@@ -13,7 +13,7 @@ func TestAddServiceSecret_Success(t *testing.T) {
 	now := time.Now().UTC()
 
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {
 				"rand-id": service_keys.ServiceKey{
 					ID:       primitive.NewObjectID(),
@@ -94,7 +94,7 @@ func TestAddServiceSecret_Success(t *testing.T) {
 
 func TestAddServiceSecret_MissingClientID(t *testing.T) {
 	db := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"service_keys": {},
 		},
 	}

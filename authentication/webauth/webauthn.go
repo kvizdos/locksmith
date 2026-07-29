@@ -1,5 +1,4 @@
 //go:build !testing
-// +build !testing
 
 package webauth
 
@@ -64,9 +63,9 @@ func BeginRegisterWebAuthn(user users.LocksmithUserInterface, db database.Databa
 	}
 
 	// SAVE SESSION TO DATABASE
-	db.UpdateOne("users", map[string]interface{}{
+	db.UpdateOne("users", map[string]any{
 		"username": user.GetUsername(),
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"websessions": session,
 		},

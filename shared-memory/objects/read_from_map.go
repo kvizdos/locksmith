@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func ReadAllocationFromMap(alloc MemoryAllocation, input map[string]interface{}) (interface{}, error) {
+func ReadAllocationFromMap(alloc MemoryAllocation, input map[string]any) (any, error) {
 	switch alloc {
 	case USER_LOGIN_ATTEMPTS:
 		return ReadUserLoginAttemptFromMap(input), nil

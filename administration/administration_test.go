@@ -10,7 +10,7 @@ import (
 
 func TestListUsersNoUsers(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -32,14 +32,14 @@ func TestListUsersNoUsers(t *testing.T) {
 func TestListUsersOneUser(t *testing.T) {
 	testPassword, _ := authentication.CompileLocksmithPassword("securepassword123")
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": testPassword,
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -63,22 +63,22 @@ func TestListUsersOneUser(t *testing.T) {
 func TestListUsersMultipleUsers(t *testing.T) {
 	testPassword, _ := authentication.CompileLocksmithPassword("securepassword123")
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": testPassword,
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
-				"a2bHHs4L-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"a2bHHs4L-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "a2bHHs4L-22a7-493f-b228-028842e09a05",
 					"username": "bob",
 					"email":    "email@email.com",
 					"password": testPassword,
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -102,30 +102,30 @@ func TestListUsersMultipleUsers(t *testing.T) {
 func TestListUsersByRole(t *testing.T) {
 	testPassword, _ := authentication.CompileLocksmithPassword("securepassword123")
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": testPassword,
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
-				"a2bHHs4L-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"a2bHHs4L-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "a2bHHs4L-22a7-493f-b228-028842e09a05",
 					"username": "bob",
 					"email":    "email@email.com",
 					"password": testPassword,
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
-				"BASafaaA-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"BASafaaA-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "b2bHHs4L-22a7-493f-b228-028842e09a05",
 					"username": "james",
 					"email":    "email@email.com",
 					"password": testPassword,
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "admin",
 				},
 			},
@@ -209,7 +209,7 @@ func (u publicCustomUser) FromRegular(user users.LocksmithUserInterface) (users.
 	return publicUser, nil
 }
 
-func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]interface{}) {
+func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[string]any) {
 	// Load initial locksmith data
 	var user users.LocksmithUserInterface
 	c.LocksmithUser.ReadFromMap(&user, u)
@@ -227,14 +227,14 @@ func (c customUser) ReadFromMap(writeTo *users.LocksmithUserInterface, u map[str
 func TestListUsersOneUserCustomStruct(t *testing.T) {
 	testPassword, _ := authentication.CompileLocksmithPassword("securepassword123")
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":           "c8531661-22a7-493f-b228-028842e09a05",
 					"username":     "kenton",
 					"email":        "email@email.com",
 					"password":     testPassword,
-					"sessions":     []interface{}{},
+					"sessions":     []any{},
 					"role":         "user",
 					"customObject": "helloworld",
 				},
@@ -273,7 +273,7 @@ func TestListUsersOneUserCustomStruct(t *testing.T) {
 
 func TestDeleteUserNoUser(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -292,14 +292,14 @@ func TestDeleteUserNoUser(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": "password",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},

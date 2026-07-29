@@ -30,7 +30,7 @@ func ValidateToken(token authentication.Token, db database.DatabaseAccessor, mag
 		token.Username = mac.Username
 		dbUser = userInfo
 	} else {
-		rawUser, usernameExists := db.FindOne("users", map[string]interface{}{
+		rawUser, usernameExists := db.FindOne("users", map[string]any{
 			"id": token.Username,
 		})
 

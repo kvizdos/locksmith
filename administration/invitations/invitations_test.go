@@ -11,7 +11,7 @@ import (
 
 func TestInviteUserInvalidRole(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -25,7 +25,7 @@ func TestInviteUserInvalidRole(t *testing.T) {
 
 func TestInviteUserInvalidEmail(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 		},
 	}
@@ -39,14 +39,14 @@ func TestInviteUserInvalidEmail(t *testing.T) {
 
 func TestInviteUserEmailExistsAsRegisteredUser(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": "password",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -62,20 +62,20 @@ func TestInviteUserEmailExistsAsRegisteredUser(t *testing.T) {
 
 func TestInviteUserEmailExistsAsInvite(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"code":  "invite-token",
 					"email": "new@email.com",
 				},
 			},
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": "password",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -91,20 +91,20 @@ func TestInviteUserEmailExistsAsInvite(t *testing.T) {
 
 func TestInviteUserSuccess(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"code":  "old-invite-token",
 					"email": "old@email.com",
 				},
 			},
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
 					"password": "password",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -121,7 +121,7 @@ func TestInviteUserSuccess(t *testing.T) {
 
 func TestGetInviteCodeMalformedToken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {},
 			"users":   {},
 		},
@@ -137,9 +137,9 @@ func TestGetInviteCodeMalformedToken(t *testing.T) {
 
 func TestGetInviteCodeInvalidToken(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"code": "jyTeL3RiH-9RgjLDt42CfTKJOVu9G16KebdGfVRygiu2Qf2Qkcb2QRRCQQDJVb210J2ZCz8v2PVJaDL56wuYPOHqiubfOk8M",
 				},
 			},
@@ -161,9 +161,9 @@ func TestGetInviteCodeValidToken(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email":   "kvizdos@email.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -198,9 +198,9 @@ func TestReinviteUserNoTokenFound(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email":   "kvizdos@email.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -232,9 +232,9 @@ func TestReinviteUserNoEmailChangeSuccess(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email":   "kvizdos@email.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -254,7 +254,7 @@ func TestReinviteUserNoEmailChangeSuccess(t *testing.T) {
 		return
 	}
 
-	rawInvite, found := testDb.FindOne("invites", map[string]interface{}{
+	rawInvite, found := testDb.FindOne("invites", map[string]any{
 		"userid": "abc123",
 	})
 
@@ -263,7 +263,7 @@ func TestReinviteUserNoEmailChangeSuccess(t *testing.T) {
 		return
 	}
 
-	invite := rawInvite.(map[string]interface{})
+	invite := rawInvite.(map[string]any)
 
 	hasher = sha256.New()
 	hasher.Write([]byte(code))
@@ -296,9 +296,9 @@ func TestReinviteWithEmailChangeEmailAlreadyRegistered(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email":   "kvizdos@email.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -308,7 +308,7 @@ func TestReinviteWithEmailChangeEmailAlreadyRegistered(t *testing.T) {
 				},
 			},
 			"users": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email": "an-email@example.com",
 				},
 			},
@@ -334,9 +334,9 @@ func TestReinviteWithEmailChangeEmailAlreadyInvited(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email":   "kvizdos@email.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -344,7 +344,7 @@ func TestReinviteWithEmailChangeEmailAlreadyInvited(t *testing.T) {
 					"code":    fmt.Sprintf("%x", hashedCode),
 					"userid":  "abc123",
 				},
-				"id2": map[string]interface{}{
+				"id2": map[string]any{
 					"email":   "kvizdos2@gmail.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -354,7 +354,7 @@ func TestReinviteWithEmailChangeEmailAlreadyInvited(t *testing.T) {
 				},
 			},
 			"users": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email": "an-email@example.com",
 				},
 			},
@@ -380,9 +380,9 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 	hashedCode := hasher.Sum(nil)
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email":   "kvizdos@email.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -390,7 +390,7 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 					"code":    fmt.Sprintf("%x", hashedCode),
 					"userid":  "abc123",
 				},
-				"id2": map[string]interface{}{
+				"id2": map[string]any{
 					"email":   "kvizdos2@gmail.com",
 					"role":    "user",
 					"inviter": "a-uuid",
@@ -400,7 +400,7 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 				},
 			},
 			"users": {
-				"id": map[string]interface{}{
+				"id": map[string]any{
 					"email": "an-email@example.com",
 				},
 			},
@@ -414,7 +414,7 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 		return
 	}
 
-	rawInvite, found := testDb.FindOne("invites", map[string]interface{}{
+	rawInvite, found := testDb.FindOne("invites", map[string]any{
 		"userid": "abc123",
 	})
 
@@ -423,7 +423,7 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 		return
 	}
 
-	invite := rawInvite.(map[string]interface{})
+	invite := rawInvite.(map[string]any)
 	hasher = sha256.New()
 	hasher.Write([]byte(code))
 	hahedReceivedCode := hasher.Sum(nil)
@@ -451,9 +451,9 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 
 func TestClaimActiveInviteOnVerifiedEmailUpgradesRoleAndExpiresInvite(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {
-				"invite1": map[string]interface{}{
+				"invite1": map[string]any{
 					"email":   "bob@bob.com",
 					"role":    "admin",
 					"inviter": "a-uuid",
@@ -463,7 +463,7 @@ func TestClaimActiveInviteOnVerifiedEmailUpgradesRoleAndExpiresInvite(t *testing
 				},
 			},
 			"users": {
-				"actual-user-id": map[string]interface{}{
+				"actual-user-id": map[string]any{
 					"id":    "actual-user-id",
 					"email": "bob@bob.com",
 					"role":  "user",
@@ -477,11 +477,11 @@ func TestClaimActiveInviteOnVerifiedEmailUpgradesRoleAndExpiresInvite(t *testing
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	rawUser, found := testDb.FindOne("users", map[string]interface{}{"id": "actual-user-id"})
+	rawUser, found := testDb.FindOne("users", map[string]any{"id": "actual-user-id"})
 	if !found {
 		t.Fatal("user disappeared")
 	}
-	user := rawUser.(map[string]interface{})
+	user := rawUser.(map[string]any)
 	if user["role"].(string) != "admin" {
 		t.Fatalf("role = %q, want admin (claimed from invite)", user["role"].(string))
 	}
@@ -491,17 +491,17 @@ func TestClaimActiveInviteOnVerifiedEmailUpgradesRoleAndExpiresInvite(t *testing
 		t.Fatalf("user id changed to %q, want unchanged", user["id"].(string))
 	}
 
-	if _, found := testDb.FindOne("invites", map[string]interface{}{"email": "bob@bob.com"}); found {
+	if _, found := testDb.FindOne("invites", map[string]any{"email": "bob@bob.com"}); found {
 		t.Fatal("invite was not expired")
 	}
 }
 
 func TestClaimActiveInviteOnVerifiedEmailNoopWhenNoInvite(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"invites": {},
 			"users": {
-				"actual-user-id": map[string]interface{}{
+				"actual-user-id": map[string]any{
 					"id":    "actual-user-id",
 					"email": "nobody-invited@example.com",
 					"role":  "user",
@@ -515,8 +515,8 @@ func TestClaimActiveInviteOnVerifiedEmailNoopWhenNoInvite(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	rawUser, _ := testDb.FindOne("users", map[string]interface{}{"id": "actual-user-id"})
-	user := rawUser.(map[string]interface{})
+	rawUser, _ := testDb.FindOne("users", map[string]any{"id": "actual-user-id"})
+	user := rawUser.(map[string]any)
 	if user["role"].(string) != "user" {
 		t.Fatalf("role = %q, want unchanged %q", user["role"].(string), "user")
 	}

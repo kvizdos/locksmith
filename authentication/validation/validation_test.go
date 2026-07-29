@@ -34,9 +34,9 @@ func pushSession(db database.DatabaseAccessor) {
 	hashedCode := hasher.Sum(nil)
 	hashedToken := fmt.Sprintf("%x", hashedCode)
 
-	db.UpdateOne("users", map[string]interface{}{
+	db.UpdateOne("users", map[string]any{
 		"username": "kenton",
-	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+	}, map[database.DatabaseUpdateActions]map[string]any{
 		database.PUSH: {
 			"sessions": authentication.PasswordSession{
 				Token:     hashedToken,
@@ -53,12 +53,12 @@ func TestValidateInvalidUsername(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -85,13 +85,13 @@ func TestValidateInvalidToken(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},
@@ -120,13 +120,13 @@ func TestValidateValidToken(t *testing.T) {
 	}
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "c8531661-22a7-493f-b228-028842e09a05",
 					"username": "kenton",
 					"email":    "email@email.com",
-					"sessions": []interface{}{},
+					"sessions": []any{},
 					"role":     "user",
 				},
 			},

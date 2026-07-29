@@ -94,7 +94,7 @@ func TestSetBaseCookiesWithOAuthProvider(t *testing.T) {
 func TestPassToClientRedirectsToConfiguredDefault(t *testing.T) {
 	t.Parallel()
 
-	db := database.TestDatabase{Tables: map[string]map[string]interface{}{}}
+	db := database.TestDatabase{Tables: map[string]map[string]any{}}
 	cm := NewCookieManager(db, "/app")
 
 	token := &authenticator_domain.Token{
@@ -121,7 +121,7 @@ func TestPassToClientRedirectsToConfiguredDefault(t *testing.T) {
 func TestPassToClientRedirectsToTokenOverride(t *testing.T) {
 	t.Parallel()
 
-	db := database.TestDatabase{Tables: map[string]map[string]interface{}{}}
+	db := database.TestDatabase{Tables: map[string]map[string]any{}}
 	cm := NewCookieManager(db, "/app")
 
 	token := &authenticator_domain.Token{

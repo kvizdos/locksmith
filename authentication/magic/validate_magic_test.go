@@ -147,9 +147,9 @@ func TestValidateMagicValidButUserWasDeleted(t *testing.T) {
 	})
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       "rand",
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -185,9 +185,9 @@ func TestValidateMagicValidButUserHas0ActiveMagics(t *testing.T) {
 	})
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       uid,
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -228,9 +228,9 @@ func TestValidateMagicValidButDoesNotExistInDatabase(t *testing.T) {
 	})
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       uid,
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -273,9 +273,9 @@ func TestValidateMagicValidSuccess(t *testing.T) {
 	})
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       uid,
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -323,9 +323,9 @@ func TestValidateMagicOldCodesAreExpired(t *testing.T) {
 	})
 
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":       uid,
 					"username": "kenton",
 					"email":    "email@email.com",
@@ -356,12 +356,12 @@ func TestValidateMagicOldCodesAreExpired(t *testing.T) {
 	// of code)
 	time.Sleep(time.Second * 2)
 
-	rawUser, _ := testDb.FindOne("users", map[string]interface{}{
+	rawUser, _ := testDb.FindOne("users", map[string]any{
 		"id": uid,
 	})
-	user := rawUser.(map[string]interface{})
+	user := rawUser.(map[string]any)
 
-	magics := MagicsFromMap(user["magic"].([]interface{}))
+	magics := MagicsFromMap(user["magic"].([]any))
 
 	if len(magics) != 1 {
 		t.Errorf("got incorrect number of magics: %d", len(magics))

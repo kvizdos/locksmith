@@ -23,14 +23,14 @@ func federatedAttemptLogin(t *testing.T, a *authorizers, sess *mockFederatedSess
 
 func TestFederated_ExistingAuthLink_ResolvesUser(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", authentication.PasswordInfo{Passwordless: true}, "user")
-	link := map[string]interface{}{
+	link := map[string]any{
 		"provider":  "mock-federated",
 		"subject":   "sub-123",
 		"issuer":    "https://issuer.example.com",
 		"user_id":   "u1",
 		"linked_at": int64(0),
 	}
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {"u1": user},
 		"auth_links": {"l1": link},
 	})
@@ -54,14 +54,14 @@ func TestFederated_ExistingAuthLink_ResolvesUser(t *testing.T) {
 
 func TestFederated_IssuerMismatch_Denied(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", authentication.PasswordInfo{Passwordless: true}, "user")
-	link := map[string]interface{}{
+	link := map[string]any{
 		"provider":  "mock-federated",
 		"subject":   "sub-123",
 		"issuer":    "https://real-issuer.example.com",
 		"user_id":   "u1",
 		"linked_at": int64(0),
 	}
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {"u1": user},
 		"auth_links": {"l1": link},
 	})
@@ -86,7 +86,7 @@ func TestFederated_IssuerMismatch_Denied(t *testing.T) {
 
 func TestFederated_NoAuthLink_EmailVerified_AutoLinks(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", authentication.PasswordInfo{Passwordless: true}, "user")
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {"u1": user},
 		"auth_links": {},
 	})
@@ -116,7 +116,7 @@ func TestFederated_NoAuthLink_EmailVerified_AutoLinks(t *testing.T) {
 
 func TestFederated_NoAuthLink_EmailNotVerified_Denied(t *testing.T) {
 	user := makeUser("u1", "kenton", "k@example.com", authentication.PasswordInfo{Passwordless: true}, "user")
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {"u1": user},
 		"auth_links": {},
 	})
@@ -140,7 +140,7 @@ func TestFederated_NoAuthLink_EmailNotVerified_Denied(t *testing.T) {
 }
 
 func TestFederated_NoAuthLink_EmailVerified_NoMatchingUser(t *testing.T) {
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {},
 		"auth_links": {},
 	})
@@ -164,7 +164,7 @@ func TestFederated_NoAuthLink_EmailVerified_NoMatchingUser(t *testing.T) {
 }
 
 func TestFederated_Rosterable_NoUser_ReturnsHint(t *testing.T) {
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {},
 		"auth_links": {},
 	})
@@ -199,7 +199,7 @@ func TestFederated_Rosterable_NoUser_ReturnsHint(t *testing.T) {
 }
 
 func TestFederated_NotRosterable_NoUser_NoHint(t *testing.T) {
-	db := newTestDB(map[string]map[string]interface{}{
+	db := newTestDB(map[string]map[string]any{
 		"users":      {},
 		"auth_links": {},
 	})

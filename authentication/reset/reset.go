@@ -69,7 +69,7 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		user, found := h.Database.FindOne("users", map[string]interface{}{
+		user, found := h.Database.FindOne("users", map[string]any{
 			"username": username,
 		})
 
@@ -80,7 +80,7 @@ func (h ResetRouterAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 
 		var lsUser users.LocksmithUserInterface
-		users.LocksmithUser{}.ReadFromMap(&lsUser, user.(map[string]interface{}))
+		users.LocksmithUser{}.ReadFromMap(&lsUser, user.(map[string]any))
 		token, err := lsUser.CreateMagicAuthenticationCode(h.Database, magic.MagicAuthenticationVariables{
 			ForUserID:          lsUser.GetID(),
 			AllowedPermissions: []string{"magic.reset.password"},

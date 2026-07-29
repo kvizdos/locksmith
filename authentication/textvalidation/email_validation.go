@@ -97,7 +97,7 @@ func (e EmailValidationResult) Result(skipDidYouMean bool) (*string, ValidationR
 }
 
 func (e EmailValidationResult) DebugPrint(inputEmail string) {
-	out := map[string]interface{}{}
+	out := map[string]any{}
 
 	out["input_email"] = inputEmail
 

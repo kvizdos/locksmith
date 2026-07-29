@@ -55,7 +55,7 @@ func TestServeLoginAPIPublishesLoginSucceeded(t *testing.T) {
 	t.Parallel()
 
 	user := makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user")
-	db := newTestDB(map[string]map[string]interface{}{"users": {"u1": user}})
+	db := newTestDB(map[string]map[string]any{"users": {"u1": user}})
 	bus := &recordingEventBus{}
 	a := newTestAuthorizer(db, WithEventBus(bus))
 
@@ -83,7 +83,7 @@ func TestServeLoginAPIPublishesLoginFailedOnInvalidPassword(t *testing.T) {
 	t.Parallel()
 
 	user := makeUser("u1", "kenton", "k@example.com", compiledPassword("hunter2"), "user")
-	db := newTestDB(map[string]map[string]interface{}{"users": {"u1": user}})
+	db := newTestDB(map[string]map[string]any{"users": {"u1": user}})
 	bus := &recordingEventBus{}
 	a := newTestAuthorizer(db, WithEventBus(bus))
 
@@ -109,7 +109,7 @@ func TestServeLoginAPIPublishesLoginFailedOnInvalidPassword(t *testing.T) {
 func TestServeLoginAPIPublishesLoginFailedOnUnknownUser(t *testing.T) {
 	t.Parallel()
 
-	db := newTestDB(map[string]map[string]interface{}{"users": {}})
+	db := newTestDB(map[string]map[string]any{"users": {}})
 	bus := &recordingEventBus{}
 	a := newTestAuthorizer(db, WithEventBus(bus))
 
@@ -126,7 +126,7 @@ func TestServeLoginAPIPublishesLoginFailedOnUnknownUser(t *testing.T) {
 func TestLinkAccountPublishesAccountLinked(t *testing.T) {
 	t.Parallel()
 
-	db := newTestDB(map[string]map[string]interface{}{"auth_links": {}})
+	db := newTestDB(map[string]map[string]any{"auth_links": {}})
 	bus := &recordingEventBus{}
 	a := newTestAuthorizer(db, WithEventBus(bus))
 

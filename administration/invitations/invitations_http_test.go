@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 
 func TestInviteUserHTTPInvalidMethod(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users":   {},
 			"invites": {},
 		},
@@ -53,7 +53,7 @@ func TestInviteUserHTTPInvalidMethod(t *testing.T) {
 
 func TestInviteUserHTTPAuthUserNotPassed(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users":   {},
 			"invites": {},
 		},
@@ -79,7 +79,7 @@ func TestInviteUserHTTPAuthUserNotPassed(t *testing.T) {
 
 func TestInviteUserHTTPInvalidPayload(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users":   {},
 			"invites": {},
 		},
@@ -111,10 +111,10 @@ func TestInviteUserHTTPInvalidPayload(t *testing.T) {
 
 func TestInviteUserHTTPAlreadyInvited(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {},
 			"invites": {
-				"ID": map[string]interface{}{
+				"ID": map[string]any{
 					"email": "random@random.com",
 				},
 			},
@@ -148,9 +148,9 @@ func TestInviteUserHTTPAlreadyInvited(t *testing.T) {
 
 func TestInviteUserHTTPAlreadyRegistered(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"ID": map[string]interface{}{
+				"ID": map[string]any{
 					"email": "random@random.com",
 				},
 			},
@@ -185,7 +185,7 @@ func TestInviteUserHTTPAlreadyRegistered(t *testing.T) {
 
 func TestInviteUserHTTPSuccess(t *testing.T) {
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users":   {},
 			"invites": {},
 		},

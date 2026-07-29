@@ -33,7 +33,7 @@ func (m meEndpointHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pub, err := user.ToPublic()
 
-	out := map[string]interface{}{
+	out := map[string]any{
 		"info": map[string]any{
 			"id":       user.GetID(),
 			"username": user.GetUsername(),
@@ -50,7 +50,7 @@ func (m meEndpointHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	u := pub.MakeUserSafe()
 
-	api_helpers.WriteResponse(w, map[string]interface{}{
+	api_helpers.WriteResponse(w, map[string]any{
 		"info":        u,
 		"permissions": roles.GetExposable(role.Permissions),
 	}, http.StatusOK)

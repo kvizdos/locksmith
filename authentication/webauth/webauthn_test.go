@@ -28,12 +28,12 @@ func TestBeginRegister(t *testing.T) {
 		PasswordInfo: passwordInfo,
 	}
 	testDb := database.TestDatabase{
-		Tables: map[string]map[string]interface{}{
+		Tables: map[string]map[string]any{
 			"users": {
-				"c8531661-22a7-493f-b228-028842e09a05": map[string]interface{}{
+				"c8531661-22a7-493f-b228-028842e09a05": map[string]any{
 					"id":          "c8531661-22a7-493f-b228-028842e09a05",
 					"username":    "kvizdos",
-					"websessions": []interface{}{},
+					"websessions": []any{},
 				},
 			},
 		},
