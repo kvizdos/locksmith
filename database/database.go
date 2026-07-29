@@ -33,20 +33,41 @@ type TransactionOptions struct {
 }
 
 type DatabaseAccessor interface {
+	// Deprecated: use InsertOneCtx
 	InsertOne(table string, body map[string]interface{}) (interface{}, error)
+	InsertOneCtx(ctx context.Context, table string, body map[string]interface{}) (interface{}, error)
+	// Deprecated: use InsertManyCtx
 	InsertMany(table string, bodies []interface{}) error
+	InsertManyCtx(ctx context.Context, table string, bodies []interface{}) error
+	// Deprecated: use UpdateOneCtx
 	UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
+	UpdateOneCtx(ctx context.Context, table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
+	// Deprecated: use UpdateManyCtx
 	UpdateMany(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
+	UpdateManyCtx(ctx context.Context, table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error)
+	// Deprecated: use FindOneCtx
 	FindOne(table string, query map[string]interface{}) (interface{}, bool)
+	FindOneCtx(ctx context.Context, table string, query map[string]interface{}) (interface{}, bool)
+	// Deprecated: use FindCtx
 	Find(table string, query map[string]interface{}) ([]interface{}, bool)
+	FindCtx(ctx context.Context, table string, query map[string]interface{}) ([]interface{}, bool)
+	// Deprecated: use FindPaginatedCtx
 	FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool)
+	FindPaginatedCtx(ctx context.Context, table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool)
+	// Deprecated: use DeleteOneCtx
 	DeleteOne(table string, query map[string]interface{}) (bool, error)
+	DeleteOneCtx(ctx context.Context, table string, query map[string]interface{}) (bool, error)
+	// Deprecated: use DeleteManyCtx
 	DeleteMany(table string, query map[string]interface{}) (bool, error)
+	DeleteManyCtx(ctx context.Context, table string, query map[string]interface{}) (bool, error)
+	// Deprecated: use AggregateCtx
+	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
+	AggregateCtx(ctx context.Context, table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
+
 	CreateTextIndex(table string, keys []string) error
 	CreateRegularIndex(table string, keys map[string]Direction, unique bool) error
 	Drop(table string) error
 	AggregateStream(ctx context.Context, table string, pipeline []map[string]interface{}, bufferSize int) (<-chan map[string]interface{}, <-chan error)
-	Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error)
 	GetUTCTimestampFromID(dbID primitive.ObjectID) (time.Time, error)
 	MonitorConnection(heartbeat time.Duration, health HealthCheckInterface)
 	Transact(ctx context.Context, opts *TransactionOptions, transaction func(sessCtx mongo.SessionContext) (interface{}, error)) (interface{}, error)
@@ -79,6 +100,10 @@ func (db TestDatabase) Transact(ctx context.Context, opts *TransactionOptions, t
 }
 
 func (db TestDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
+	return db.AggregateCtx(context.Background(), table, pipeline)
+}
+
+func (db TestDatabase) AggregateCtx(ctx context.Context, table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
 	if db.StubAggregateCall != nil {
 		return db.StubAggregateCall, nil
 	}
@@ -107,8 +132,12 @@ func (db TestDatabase) AggregateStream(ctx context.Context, table string, pipeli
 }
 
 func (db TestDatabase) InsertMany(table string, documents []interface{}) error {
+	return db.InsertManyCtx(context.Background(), table, documents)
+}
+
+func (db TestDatabase) InsertManyCtx(ctx context.Context, table string, documents []interface{}) error {
 	for _, doc := range documents {
-		_, err := db.InsertOne(table, doc.(map[string]interface{}))
+		_, err := db.InsertOneCtx(ctx, table, doc.(map[string]interface{}))
 
 		if err != nil {
 			return err
@@ -124,11 +153,19 @@ func (db TestDatabase) Drop(table string) error {
 }
 
 func (db TestDatabase) FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool) {
+	return db.FindPaginatedCtx(context.Background(), table, query, maxPages, lastID)
+}
+
+func (db TestDatabase) FindPaginatedCtx(ctx context.Context, table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool) {
 	// TODO: Probably stub this
 	return []map[string]interface{}{}, false
 }
 
 func (db TestDatabase) InsertOne(table string, body map[string]interface{}) (interface{}, error) {
+	return db.InsertOneCtx(context.Background(), table, body)
+}
+
+func (db TestDatabase) InsertOneCtx(ctx context.Context, table string, body map[string]interface{}) (interface{}, error) {
 	if _, ok := db.Tables[table]; !ok {
 		db.Tables[table] = make(map[string]interface{})
 	}
@@ -146,6 +183,10 @@ func (db TestDatabase) InsertOne(table string, body map[string]interface{}) (int
 }
 
 func (db TestDatabase) UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
+	return db.UpdateOneCtx(context.Background(), table, query, body)
+}
+
+func (db TestDatabase) UpdateOneCtx(ctx context.Context, table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
 	if tableData, ok := db.Tables[table]; ok {
 		for _, row := range tableData {
 			match := true
@@ -240,6 +281,10 @@ func (db TestDatabase) UpdateOne(table string, query map[string]interface{}, bod
 }
 
 func (db TestDatabase) UpdateMany(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
+	return db.UpdateManyCtx(context.Background(), table, query, body)
+}
+
+func (db TestDatabase) UpdateManyCtx(ctx context.Context, table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
 	if tableData, ok := db.Tables[table]; ok {
 		updatedRows := []interface{}{}
 		for _, row := range tableData {
@@ -303,6 +348,10 @@ func (db TestDatabase) UpdateMany(table string, query map[string]interface{}, bo
 }
 
 func (db TestDatabase) FindOne(table string, query map[string]interface{}) (interface{}, bool) {
+	return db.FindOneCtx(context.Background(), table, query)
+}
+
+func (db TestDatabase) FindOneCtx(ctx context.Context, table string, query map[string]interface{}) (interface{}, bool) {
 	if tableData, ok := db.Tables[table]; ok {
 		for _, row := range tableData {
 			match := true
@@ -328,6 +377,10 @@ func (db TestDatabase) FindOne(table string, query map[string]interface{}) (inte
 }
 
 func (db TestDatabase) Find(table string, query map[string]interface{}) ([]interface{}, bool) {
+	return db.FindCtx(context.Background(), table, query)
+}
+
+func (db TestDatabase) FindCtx(ctx context.Context, table string, query map[string]interface{}) ([]interface{}, bool) {
 	if tableData, ok := db.Tables[table]; ok {
 		var results []interface{}
 
@@ -335,7 +388,7 @@ func (db TestDatabase) Find(table string, query map[string]interface{}) ([]inter
 		if orQueries, ok := query["$or"]; ok {
 			if orQueriesList, ok := orQueries.([]map[string]interface{}); ok {
 				for _, orQuery := range orQueriesList {
-					if result, ok := db.Find(table, orQuery); ok {
+					if result, ok := db.FindCtx(ctx, table, orQuery); ok {
 						results = append(results, result...)
 					}
 				}
@@ -375,6 +428,10 @@ func (db TestDatabase) Find(table string, query map[string]interface{}) ([]inter
 }
 
 func (db TestDatabase) DeleteOne(table string, query map[string]interface{}) (bool, error) {
+	return db.DeleteOneCtx(context.Background(), table, query)
+}
+
+func (db TestDatabase) DeleteOneCtx(ctx context.Context, table string, query map[string]interface{}) (bool, error) {
 	if tableData, ok := db.Tables[table]; ok {
 		for key, row := range tableData {
 			match := true
@@ -410,6 +467,10 @@ func (db TestDatabase) DeleteOne(table string, query map[string]interface{}) (bo
 }
 
 func (db TestDatabase) DeleteMany(table string, query map[string]interface{}) (bool, error) {
+	return db.DeleteManyCtx(context.Background(), table, query)
+}
+
+func (db TestDatabase) DeleteManyCtx(ctx context.Context, table string, query map[string]interface{}) (bool, error) {
 	if tableData, ok := db.Tables[table]; ok {
 		keysToDelete := []string{}
 		for key, row := range tableData {

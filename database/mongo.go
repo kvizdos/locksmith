@@ -90,7 +90,11 @@ func (db MongoDatabase) Transact(ctx context.Context, opts *TransactionOptions, 
 }
 
 func (db MongoDatabase) InsertMany(table string, documents []interface{}) error {
-	_, err := db.database.Collection(table).InsertMany(context.Background(), documents)
+	return db.InsertManyCtx(context.Background(), table, documents)
+}
+
+func (db MongoDatabase) InsertManyCtx(ctx context.Context, table string, documents []interface{}) error {
+	_, err := db.database.Collection(table).InsertMany(ctx, documents)
 
 	return err
 }
@@ -108,16 +112,20 @@ func (db MongoDatabase) Drop(table string) error {
 }
 
 func (db MongoDatabase) Aggregate(table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
+	return db.AggregateCtx(context.Background(), table, pipeline)
+}
+
+func (db MongoDatabase) AggregateCtx(ctx context.Context, table string, pipeline []map[string]interface{}) ([]map[string]interface{}, error) {
 	col := db.database.Collection(table)
 
-	res, err := col.Aggregate(context.TODO(), pipeline)
+	res, err := col.Aggregate(ctx, pipeline)
 
 	if err != nil {
 		return []map[string]interface{}{}, err
 	}
 
 	var results []map[string]interface{}
-	res.All(context.Background(), &results)
+	res.All(ctx, &results)
 
 	finalResults := make([]map[string]interface{}, len(results))
 
@@ -163,9 +171,13 @@ func (db MongoDatabase) AggregateStream(ctx context.Context, table string, pipel
 }
 
 func (db MongoDatabase) DeleteOne(table string, query map[string]interface{}) (bool, error) {
+	return db.DeleteOneCtx(context.Background(), table, query)
+}
+
+func (db MongoDatabase) DeleteOneCtx(ctx context.Context, table string, query map[string]interface{}) (bool, error) {
 	col := db.database.Collection(table)
 
-	res, err := col.DeleteOne(context.Background(), query)
+	res, err := col.DeleteOne(ctx, query)
 
 	if err != nil {
 		return false, err
@@ -179,9 +191,13 @@ func (db MongoDatabase) DeleteOne(table string, query map[string]interface{}) (b
 }
 
 func (db MongoDatabase) DeleteMany(table string, query map[string]interface{}) (bool, error) {
+	return db.DeleteManyCtx(context.Background(), table, query)
+}
+
+func (db MongoDatabase) DeleteManyCtx(ctx context.Context, table string, query map[string]interface{}) (bool, error) {
 	col := db.database.Collection(table)
 
-	res, err := col.DeleteMany(context.Background(), query)
+	res, err := col.DeleteMany(ctx, query)
 
 	if err != nil {
 		return false, err
@@ -195,9 +211,13 @@ func (db MongoDatabase) DeleteMany(table string, query map[string]interface{}) (
 }
 
 func (db MongoDatabase) FindOne(table string, query map[string]interface{}) (interface{}, bool) {
+	return db.FindOneCtx(context.Background(), table, query)
+}
+
+func (db MongoDatabase) FindOneCtx(ctx context.Context, table string, query map[string]interface{}) (interface{}, bool) {
 	col := db.database.Collection(table)
 
-	res := col.FindOne(context.Background(), query)
+	res := col.FindOne(ctx, query)
 
 	if res.Err() != nil {
 		return map[string]interface{}{}, false
@@ -212,9 +232,13 @@ func (db MongoDatabase) FindOne(table string, query map[string]interface{}) (int
 }
 
 func (db MongoDatabase) Find(table string, query map[string]interface{}) ([]interface{}, bool) {
+	return db.FindCtx(context.Background(), table, query)
+}
+
+func (db MongoDatabase) FindCtx(ctx context.Context, table string, query map[string]interface{}) ([]interface{}, bool) {
 	col := db.database.Collection(table)
 
-	res, err := col.Find(context.Background(), query)
+	res, err := col.Find(ctx, query)
 
 	if err != nil {
 		fmt.Println(err)
@@ -222,7 +246,7 @@ func (db MongoDatabase) Find(table string, query map[string]interface{}) ([]inte
 	}
 
 	var results []map[string]interface{}
-	res.All(context.Background(), &results)
+	res.All(ctx, &results)
 
 	finalResults := make([]interface{}, len(results))
 
@@ -275,6 +299,10 @@ func (db MongoDatabase) Count(table string, filter map[string]interface{}) (int6
 }
 
 func (db MongoDatabase) FindPaginated(table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool) {
+	return db.FindPaginatedCtx(context.Background(), table, query, maxPages, lastID)
+}
+
+func (db MongoDatabase) FindPaginatedCtx(ctx context.Context, table string, query map[string]interface{}, maxPages int64, lastID string) ([]map[string]interface{}, bool) {
 	// Set the maximum and sort by ID
 	opts := options.Find().SetLimit(maxPages).SetSort(bson.D{{"_id", 1}})
 
@@ -288,14 +316,14 @@ func (db MongoDatabase) FindPaginated(table string, query map[string]interface{}
 		query["_id"] = map[string]interface{}{"$gt": objID}
 	}
 
-	res, err := db.database.Collection(table).Find(context.TODO(), query, opts)
+	res, err := db.database.Collection(table).Find(ctx, query, opts)
 
 	if err != nil {
 		return []map[string]interface{}{}, false
 	}
 
 	var results []map[string]interface{}
-	res.All(context.Background(), &results)
+	res.All(ctx, &results)
 
 	return results, true
 }
@@ -341,9 +369,13 @@ func convertPrimitiveArrayToSlice(array primitive.A) []interface{} {
 }
 
 func (db MongoDatabase) InsertOne(table string, body map[string]interface{}) (interface{}, error) {
+	return db.InsertOneCtx(context.Background(), table, body)
+}
+
+func (db MongoDatabase) InsertOneCtx(ctx context.Context, table string, body map[string]interface{}) (interface{}, error) {
 	col := db.database.Collection(table)
 
-	res, err := col.InsertOne(context.Background(), body)
+	res, err := col.InsertOne(ctx, body)
 	if err != nil {
 		return nil, err
 	}
@@ -352,6 +384,10 @@ func (db MongoDatabase) InsertOne(table string, body map[string]interface{}) (in
 }
 
 func (db MongoDatabase) UpdateOne(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
+	return db.UpdateOneCtx(context.Background(), table, query, body)
+}
+
+func (db MongoDatabase) UpdateOneCtx(ctx context.Context, table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
 	col := db.database.Collection(table)
 
 	bsonBody := bson.M{}
@@ -370,13 +406,13 @@ func (db MongoDatabase) UpdateOne(table string, query map[string]interface{}, bo
 
 	switch useAction {
 	case PUSH:
-		res, err = col.UpdateOne(context.Background(), query, bson.M{"$push": bsonBody})
+		res, err = col.UpdateOne(ctx, query, bson.M{"$push": bsonBody})
 		break
 	case SET:
-		res, err = col.UpdateOne(context.Background(), query, bson.M{"$set": bsonBody})
+		res, err = col.UpdateOne(ctx, query, bson.M{"$set": bsonBody})
 		break
 	case INC:
-		res, err = col.UpdateOne(context.Background(), query, bson.M{"$inc": bsonBody})
+		res, err = col.UpdateOne(ctx, query, bson.M{"$inc": bsonBody})
 		break
 	}
 	if err != nil {
@@ -387,6 +423,10 @@ func (db MongoDatabase) UpdateOne(table string, query map[string]interface{}, bo
 }
 
 func (db MongoDatabase) UpdateMany(table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
+	return db.UpdateManyCtx(context.Background(), table, query, body)
+}
+
+func (db MongoDatabase) UpdateManyCtx(ctx context.Context, table string, query map[string]interface{}, body map[DatabaseUpdateActions]map[string]interface{}) (interface{}, error) {
 	col := db.database.Collection(table)
 
 	bsonBody := bson.M{}
@@ -405,13 +445,13 @@ func (db MongoDatabase) UpdateMany(table string, query map[string]interface{}, b
 
 	switch useAction {
 	case PUSH:
-		res, err = col.UpdateMany(context.Background(), query, bson.M{"$push": bsonBody})
+		res, err = col.UpdateMany(ctx, query, bson.M{"$push": bsonBody})
 		break
 	case SET:
-		res, err = col.UpdateMany(context.Background(), query, bson.M{"$set": bsonBody})
+		res, err = col.UpdateMany(ctx, query, bson.M{"$set": bsonBody})
 		break
 	case INC:
-		res, err = col.UpdateMany(context.Background(), query, bson.M{"$inc": bsonBody})
+		res, err = col.UpdateMany(ctx, query, bson.M{"$inc": bsonBody})
 		break
 	}
 	if err != nil {
