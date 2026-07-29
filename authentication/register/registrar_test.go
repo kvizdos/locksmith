@@ -12,6 +12,7 @@ import (
 	"github.com/kvizdos/locksmith/authentication/register/register_domain"
 	"github.com/kvizdos/locksmith/authentication/registrationhints"
 	"github.com/kvizdos/locksmith/authentication/signing"
+	"github.com/kvizdos/locksmith/authentication/verificationcodes"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -152,6 +153,148 @@ func TestRegistrarRegisterUsesInviteRoleIDAndExpiresInvite(t *testing.T) {
 	}
 	if _, found := db.FindOne("invites", map[string]interface{}{"code": hashedCode}); found {
 		t.Fatal("invite was not expired")
+	}
+}
+
+func TestRegistrarPasswordRegistrationDefersPendingInviteUntilEmailVerified(t *testing.T) {
+	sender := &recordingVerificationSender{}
+	db := newRegistrarTestDB(map[string]map[string]interface{}{
+		"users": {},
+		"invites": {
+			"invite1": map[string]interface{}{
+				"code":    "unused-hashed-code",
+				"email":   "bob@bob.com",
+				"role":    "admin",
+				"inviter": "inviter-id",
+				"sentAt":  time.Now().Unix(),
+				"userid":  "invited-user-id",
+			},
+		},
+	})
+	r := NewRegistrar(db, WithDefaultRoleName("admin"), WithAccountVerifier(verificationcodes.NewVerifier(db, sender)))
+
+	result, err := r.register(context.Background(), register_domain.Request{
+		Username: "bob",
+		Password: "password123",
+		Email:    "bob@bob.com",
+	})
+	if err != nil {
+		t.Fatalf("register returned error: %v", err)
+	}
+	if result.InviteUsed {
+		t.Fatal("result.InviteUsed = true, want false (must not be applied before verification)")
+	}
+	if result.User.GetID() == "invited-user-id" {
+		t.Fatal("user was assigned the invite's pinned id before verifying their email")
+	}
+	if !result.RequiresEmailVerification {
+		t.Fatal("RequiresEmailVerification = false, want true because the email matches a pending invite")
+	}
+	if sender.calls != 1 {
+		t.Fatalf("verification send calls = %d, want 1", sender.calls)
+	}
+	if _, found := db.FindOne("invites", map[string]interface{}{"email": "bob@bob.com"}); !found {
+		t.Fatal("invite should still be pending, not yet expired")
+	}
+}
+
+func TestRegistrarPasswordRegistrationIgnoresPendingInviteWithoutAccountVerifier(t *testing.T) {
+	db := newRegistrarTestDB(map[string]map[string]interface{}{
+		"users": {},
+		"invites": {
+			"invite1": map[string]interface{}{
+				"code":    "unused-hashed-code",
+				"email":   "bob@bob.com",
+				"role":    "admin",
+				"inviter": "inviter-id",
+				"sentAt":  time.Now().Unix(),
+				"userid":  "invited-user-id",
+			},
+		},
+	})
+	// No WithAccountVerifier: there's no way for this user to ever prove
+	// control of their email, so the pending-invite check must be a no-op.
+	r := NewRegistrar(db, WithDefaultRoleName("admin"))
+
+	result, err := r.register(context.Background(), register_domain.Request{
+		Username: "bob",
+		Password: "password123",
+		Email:    "bob@bob.com",
+	})
+	if err != nil {
+		t.Fatalf("register returned error: %v", err)
+	}
+	if result.RequiresEmailVerification {
+		t.Fatal("RequiresEmailVerification = true, want false without a configured account verifier")
+	}
+	if _, found := db.FindOne("invites", map[string]interface{}{"email": "bob@bob.com"}); !found {
+		t.Fatal("invite should still be pending, not expired")
+	}
+}
+
+func TestRegistrarHintedRegistrationClaimsMatchingInviteByVerifiedEmail(t *testing.T) {
+	db := newRegistrarTestDB(map[string]map[string]interface{}{
+		"users": {},
+		"invites": {
+			"invite1": map[string]interface{}{
+				"code":    "unused-hashed-code",
+				"email":   "rostered@example.com",
+				"role":    "admin",
+				"inviter": "inviter-id",
+				"sentAt":  time.Now().Unix(),
+				"userid":  "invited-user-id",
+			},
+		},
+	})
+	r := NewRegistrar(db, WithDefaultRoleName("admin"), WithDisablePublicRegistration(true))
+	hint := newRosterableHint(func(h *registrationhints.Hint) { h.EmailVerified = true })
+
+	result, err := r.register(context.Background(), register_domain.Request{Hint: &hint})
+	if err != nil {
+		t.Fatalf("register returned error: %v", err)
+	}
+	if !result.InviteUsed {
+		t.Fatal("result.InviteUsed = false, want true")
+	}
+	if result.User.GetID() != "invited-user-id" {
+		t.Fatalf("user id = %q, want invited-user-id", result.User.GetID())
+	}
+	if _, found := db.FindOne("invites", map[string]interface{}{"email": "rostered@example.com"}); found {
+		t.Fatal("invite was not expired")
+	}
+}
+
+func TestRegistrarHintedRegistrationIgnoresInviteWhenEmailUnverified(t *testing.T) {
+	db := newRegistrarTestDB(map[string]map[string]interface{}{
+		"users": {},
+		"invites": {
+			"invite1": map[string]interface{}{
+				"code":    "unused-hashed-code",
+				"email":   "rostered@example.com",
+				"role":    "admin",
+				"inviter": "inviter-id",
+				"sentAt":  time.Now().Unix(),
+				"userid":  "invited-user-id",
+			},
+		},
+	})
+	r := NewRegistrar(db, WithDefaultRoleName("admin"))
+	// EmailVerified defaults to false: an unverified provider email must not
+	// be able to claim someone else's invite.
+	hint := newRosterableHint()
+
+	result, err := r.register(context.Background(), register_domain.Request{Hint: &hint})
+	if err != nil {
+		t.Fatalf("register returned error: %v", err)
+	}
+	if result.InviteUsed {
+		t.Fatal("result.InviteUsed = true, want false")
+	}
+	if result.User.GetID() == "invited-user-id" {
+		t.Fatal("user was assigned the invite's pinned user id despite unverified email")
+	}
+	if _, found := db.FindOne("invites", map[string]interface{}{"email": "rostered@example.com"}); !found {
+		t.Fatal("invite should not have been expired")
 	}
 }
 

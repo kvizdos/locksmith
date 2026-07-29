@@ -24,9 +24,10 @@ type registrar struct {
 	db  database.DatabaseAccessor
 	log *slog.Logger
 
-	methods  []register_domain.Handler
-	tm       tokens.TokenManager
-	eventBus events.Bus
+	methods        []register_domain.Handler
+	tm             tokens.TokenManager
+	eventBus       events.Bus
+	inviteResolver register_domain.InviteResolver
 
 	defaultRoleName           string
 	disablePublicRegistration bool
@@ -43,7 +44,7 @@ type registrar struct {
 type Option func(*registrar)
 
 func NewRegistrar(db database.DatabaseAccessor, opts ...Option) *registrar {
-	r := &registrar{db: db, log: slog.Default(), eventBus: events.NoopBus{}}
+	r := &registrar{db: db, log: slog.Default(), eventBus: events.NoopBus{}, inviteResolver: newDefaultInviteResolver()}
 	for _, opt := range opts {
 		opt(r)
 	}
@@ -92,6 +93,14 @@ func WithRequiresEmailVerification(fn func(context.Context, database.DatabaseAcc
 
 func WithAccountVerifier(verifier verificationcodes.Verifier) Option {
 	return func(r *registrar) { r.accountVerifier = verifier }
+}
+
+func WithInviteResolver(resolver register_domain.InviteResolver) Option {
+	return func(r *registrar) {
+		if resolver != nil {
+			r.inviteResolver = resolver
+		}
+	}
 }
 
 func WithEmailValidation(validator textvalidation.EmailValidator) Option {

@@ -448,3 +448,76 @@ func TestReinviteWithEmailChangeEmailSuccess(t *testing.T) {
 		t.Error("role is incorrect: %", invite["role"].(string))
 	}
 }
+
+func TestClaimActiveInviteOnVerifiedEmailUpgradesRoleAndExpiresInvite(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {
+				"invite1": map[string]interface{}{
+					"email":   "bob@bob.com",
+					"role":    "admin",
+					"inviter": "a-uuid",
+					"sentAt":  time.Now().Unix(),
+					"code":    "hashed-code",
+					"userid":  "attach-user-id",
+				},
+			},
+			"users": {
+				"actual-user-id": map[string]interface{}{
+					"id":    "actual-user-id",
+					"email": "bob@bob.com",
+					"role":  "user",
+				},
+			},
+		},
+	}
+
+	err := ClaimActiveInviteOnVerifiedEmail(testDb, "actual-user-id", "bob@bob.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	rawUser, found := testDb.FindOne("users", map[string]interface{}{"id": "actual-user-id"})
+	if !found {
+		t.Fatal("user disappeared")
+	}
+	user := rawUser.(map[string]interface{})
+	if user["role"].(string) != "admin" {
+		t.Fatalf("role = %q, want admin (claimed from invite)", user["role"].(string))
+	}
+	// The user keeps their own id -- claiming an invite post-registration
+	// must never reassign identity, only role.
+	if user["id"].(string) != "actual-user-id" {
+		t.Fatalf("user id changed to %q, want unchanged", user["id"].(string))
+	}
+
+	if _, found := testDb.FindOne("invites", map[string]interface{}{"email": "bob@bob.com"}); found {
+		t.Fatal("invite was not expired")
+	}
+}
+
+func TestClaimActiveInviteOnVerifiedEmailNoopWhenNoInvite(t *testing.T) {
+	testDb := database.TestDatabase{
+		Tables: map[string]map[string]interface{}{
+			"invites": {},
+			"users": {
+				"actual-user-id": map[string]interface{}{
+					"id":    "actual-user-id",
+					"email": "nobody-invited@example.com",
+					"role":  "user",
+				},
+			},
+		},
+	}
+
+	err := ClaimActiveInviteOnVerifiedEmail(testDb, "actual-user-id", "nobody-invited@example.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	rawUser, _ := testDb.FindOne("users", map[string]interface{}{"id": "actual-user-id"})
+	user := rawUser.(map[string]interface{})
+	if user["role"].(string) != "user" {
+		t.Fatalf("role = %q, want unchanged %q", user["role"].(string), "user")
+	}
+}

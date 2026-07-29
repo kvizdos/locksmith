@@ -128,8 +128,19 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 			MinimalPermissions: []string{"verify.email"},
 		}))
 
+		var onEmailVerified func(database.DatabaseAccessor, users.LocksmithUser) error
+		if !options.DisableInvites {
+			// A plain (non-OAuth) registration may match a pending invite by
+			// email, but that match isn't applied until the owner proves
+			// control of the address here.
+			onEmailVerified = func(db database.DatabaseAccessor, user users.LocksmithUser) error {
+				return invitations.ClaimActiveInviteOnVerifiedEmail(db, user.GetID(), user.GetEmail())
+			}
+		}
+
 		mux.Handle("POST /api/verify/exchange", endpoints.SecureEndpointHTTPMiddleware(verificationcodes.VerifierExchangeHTTP{
-			Verifier: options.AccountVerifier,
+			Verifier:        options.AccountVerifier,
+			OnEmailVerified: onEmailVerified,
 		}, db, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"verify.email"},
 		}))

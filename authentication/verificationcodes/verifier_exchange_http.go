@@ -13,6 +13,13 @@ import (
 
 type VerifierExchangeHTTP struct {
 	Verifier Verifier
+
+	// OnEmailVerified, if set, runs after an email has been successfully
+	// verified and persisted, before the success response is written. A
+	// failure here fails the whole exchange. Common use: claim an invite
+	// that was pending on this now-verified email (see
+	// administration/invitations.ClaimActiveInviteOnVerifiedEmail).
+	OnEmailVerified func(db database.DatabaseAccessor, user users.LocksmithUser) error
 }
 
 type bod struct {
@@ -86,6 +93,14 @@ func (rr VerifierExchangeHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		fmt.Println("Error deleting code:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	if rr.OnEmailVerified != nil {
+		if err := rr.OnEmailVerified(db, authUser); err != nil {
+			fmt.Println("Error running OnEmailVerified hook:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	api_helpers.WriteResponse(w, map[string]any{"success": true}, http.StatusOK)

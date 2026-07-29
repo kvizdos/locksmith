@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
-	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/authentication"
 	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/authentication/register/register_domain"
@@ -206,23 +205,54 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 
 	useRole := r.defaultRoleName
 	useID := uuid.New().String()
-	var invite invitations.Invitation
+	var invite register_domain.Invite
 	inviteUsed := false
-	if len(req.Code) > 0 {
+	// pendingInviteEmailMatch is set when a plain (non-hinted) registration's
+	// client-supplied email matches an active invite. Unlike the hinted case,
+	// a client-supplied email isn't proof of anything, so the invite isn't
+	// applied yet -- it's only claimed once the user actually verifies
+	// control of that email address (see the forced-verification logic
+	// below and invitations.ClaimActiveInviteOnVerifiedEmail).
+	pendingInviteEmailMatch := false
+	switch {
+	case len(req.Code) > 0:
 		if len(req.Code) != 96 {
 			return nil, register_domain.ErrRegistrationBadInviteCode
 		}
 		var inviteErr error
-		invite, inviteErr = invitations.GetInviteFromCode(r.db, req.Code)
+		invite, inviteErr = r.inviteResolver.ResolveByCode(r.db, req.Code)
 		if inviteErr != nil {
 			return nil, register_domain.ErrRegistrationInvalidInviteCode
 		}
 		if !strings.EqualFold(invite.Email, req.Email) {
 			return nil, register_domain.ErrRegistrationInvalidEmail
 		}
+		inviteUsed = true
+	case isHinted && req.Hint.EmailVerified:
+		// A provider-verified email is trustworthy proof of identity (unlike a
+		// client-supplied email in a plain password registration), so an
+		// OAuth/hinted registration may claim a matching active invite without
+		// needing the original invite code. A lookup failure or no match just
+		// means this proceeds as a normal, uninvited registration.
+		if matched, found, inviteErr := r.inviteResolver.ResolveActiveByEmail(r.db, req.Email); inviteErr == nil && found {
+			invite = matched
+			inviteUsed = true
+		}
+	case !isHinted && r.accountVerifier != nil:
+		// A plain password registration can also match a pending invite by
+		// email, but since that email is unverified at this point, we don't
+		// trust it enough to grant the invite's role/attachment yet. Instead,
+		// force this registration down the email-verification path so the
+		// invite can only be claimed once they prove control of the email
+		// (requires an account verifier to be configured, otherwise there's no
+		// way for them to ever complete that proof).
+		if _, found, inviteErr := r.inviteResolver.ResolveActiveByEmail(r.db, req.Email); inviteErr == nil && found {
+			pendingInviteEmailMatch = true
+		}
+	}
+	if inviteUsed {
 		useRole = invite.Role
 		useID = invite.AttachUserID
-		inviteUsed = true
 	}
 
 	matches, _ := r.db.Find("users", map[string]interface{}{
@@ -272,7 +302,9 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		if evaluator == nil {
 			evaluator = textvalidation.EmailValidationResult{}
 		}
-		lsu = lsu.SetRequiresEmailVerification(r.requiresEmailVerification(ctx, r.db, lsu, evaluator))
+		lsu = lsu.SetRequiresEmailVerification(r.requiresEmailVerification(ctx, r.db, lsu, evaluator) || pendingInviteEmailMatch)
+	} else if pendingInviteEmailMatch {
+		lsu = lsu.SetRequiresEmailVerification(true)
 	}
 
 	_, err = r.db.InsertOne("users", lsu.ToMap())
@@ -280,7 +312,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		return nil, fmt.Errorf("insert user: %w", err)
 	}
 	if inviteUsed {
-		invite.Expire(r.db)
+		r.inviteResolver.Expire(r.db, invite)
 	}
 
 	createdAuthLink := false

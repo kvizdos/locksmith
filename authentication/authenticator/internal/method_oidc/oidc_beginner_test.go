@@ -113,7 +113,7 @@ func TestBeginSetsCookiesAndRedirects(t *testing.T) {
 	if pkceChallenge(pkceCookie.Value) != query.Get("code_challenge") {
 		t.Fatal("expected code_challenge to be derived from pkce verifier cookie")
 	}
-	assertOIDCCookie(t, pkceCookie, false)
+	assertOIDCCookie(t, pkceCookie, true)
 }
 
 func TestBeginUsesPageParamAsOAuthState(t *testing.T) {

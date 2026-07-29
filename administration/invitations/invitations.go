@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -75,6 +76,8 @@ func ListInvites(db database.DatabaseAccessor) []Invitation {
 // InvitedBy is the UID of the user who invited this email.
 // Returns [inviteCode, attachUserID, error]
 func InviteUser(db database.DatabaseAccessor, email string, role string, invitedBy string) (string, string, error) {
+	email = strings.ToLower(email)
+
 	if !roles.RoleExists(role) {
 		return "", "", fmt.Errorf("invalid role")
 	}
@@ -205,6 +208,79 @@ func ReinviteUser(db database.DatabaseAccessor, forUserID string, authUserID str
 	}
 
 	return inviteCode, nil
+}
+
+// GetActiveInviteByEmail looks up an active (i.e. not yet consumed) invite
+// for the given email, if one exists. found=false, err=nil means no invite
+// exists for that email.
+//
+// Note: this performs an exact-match query, so callers should normalize
+// casing themselves (e.g. lowercase) to match how invites are stored.
+func GetActiveInviteByEmail(db database.DatabaseAccessor, email string) (Invitation, bool, error) {
+	rawInvite, found := db.FindOne("invites", map[string]interface{}{
+		"email": email,
+	})
+
+	if !found {
+		return Invitation{}, false, nil
+	}
+
+	inv := rawInvite.(map[string]interface{})
+
+	invite := Invitation{
+		Code:         inv["code"].(string),
+		Email:        inv["email"].(string),
+		Role:         inv["role"].(string),
+		InvitedBy:    inv["inviter"].(string),
+		SentAt:       inv["sentAt"].(int64),
+		AttachUserID: inv["userid"].(string),
+	}
+
+	return invite, true, nil
+}
+
+// ExpireByEmail deletes the active invite for the given email, if any. It
+// mirrors Invitation.Expire but doesn't require the caller to already hold
+// the invite's hashed code.
+func ExpireByEmail(db database.DatabaseAccessor, email string) {
+	db.DeleteOne("invites", map[string]interface{}{
+		"email": email,
+	})
+}
+
+// ClaimActiveInviteOnVerifiedEmail looks for an active invite matching
+// userID's now-verified email and, if found, upgrades that user's role to
+// the invite's role and expires the invite.
+//
+// This is the deferred counterpart to registering with an explicit invite
+// code: a plain (non-OAuth) registration can match a pending invite by
+// email, but since a client-supplied email isn't proof of anything, the
+// match isn't trusted -- and the invite isn't applied -- until the user
+// proves control of that address via the normal email verification flow.
+// Callers should invoke this once verification succeeds (e.g. from an
+// email-verification-exchange handler).
+func ClaimActiveInviteOnVerifiedEmail(db database.DatabaseAccessor, userID string, email string) error {
+	invite, found, err := GetActiveInviteByEmail(db, email)
+	if err != nil {
+		return fmt.Errorf("lookup active invite: %w", err)
+	}
+	if !found {
+		return nil
+	}
+
+	_, err = db.UpdateOne("users", map[string]interface{}{
+		"id": userID,
+	}, map[database.DatabaseUpdateActions]map[string]interface{}{
+		database.SET: {
+			"role": invite.Role,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("apply invite role: %w", err)
+	}
+
+	ExpireByEmail(db, email)
+	return nil
 }
 
 func GetInviteFromCode(db database.DatabaseAccessor, code string) (Invitation, error) {
