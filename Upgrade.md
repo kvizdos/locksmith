@@ -1,9 +1,8 @@
-# Locksmith Upgrade Guide: `alpha-ui2-v1.2.0` → current `main`
+# Locksmith Upgrade Guide: `alpha-ui2-v1.2.0` → current `alpha-ui2-v1.3.0`
 
 This guide is for consumers who wired up Locksmith using the `main.go`
 boilerplate as it existed at tag `alpha-ui2-v1.2.0`, and now need to move to
-the architecture on `main` (18 commits ahead, unreleased as of this writing —
-`git describe` reports `alpha-ui2-v1.2.0-18-g2afd6f6`).
+the architecture on `alpha-ui2-v1.3.0`.
 
 This is **not** a drop-in, backward-compatible update. The authentication
 core was rewritten: login, registration, OAuth/OIDC, and CSRF protection all
@@ -21,7 +20,7 @@ protection, CSRF, user enumeration). Read it before you ship.
 
 ## 1. TL;DR — what moved where
 
-| Old (`alpha-ui2-v1.2.0`) | New (`main`) |
+| Old (`alpha-ui2-v1.2.0`) | New (`alpha-ui2-v1.3.0`) |
 |---|---|
 | `authentication/login` package, `login.LoginOptions{LockoutPolicy: ...}` | **Deleted.** No direct replacement — see [§5.1](#51-brute-force--account-lockout-protection-was-removed). |
 | `authentication/xsrf`, `xsrf.XSRFSigningPackage.{Anonymous,Authenticated}` | **Deleted.** No global XSRF signer to configure — see [§5.3](#53-global-xsrf-signing-package-is-gone). |
