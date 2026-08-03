@@ -51,24 +51,29 @@ func (db *MongoDatabase) Initialize(uri string, database string) error {
 	db.database = data
 	return nil
 }
-func (db MongoDatabase) MonitorConnection(heartbeat time.Duration, health HealthCheckInterface) {
-	ticker := time.NewTicker(heartbeat) // Adjust the interval as needed.
+func (db MongoDatabase) MonitorConnection(
+	heartbeat time.Duration,
+	health HealthCheckInterface,
+) {
+	ticker := time.NewTicker(heartbeat)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			ctx, timeout := context.WithTimeout(context.Background(), heartbeat)
-			defer timeout()
+	for range ticker.C {
+		func() {
+			ctx, cancel := context.WithTimeout(context.Background(), heartbeat)
+			defer cancel()
 
 			err := db.database.Client().Ping(ctx, readpref.Primary())
 			if err != nil {
 				fmt.Printf("MongoDB failed to ping health: %v\n", err)
 				health.SetMongoDown()
-			} else if !health.IsMongoUp() {
+				return
+			}
+
+			if !health.IsMongoUp() {
 				health.SetMongoUp()
 			}
-		}
+		}()
 	}
 }
 
