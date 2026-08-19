@@ -221,6 +221,8 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 	// control of that email address (see the forced-verification logic
 	// below and invitations.ClaimActiveInviteOnVerifiedEmail).
 	pendingInviteEmailMatch := false
+	inviteVerifiedEmail := false
+
 	switch {
 	case len(req.Code) > 0:
 		if len(req.Code) != 96 {
@@ -235,6 +237,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 			return nil, register_domain.ErrRegistrationInvalidEmail
 		}
 		inviteUsed = true
+		inviteVerifiedEmail = true
 	case isHinted && req.Hint.EmailVerified:
 		// A provider-verified email is trustworthy proof of identity (unlike a
 		// client-supplied email in a plain password registration), so an
@@ -279,7 +282,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		oauthRestriction = req.Hint.ProviderName
 	}
 
-	verified := false
+	verified := inviteVerifiedEmail
 	if req.Hint != nil {
 		verified = req.Hint.EmailVerified
 	}
@@ -299,7 +302,9 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 	if r.configureCustomUser != nil {
 		lsu = r.configureCustomUser(lsu.(users.LocksmithUser), r.db)
 	}
-	if r.requiresEmailVerification != nil {
+	if inviteVerifiedEmail {
+		lsu = lsu.SetRequiresEmailVerification(false)
+	} else if r.requiresEmailVerification != nil {
 		// Always hand the callback a non-nil evaluator, even if no
 		// EmailValidator is configured, so callbacks can safely call its
 		// methods without a nil check. A zero-value EmailValidationResult
@@ -317,6 +322,14 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 	_, err = r.db.InsertOne("users", lsu.ToMap())
 	if err != nil {
 		return nil, fmt.Errorf("insert user: %w", err)
+	}
+	if inviteVerifiedEmail {
+		r.publishRegistrationEvent(ctx, events.EventEmailVerified, events.AccountVerifiedPayload{
+			LoginOrRegister: "registration",
+			Method:          "invite_code",
+			Provider:        "email",
+			SelectBy:        selectBy,
+		})
 	}
 	if inviteUsed {
 		r.inviteResolver.Expire(r.db, invite)
