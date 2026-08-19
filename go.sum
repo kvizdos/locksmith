@@ -1,3 +1,7 @@
+github.com/MicahParks/jwkset v0.11.1 h1:Gr+6JeYoJ7twqyBGf8MXxj2NSCKPoX8RFMtey3GY9Nw=
+github.com/MicahParks/jwkset v0.11.1/go.mod h1:U2oRhRaLgDCLjtpGL2GseNKGmZtLs/3O7p+OZaL5vo0=
+github.com/MicahParks/keyfunc/v3 v3.8.1 h1:VR3jlEs2wz1xGjvUUwUHeoB+eJ6gUnBrpnIByRrtj6g=
+github.com/MicahParks/keyfunc/v3 v3.8.1/go.mod h1:LcorJ0sz2tZGvgZqIfaeyLkJmM+kxIfRDu8dFY0TAas=
 github.com/alexedwards/argon2id v1.0.0 h1:wJzDx66hqWX7siL/SRUmgz3F8YMrd/nfX/xHHcQQP0w=
 github.com/alexedwards/argon2id v1.0.0/go.mod h1:tYKkqIjzXvZdzPvADMWOEZ+l6+BD6CtBXMj5fnJppiw=
 github.com/beevik/etree v1.5.0 h1:iaQZFSDS+3kYZiGoc9uKeOkUY3nYMXOKLl6KIJxiJWs=
@@ -69,6 +73,10 @@ github.com/klauspost/compress v1.18.5 h1:/h1gH5Ce+VWNLSWqPzOVn6XBO+vJbCNGvjoaGBF
 github.com/klauspost/compress v1.18.5/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 github.com/klauspost/compress v1.19.1 h1:VsB4HPswih7mmZ8WleSFQ75c/Ui1M4trX5oAsJnhSlk=
 github.com/klauspost/compress v1.19.1/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+github.com/kvizdos/go-email-verification-protocol v0.0.0-20260819191859-b835b0f15e29 h1:kVL+VUG1W17EJTD81K5WWs64uufDejlDGmg7hIuzeO4=
+github.com/kvizdos/go-email-verification-protocol v0.0.0-20260819191859-b835b0f15e29/go.mod h1:rcn6D//Zml5Ve9u1qI0GC2aPjkOkvi78/ZqN6Um69Ck=
+github.com/kvizdos/go-email-verification-protocol v1.0.0 h1:VIi5f6+9UNFF1iwskiz9O73bLRnut/66EwBXxRIbDe0=
+github.com/kvizdos/go-email-verification-protocol v1.0.0/go.mod h1:rcn6D//Zml5Ve9u1qI0GC2aPjkOkvi78/ZqN6Um69Ck=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/montanaflynn/stats v0.7.1 h1:etflOAAHORrCC44V+aR6Ftzort912ZU+YLiSTuV8eaE=

@@ -141,6 +141,7 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		mux.Handle("POST /api/verify/exchange", endpoints.SecureEndpointHTTPMiddleware(verificationcodes.VerifierExchangeHTTP{
 			Verifier:        options.AccountVerifier,
 			OnEmailVerified: onEmailVerified,
+			EventBus:        options.Bus,
 		}, db, endpoints.EndpointSecurityOptions{
 			MinimalPermissions: []string{"verify.email"},
 		}))

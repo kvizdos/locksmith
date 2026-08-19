@@ -55,6 +55,7 @@
         <locksmith-layout logoURL="{{.Styling.LogoURL}}">
             <section slot="main">
                 <locksmith-registration
+                    evpnonce="{{.EVPNonce}}"
                     appName="{{.Title}}"
                     forceEmail="{{.Invitation.Email}}"
                     inviteCode="{{.Invitation.Code}}"

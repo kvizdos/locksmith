@@ -1,6 +1,9 @@
 package register_domain
 
-import "github.com/kvizdos/locksmith/authentication/registrationhints"
+import (
+	"github.com/kvizdos/locksmith/authentication/registrationhints"
+	"github.com/kvizdos/locksmith/authentication/verificationcodes"
+)
 
 type Request struct {
 	Username string
@@ -9,6 +12,10 @@ type Request struct {
 	Code     string
 
 	ValidationOK bool
+
+	// as of now meant for email-verification-protocol token
+	// optional; requires opt-in to use.
+	AutoVerificationPayload verificationcodes.AutoVerificationPayload
 
 	Hint *registrationhints.Hint
 }

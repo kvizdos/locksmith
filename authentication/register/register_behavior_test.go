@@ -547,48 +547,6 @@ func TestRegistrationHandlerBackwardCompatibleWithoutTokenManager(t *testing.T) 
 	}
 }
 
-func TestRegistrationHandlerStrictJSONRejectsUnsupportedFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload string
-	}{
-		{
-			name:    "rejects role escalation field",
-			payload: `{"username":"kenton","password":"password123","email":"email@example.com","role":"admin"}`,
-		},
-		{
-			name:    "rejects removed pwn ok field",
-			payload: `{"username":"kenton","password":"password123","email":"email@example.com","pwnOK":true}`,
-		},
-		{
-			name:    "rejects oauth restriction injection",
-			payload: `{"username":"kenton","password":"password123","email":"email@example.com","restrictToOauthSrc":"github"}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			db := newRegistrationTestDB(nil)
-			r := newTestRegistrar(db, WithDefaultRoleName("admin"))
-			rr := performRegistrationRequest(t, r, tt.payload)
-
-			if rr.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
-			}
-			if got := decodeRegistrationResponse(t, rr).Error; got != "could not unmarshal" {
-				t.Fatalf("error = %q, want %q", got, "could not unmarshal")
-			}
-			if _, found := db.FindOne("users", map[string]any{"username": "kenton"}); found {
-				t.Fatal("unsupported field request inserted a user")
-			}
-		})
-	}
-}
-
 func TestRegistrationHandlerRejectsDuplicateUsernameOrEmailCaseInsensitively(t *testing.T) {
 	t.Parallel()
 

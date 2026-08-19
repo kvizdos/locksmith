@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/kvizdos/locksmith/api_helpers"
+	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -14,6 +17,7 @@ import (
 type VerifierExchangeHTTP struct {
 	Verifier Verifier
 
+	EventBus events.Bus
 	// OnEmailVerified, if set, runs after an email has been successfully
 	// verified and persisted, before the success response is written. A
 	// failure here fails the whole exchange. Common use: claim an invite
@@ -101,6 +105,22 @@ func (rr VerifierExchangeHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	}
+
+	if rr.EventBus != nil {
+		envelope := events.EnrichEnvelope(r.Context(), events.Envelope{
+			ID:         uuid.New().String(),
+			Name:       events.EventEmailVerified,
+			OccurredAt: time.Now(),
+			Source:     "verifier/exchange",
+			Payload: events.AccountVerifiedPayload{
+				UserID:          authUser.GetID(),
+				LoginOrRegister: "register",
+				Method:          "magic_link",
+				Provider:        "email",
+			},
+		})
+		rr.EventBus.Publish(r.Context(), envelope)
 	}
 
 	api_helpers.WriteResponse(w, map[string]any{"success": true}, http.StatusOK)

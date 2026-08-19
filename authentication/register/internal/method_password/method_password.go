@@ -1,8 +1,8 @@
 package method_password
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,20 +56,36 @@ func (prs *passwordRegistrationSession) LoadRequest(r *http.Request) error {
 	if contentType != "application/json" {
 		return fmt.Errorf("unsupported content type: %w", authenticator_domain.ErrInvalidContentType)
 	}
-	var dto passwordRegistrationRequestDTO
-	decoder := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&dto); err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			return fmt.Errorf("%w: max %d bytes", authenticator_domain.ErrRequestTooLarge, maxBytesErr.Limit)
-		}
 
+	const maxBodySize = 1 << 20 // 1 MB
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBodySize+1))
+	if err != nil {
+		return err
+	}
+
+	if len(body) > maxBodySize {
+		return fmt.Errorf(
+			"%w: max %d bytes",
+			authenticator_domain.ErrRequestTooLarge,
+			maxBodySize,
+		)
+	}
+
+	// Restore the request body for anything downstream.
+	r.Body = io.NopCloser(bytes.NewReader(body))
+
+	var dto passwordRegistrationRequestDTO
+	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&dto); err != nil {
 		return err
 	}
 
 	if prs.options.MinimumLength > 0 && len(dto.Password) < prs.options.MinimumLength {
-		return fmt.Errorf("password must be at least %d characters: %w", prs.options.MinimumLength, register_domain.ErrRegistrationPasswordTooShort)
+		return fmt.Errorf(
+			"password must be at least %d characters: %w",
+			prs.options.MinimumLength,
+			register_domain.ErrRegistrationPasswordTooShort,
+		)
 	}
 
 	prs.request = register_domain.Request{
@@ -79,6 +95,7 @@ func (prs *passwordRegistrationSession) LoadRequest(r *http.Request) error {
 		Code:         dto.Code,
 		ValidationOK: dto.ValidationOK,
 	}
+
 	return nil
 }
 

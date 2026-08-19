@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/kvizdos/locksmith/database"
@@ -47,6 +48,15 @@ type Verifier interface {
 	DeleteCode(ctx context.Context, method verifierMethod, userID string) error
 	CheckCode(ctx context.Context, method verifierMethod, userID string, code string) (bool, error)
 	SendVerification(ctx context.Context, lsu users.LocksmithUserInterface, method verifierMethod, forValue string) error
+}
+
+type AutoVerificationPayload interface{}
+
+type AutoVerifier interface {
+	// Primarily meant for EVP as of writing.
+	Verify(ctx context.Context, email string, payload AutoVerificationPayload) error
+	Load(req *http.Request) AutoVerificationPayload
+	Name() string
 }
 
 type verifier struct {

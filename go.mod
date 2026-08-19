@@ -1,6 +1,6 @@
 module github.com/kvizdos/locksmith
 
-go 1.25.0
+go 1.27.0
 
 require (
 	github.com/alexedwards/argon2id v1.0.0
@@ -20,6 +20,8 @@ require (
 )
 
 require (
+	github.com/MicahParks/jwkset v0.11.1 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.8.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
@@ -30,6 +32,7 @@ require (
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/kvizdos/go-email-verification-protocol v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/montanaflynn/stats v0.12.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect

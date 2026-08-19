@@ -28,9 +28,6 @@ import (
 	"github.com/kvizdos/locksmith/authentication/register"
 	"github.com/kvizdos/locksmith/authentication/register/register_methods"
 	"github.com/kvizdos/locksmith/authentication/registrationhints"
-	"github.com/kvizdos/locksmith/authentication/saml/saml_discovery"
-	"github.com/kvizdos/locksmith/authentication/saml/saml_entities"
-	"github.com/kvizdos/locksmith/authentication/saml/saml_init"
 	"github.com/kvizdos/locksmith/authentication/signing"
 	"github.com/kvizdos/locksmith/authentication/textvalidation"
 	"github.com/kvizdos/locksmith/authentication/tokens"
@@ -51,10 +48,7 @@ import (
 // import
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	godotenv.Load()
 }
 
 type TestAppHandler struct{}
@@ -159,41 +153,41 @@ func main() {
 
 	sp, _ := signing.DecodePrivateKey("MHcCAQEEIOXFnC40e/HNM6nn6iO8u3oA/KMoSyLrzarpJ/UMdTrKoAoGCCqGSM49AwEHoUQDQgAE8ZtLIHX8NYqAe0VukxPGZNHmOv84WVjRDPHATJq/go/eubOIB/ddQ4JG2tEtPqCKa+pso5l/vC1kIzIbZIJIFA==")
 
-	samlProvider, err := saml_init.LoadServiceProviderFromMetadata("buzz", []byte(os.Getenv("saml_demo")))
-	if err != nil {
-		panic(err)
-	}
+	// samlProvider, err := saml_init.LoadServiceProviderFromMetadata("buzz", []byte(os.Getenv("saml_demo")))
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	certPEM, keyPEM, err := LoadOrGenerateDemoKeypair("./saml-cert.pem", "./saml-key.pem")
+	// certPEM, keyPEM, err := LoadOrGenerateDemoKeypair("./saml-cert.pem", "./saml-key.pem")
 
-	if err != nil {
-		panic(err)
-	}
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	samlCfg := saml_init.NewIdPConfig(
-		"demoEntityID",
-		"https://dev.kv.codes/api/auth/saml/sso",
-		certPEM,
-		[]string{"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress", "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"},
-		"sso@edvizion.com",
-		"Demo Org",
-		samlProvider).WithDiscoveryFunc(func(r *http.Request, sp *saml_entities.SAMLProvider) (*saml_discovery.IdPDiscovery, error) {
-		out := new(saml_discovery.IdPDiscovery)
+	// samlCfg := saml_init.NewIdPConfig(
+	// 	"demoEntityID",
+	// 	"https://dev.kv.codes/api/auth/saml/sso",
+	// 	certPEM,
+	// 	[]string{"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress", "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"},
+	// 	"sso@edvizion.com",
+	// 	"Demo Org",
+	// 	samlProvider).WithDiscoveryFunc(func(r *http.Request, sp *saml_entities.SAMLProvider) (*saml_discovery.IdPDiscovery, error) {
+	// 	out := new(saml_discovery.IdPDiscovery)
 
-		authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
+	// 	authUser := r.Context().Value("authUser").(users.LocksmithUserInterface)
 
-		if authUser.GetUsername() == "lp-admin" {
-			return nil, saml_discovery.DiscoveryError{
-				ErrorCode:   error_svc.ErrorCode("J0YUT"),
-				SystemError: fmt.Errorf("user is not authorized to continue with saml on service '%s'", sp.Nickname),
-			}
-		}
+	// 	if authUser.GetUsername() == "lp-admin" {
+	// 		return nil, saml_discovery.DiscoveryError{
+	// 			ErrorCode:   error_svc.ErrorCode("J0YUT"),
+	// 			SystemError: fmt.Errorf("user is not authorized to continue with saml on service '%s'", sp.Nickname),
+	// 		}
+	// 	}
 
-		// Demo
-		out.SetUserID("visdosadmin")
+	// 	// Demo
+	// 	out.SetUserID("visdosadmin")
 
-		return out, nil
-	}).WithSigner(keyPEM)
+	// 	return out, nil
+	// }).WithSigner(keyPEM)
 	// .WithUserDecoder(users.LocksmithUser{})
 
 	slog.SetLogLoggerLevel(slog.LevelDebug)
@@ -288,6 +282,7 @@ func main() {
 		register.WithDefaultRoleName("user"),
 		register.WithEmailAsUsername(true),
 		register.WithMinimumLengthRequirement(8),
+		register.WithAutoVerifier(verificationcodes.NewEVPVerifier("https://dev.kv.codes")),
 		register.WithRequiresEmailVerification(requiresEmailVerification),
 		register.WithAccountVerifier(verificationcodes.NewVerifier(db, nil)),
 		register.WithEventBus(authEvents),
@@ -308,7 +303,7 @@ func main() {
 		Authorizer:         authorizer,
 		Registrar:          registrar,
 		Bus:                authEvents,
-		SAMLConfig:         samlCfg,
+		// SAMLConfig:         samlCfg,
 		WithErrors: func(es error_svc.ErrorService) {
 			es.RegisterError("J0YUT", error_svc.Error{
 				Header:      "You are not authorized to access the LMS.",

@@ -86,7 +86,14 @@ func (r *registrar) attemptRegistration(ctx context.Context, handler register_do
 		return nil, fmt.Errorf("%w: %v", register_domain.ErrFailedToParse, err)
 	}
 
-	return r.register(ctx, session.RegistrationRequest())
+	data := session.RegistrationRequest()
+
+	// If Auto verifier available, load the payload..
+	if r.autoVerifier != nil {
+		data.AutoVerificationPayload = r.autoVerifier.Load(req)
+	}
+
+	return r.register(ctx, data)
 }
 
 // register contains the shared registration business rules: validation,
@@ -346,9 +353,41 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 					"needsEmailVerification":  false,
 				},
 			})
+			lsu = lsu.SetRequiresEmailVerification(false)
+
 		}
 		createdAuthLink = true
 	}
+
+	if r.autoVerifier != nil && req.Hint == nil && req.AutoVerificationPayload != nil {
+		// Attempt to auto-verify using the token..
+		if err := r.autoVerifier.Verify(ctx, lsu.GetEmail(), req.AutoVerificationPayload); err == nil {
+			// Token verified, mark email as verified
+			_, err = r.db.UpdateOneCtx(ctx, "users", map[string]any{
+				"id": lsu.GetID(),
+			}, map[database.DatabaseUpdateActions]map[string]any{
+				database.SET: {
+					"emailVerified":           true,
+					"emailVerificationMethod": "auto-verification-token",
+					"needsEmailVerification":  false,
+				},
+			})
+			r.publishRegistrationEvent(ctx, events.EventEmailVerified, events.AccountVerifiedPayload{
+				LoginOrRegister: "registration",
+				Method:          "auto-verification-token",
+				Provider:        r.autoVerifier.Name(),
+			})
+			lsu = lsu.SetRequiresEmailVerification(false)
+			r.log.DebugContext(ctx, "evp success")
+
+		} else {
+			r.log.DebugContext(ctx, "evp failed", "error", err)
+
+			// If there is an error, the system does not care.
+			// It's a progressive enhancement, not a requirement.
+		}
+	}
+
 	if r.accountVerifier != nil && lsu.RequiresEmailVerification() {
 		if err := r.accountVerifier.SendVerification(ctx, lsu, verificationcodes.VerifierMethod_EMAIL, lsu.GetEmail()); err != nil {
 			return nil, fmt.Errorf("send verification code: %w", err)

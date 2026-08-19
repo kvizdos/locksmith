@@ -153,6 +153,10 @@ func (u LocksmithUser) RequiresEmailVerification() bool {
 
 func (u LocksmithUser) SetRequiresEmailVerification(requiresEmailVerification bool) LocksmithUserInterface {
 	u.NeedsEmailVerification = requiresEmailVerification
+
+	if !u.NeedsEmailVerification {
+		u.EmailVerified = true
+	}
 	return u
 }
 

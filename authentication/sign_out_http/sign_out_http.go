@@ -14,7 +14,7 @@ type SignOutHTTP struct {
 }
 
 func (m SignOutHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Clear-Site-Data", `"cookies", "storage"`)
+	w.Header().Set("Clear-Site-Data", `"cookies"`)
 
 	c := &http.Cookie{
 		Name:     "token",

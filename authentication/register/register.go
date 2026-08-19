@@ -33,6 +33,7 @@ type registrar struct {
 	configureCustomUser       RegisterCustomUserFunc
 	requiresEmailVerification func(context.Context, database.DatabaseAccessor, users.LocksmithUserInterface, textvalidation.ValidationResultEvaluator) bool
 	accountVerifier           verificationcodes.Verifier
+	autoVerifier              verificationcodes.AutoVerifier
 	emailValidation           textvalidation.EmailValidator
 	emailAsUsername           bool
 	minimumLengthRequirement  int
@@ -110,4 +111,8 @@ func WithEmailAsUsername(enabled bool) Option {
 
 func WithMinimumLengthRequirement(length int) Option {
 	return func(r *registrar) { r.minimumLengthRequirement = length }
+}
+
+func WithAutoVerifier(verifier verificationcodes.AutoVerifier) Option {
+	return func(r *registrar) { r.autoVerifier = verifier }
 }

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
+	evp "github.com/kvizdos/go-email-verification-protocol"
+
 	"github.com/kvizdos/locksmith/administration/invitations"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/logger"
@@ -26,7 +28,7 @@ type RegistrationPageHandler struct {
 	OAuthProviders            []string
 }
 
-func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http.Request, invite ...invitations.Invitation) {
+func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, r *http.Request, invite ...invitations.Invitation) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	tmpl, err := template.New("register.html").Parse(string(pages.RegisterPageHTML))
@@ -50,7 +52,10 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http
 		HasOnboarding         bool
 		MinimumPasswordLength int
 		OAuthProviders        string
+		EVPNonce              string
 	}
+	nonce, _ := evp.GetOrCreateEVPNonce(w, r)
+
 	inv := TemplateData{
 		Title:                 rr.AppName,
 		Styling:               rr.Styling,
@@ -58,6 +63,7 @@ func (rr RegistrationPageHandler) servePublicHTML(w http.ResponseWriter, _ *http
 		HasOnboarding:         rr.HasOnboarding,
 		MinimumPasswordLength: rr.MinimumLengthRequirement,
 		OAuthProviders:        providers,
+		EVPNonce:              nonce,
 	}
 
 	if inv.Styling.SubmitColor == "" {
