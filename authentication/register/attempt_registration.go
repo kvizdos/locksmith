@@ -319,7 +319,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 		lsu = lsu.SetRequiresEmailVerification(true)
 	}
 
-	_, err = r.db.InsertOne("users", lsu.ToMap())
+	_, err = r.db.InsertOneCtx(ctx, "users", lsu.ToMap())
 	if err != nil {
 		return nil, fmt.Errorf("insert user: %w", err)
 	}
@@ -330,6 +330,16 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 			Provider:        "email",
 			SelectBy:        selectBy,
 		})
+		_, err = r.db.UpdateOneCtx(ctx, "users", map[string]any{
+			"id": lsu.GetID(),
+		}, map[database.DatabaseUpdateActions]map[string]any{
+			database.SET: {
+				"emailVerificationMethod": "invite_code",
+			},
+		})
+		if err != nil {
+			r.log.ErrorContext(ctx, "failed to mark user as email verification method invite_code", "error", err)
+		}
 	}
 	if inviteUsed {
 		r.inviteResolver.Expire(r.db, invite)
