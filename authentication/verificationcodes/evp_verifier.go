@@ -51,7 +51,6 @@ func (v *evpVerifier) Load(req *http.Request) AutoVerificationPayload {
 		}
 	}
 
-	fmt.Printf("Loading EVP Payload: %+v\n", avp)
 	return avp
 }
 
