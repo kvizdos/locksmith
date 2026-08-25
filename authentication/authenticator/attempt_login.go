@@ -415,6 +415,7 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 		a.publishAuthEvent(ctx, events.EventEmailVerified, events.AccountVerifiedPayload{
 			LoginOrRegister: "registration",
 			Method:          "login",
+			UserID:          user.GetID(),
 			Provider:        handler.Name(),
 			SelectBy:        selectBy,
 		})

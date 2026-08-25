@@ -329,6 +329,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 			Method:          "invite_code",
 			Provider:        "email",
 			SelectBy:        selectBy,
+			UserID:          lsu.GetID(),
 		})
 		_, err = r.db.UpdateOneCtx(ctx, "users", map[string]any{
 			"id": lsu.GetID(),
@@ -366,6 +367,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 				Method:          method,
 				Provider:        provider,
 				SelectBy:        selectBy,
+				UserID:          lsu.GetID(),
 			})
 			_, err = r.db.UpdateOne("users", map[string]any{
 				"id": lsu.GetID(),
@@ -399,6 +401,7 @@ func (r *registrar) register(ctx context.Context, req register_domain.Request) (
 				LoginOrRegister: "registration",
 				Method:          "auto-verification-token",
 				Provider:        r.autoVerifier.Name(),
+				UserID:          lsu.GetID(),
 			})
 			lsu = lsu.SetRequiresEmailVerification(false)
 			r.log.DebugContext(ctx, "evp success")
