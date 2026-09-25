@@ -222,6 +222,9 @@ func main() {
 		// Setup Token Store
 		authenticator.WithTokenManager(tm),
 
+		// Only allow specific roles to sign in..
+		// authenticator.WithRestrictedRoles("demo", "admin"),
+
 		// Publish login/roster/account-link events for logging and downstream consumers
 		authenticator.WithEventBus(authEvents),
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -161,6 +162,9 @@ func (a *authorizers) ServeLoginAPI(w http.ResponseWriter, r *http.Request) {
 				Reason:            "invalid_password",
 			})
 			a.writeAuthError(waitMinimum, w, "Password is incorrect.")
+			return
+		case errors.Is(err, authenticator_domain.ErrRoleNotAllowed):
+			a.writeAuthError(waitMinimum, w, "User does not have permission to use this handler.")
 			return
 		case errors.Is(err, authenticator_domain.ErrPasswordTooShort):
 			a.writeAuthError(waitMinimum, w, "Password is too short.")
@@ -372,6 +376,12 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 	// Confirm the user is authorized to use this handler.
 	if user.Passwordless() && !handler.Passwordless() {
 		return nil, selectBy, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
+	}
+
+	if role, err := user.GetRole(); err == nil {
+		if !slices.Contains(a.restrictToRoles, role.Name) {
+			return nil, selectBy, fmt.Errorf("user does not have role for realm: %w", authenticator_domain.ErrRoleNotAllowed)
+		}
 	}
 
 	if lu, ok := user.(interface{ GetOAuthRestrictedSource() string }); ok {

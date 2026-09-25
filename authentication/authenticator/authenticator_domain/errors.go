@@ -9,6 +9,7 @@ import (
 var (
 	ErrUnhandleableRequest  = errors.New("unhandleable request")
 	ErrPasswordlessRequired = errors.New("passwordless required")
+	ErrRoleNotAllowed       = errors.New("role not allowed")
 
 	ErrVerificationRequired = errors.New("verification required")
 

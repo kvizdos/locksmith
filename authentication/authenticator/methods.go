@@ -25,6 +25,7 @@ type authorizers struct {
 	minimumResponseTime              time.Duration
 	disableUserEnumerationProtection bool
 	emailAsUsername                  bool
+	restrictToRoles                  []string
 }
 
 type Option func(*authorizers)
@@ -66,6 +67,12 @@ func DisableUserEnumerationProtection() Option {
 func WithLogger(log *slog.Logger) Option {
 	return func(a *authorizers) {
 		a.log = log
+	}
+}
+
+func WithRestrictedRoles(roles ...string) Option {
+	return func(a *authorizers) {
+		a.restrictToRoles = roles
 	}
 }
 
