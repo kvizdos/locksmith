@@ -378,9 +378,11 @@ func (a *authorizers) attemptLogin(ctx context.Context, handler authenticator_do
 		return nil, selectBy, fmt.Errorf("handler %q does not support passwordless: %w", handler.Name(), authenticator_domain.ErrPasswordlessRequired)
 	}
 
-	if role, err := user.GetRole(); err == nil {
-		if !slices.Contains(a.restrictToRoles, role.Name) {
-			return nil, selectBy, fmt.Errorf("user does not have role for realm: %w", authenticator_domain.ErrRoleNotAllowed)
+	if len(a.restrictToRoles) > 0 {
+		if role, err := user.GetRole(); err == nil {
+			if !slices.Contains(a.restrictToRoles, role.Name) {
+				return nil, selectBy, fmt.Errorf("user does not have role for realm: %w", authenticator_domain.ErrRoleNotAllowed)
+			}
 		}
 	}
 
