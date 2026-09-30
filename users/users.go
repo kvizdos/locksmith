@@ -280,7 +280,14 @@ func (u LocksmithUser) ReadFromMap(writeTo *LocksmithUserInterface, user map[str
 
 	var loginTime time.Time
 	if user["last_login"] != nil {
-		loginTime = time.Unix(user["last_login"].(int64), 0)
+		switch t := user["last_login"].(type) {
+		case int64:
+			loginTime = time.Unix(t, 0)
+		case int32:
+			loginTime = time.Unix(int64(t), 0)
+		case time.Time:
+			loginTime = t
+		}
 	} else {
 		// If they've yet to login, set to now.
 		loginTime = time.Now().UTC()
