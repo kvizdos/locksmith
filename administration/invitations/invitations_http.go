@@ -91,19 +91,21 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 		}
 	}
 
-	envelope := events.EnrichEnvelope(r.Context(), events.Envelope{
-		ID:         uuid.New().String(),
-		Name:       events.EventInviteUser,
-		OccurredAt: time.Now(),
-		Payload: map[string]string{
-			"email":      invite.Email,
-			"role":       invite.Role,
-			"inviteCode": inviteCode,
-		},
-	})
+	if i.Bus != nil {
+		envelope := events.EnrichEnvelope(r.Context(), events.Envelope{
+			ID:         uuid.New().String(),
+			Name:       events.EventInviteUser,
+			OccurredAt: time.Now(),
+			Payload: map[string]string{
+				"email":      invite.Email,
+				"role":       invite.Role,
+				"inviteCode": inviteCode,
+			},
+		})
 
-	if err := i.Bus.Publish(r.Context(), envelope); err != nil {
-		fmt.Println("Error publishing event:", err)
+		if err := i.Bus.Publish(r.Context(), envelope); err != nil {
+			fmt.Println("Error publishing event:", err)
+		}
 	}
 
 	w.Write([]byte("OK"))
