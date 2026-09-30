@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/kvizdos/locksmith/authentication/events"
 	"github.com/kvizdos/locksmith/database"
 	"github.com/kvizdos/locksmith/users"
 )
@@ -22,7 +25,9 @@ func (i HTTPInvite) IsValid() bool {
 	return true
 }
 
-type AdministrationInviteUserHandler struct{}
+type AdministrationInviteUserHandler struct {
+	Bus events.Bus
+}
 
 // Requires an authUser to be passed to HTTP Context
 // Preferably through SecureEndpoint middleware.
@@ -86,5 +91,20 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 		}
 	}
 
-	w.Write([]byte(inviteCode))
+	envelope := events.EnrichEnvelope(r.Context(), events.Envelope{
+		ID:         uuid.New().String(),
+		Name:       events.EventInviteUser,
+		OccurredAt: time.Now(),
+		Payload: map[string]string{
+			"email":      invite.Email,
+			"role":       invite.Role,
+			"inviteCode": inviteCode,
+		},
+	})
+
+	if err := i.Bus.Publish(r.Context(), envelope); err != nil {
+		fmt.Println("Error publishing event:", err)
+	}
+
+	w.Write([]byte("OK"))
 }

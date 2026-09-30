@@ -106,6 +106,8 @@ func subscribePrettyPrintedAuthEvents(bus events.Bus) {
 		events.EventEmailVerified,
 
 		events.EventSignOut,
+
+		events.EventInviteUser,
 	} {
 		bus.Subscribe(name, logEvent(name))
 	}

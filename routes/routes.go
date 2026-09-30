@@ -150,7 +150,9 @@ func InitializeLocksmithRoutes(mux *http.ServeMux, db database.DatabaseAccessor,
 		mux.Handle("/api/users/delete", deleteUserAdminAPIHandler)
 
 		if !options.DisableInvites {
-			inviteUserAPIHandler := endpoints.SecureEndpointHTTPMiddleware(invitations.AdministrationInviteUserHandler{}, db, endpoints.EndpointSecurityOptions{
+			inviteUserAPIHandler := endpoints.SecureEndpointHTTPMiddleware(invitations.AdministrationInviteUserHandler{
+				Bus: options.Bus,
+			}, db, endpoints.EndpointSecurityOptions{
 				MinimalPermissions: []string{"user.invite"},
 			})
 			mux.Handle("/api/users/invite", inviteUserAPIHandler)

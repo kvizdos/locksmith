@@ -22,6 +22,8 @@ const (
 	EventEmailVerified         EventName = "auth.email_verification.verified"
 
 	EventSignOut EventName = "auth.sign_out"
+
+	EventInviteUser EventName = "auth.invite_user"
 )
 
 type Envelope struct {
