@@ -96,10 +96,10 @@ func (i AdministrationInviteUserHandler) ServeHTTP(w http.ResponseWriter, r *htt
 			ID:         uuid.New().String(),
 			Name:       events.EventInviteUser,
 			OccurredAt: time.Now(),
-			Payload: map[string]string{
-				"email":      invite.Email,
-				"role":       invite.Role,
-				"inviteCode": inviteCode,
+			Payload: events.InviteUserPayload{
+				Email:      invite.Email,
+				Role:       invite.Role,
+				InviteCode: inviteCode,
 			},
 		})
 

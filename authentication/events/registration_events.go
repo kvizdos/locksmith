@@ -58,3 +58,9 @@ type EmailVerificationSentPayload struct {
 	Method string
 	Target string
 }
+
+type InviteUserPayload struct {
+	Email      string
+	Role       string
+	InviteCode string
+}
