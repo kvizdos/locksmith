@@ -20,12 +20,14 @@ jobs:
     name: Govulncheck & Code Scanning
     runs-on: ubuntu-latest
     permissions:
-      security-events: write # needed to upload SARIF to Code Scanning
+      contents: read
+      security-events: write
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
 
@@ -36,7 +38,13 @@ jobs:
         run: |
           govulncheck -format sarif ./... > govulncheck.sarif
 
+      - name: Fix duplicate SARIF stacks
+        run: |
+          jq '(.runs[].results[].stacks? // empty) |= unique' \
+            govulncheck.sarif > fixed.sarif
+          mv fixed.sarif govulncheck.sarif
+
       - name: Upload govulncheck SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: govulncheck.sarif
